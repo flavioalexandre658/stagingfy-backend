@@ -2,8 +2,10 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '@/db/connection';
 import * as schema from '@/db/schema';
+import { v4 as uuidv4 } from 'uuid';
 
 export const auth: any = betterAuth({
+  idGenerator: () => uuidv4(), // agora sempre gera UUID válido
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
