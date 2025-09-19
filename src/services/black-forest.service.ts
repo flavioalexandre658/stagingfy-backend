@@ -115,7 +115,7 @@ class BlackForestService {
       const response = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          'x-key': this.apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
@@ -146,7 +146,7 @@ class BlackForestService {
       const response = await fetch(`${this.baseUrl}/images/${jobId}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          'x-key': this.apiKey,
           'Content-Type': 'application/json',
         },
       });
