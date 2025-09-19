@@ -209,7 +209,6 @@ export class VirtualStagingController {
       );
       console.log(`[${uploadId}] Prompt gerado:`, {
         promptLength: stagingPrompt.prompt.length,
-        negativePromptLength: stagingPrompt.negativePrompt.length,
         designPrinciplesCount: stagingPrompt.designPrinciples.length,
         suggestedElementsCount: stagingPrompt.suggestedElements.length
       });
