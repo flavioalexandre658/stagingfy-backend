@@ -1,0 +1,36 @@
+### Teste de Correção do Erro path-to-regexp
+### Problema identificado: router.all('*', ...) causava erro "Missing parameter name at index 1: *"
+### Correção aplicada: Alterado para router.all('/*', ...) no arquivo auth.ts
+
+### 1. Health Check (deve funcionar)
+GET https://stagingfy.com/health
+
+### 2. Auth Base (deve retornar resposta válida, não 404)
+GET https://stagingfy.com/api/auth
+
+### 3. Sign-up (deve retornar resposta válida, não 404)
+POST https://stagingfy.com/api/auth/sign-up/email
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test123!",
+  "name": "Test User"
+}
+
+### 4. Sign-in (deve retornar resposta válida, não 404)
+POST https://stagingfy.com/api/auth/sign-in/email
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test123!"
+}
+
+### 5. Session (deve retornar resposta válida, não 404)
+GET https://stagingfy.com/api/auth/session
+
+### Resultado esperado:
+### - Todas as rotas /api/auth/* devem retornar respostas válidas (não 404)
+### - O servidor não deve mais apresentar o erro "Missing parameter name at index 1: *"
+### - Os logs do PM2 devem parar de mostrar erros do path-to-regexp

@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 const router = Router();
 
 // Handle all BetterAuth routes
-router.all('*', async (req, res) => {
+router.all('/*', async (req, res) => {
   try {
     // Convert Express request to Web API Request
     const url = new URL(req.url, `${req.protocol}://${req.get('host')}`);
