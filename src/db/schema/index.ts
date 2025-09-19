@@ -7,6 +7,7 @@ export * from './room-types';
 export * from './furniture-styles';
 export * from './loras';
 export * from './jobs';
+export * from './uploads';
 
 // Billing schemas
 export * from './plans';

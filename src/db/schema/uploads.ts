@@ -1,0 +1,52 @@
+import { pgTable, uuid, text, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { user } from './auth';
+
+// Enum para status do upload
+export const uploadStatusEnum = pgEnum('upload_status', [
+  'pending',
+  'processing', 
+  'completed',
+  'failed'
+]);
+
+// Enum para tipos de ambiente
+export const roomTypeEnum = pgEnum('room_type', [
+  'living_room',
+  'bedroom',
+  'kitchen',
+  'bathroom',
+  'dining_room',
+  'office',
+  'balcony'
+]);
+
+// Enum para estilos de móveis
+export const furnitureStyleEnum = pgEnum('furniture_style', [
+  'modern',
+  'japanese_minimalist',
+  'scandinavian',
+  'industrial',
+  'classic',
+  'contemporary',
+  'rustic',
+  'bohemian'
+]);
+
+export const uploads = pgTable('uploads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  roomType: roomTypeEnum('room_type').notNull(),
+  furnitureStyle: furnitureStyleEnum('furniture_style').notNull(),
+  inputImageUrl: text('input_image_url').notNull(),
+  outputImageUrl: text('output_image_url'),
+  status: uploadStatusEnum('status').default('pending').notNull(),
+  errorMessage: text('error_message'),
+  blackForestJobId: text('black_forest_job_id'), // ID do job na API da Black Forest
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
