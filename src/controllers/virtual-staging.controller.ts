@@ -1,0 +1,386 @@
+import { Request, Response } from 'express';
+import multer from 'multer';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { uploadRepository } from '../repositories/upload.repository';
+import { chatGPTService } from '../services/chatgpt.service';
+import { fluxKontextService } from '../services/flux-kontext.service';
+import { 
+  CreateUploadRequest, 
+  RoomType, 
+  FurnitureStyle,
+  Upload 
+} from '../interfaces/upload.interface';
+
+// Configuração do S3
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+const BUCKET_NAME = process.env.AWS_S3_BUCKET!;
+
+// Configuração do Multer para upload em memória
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tipo de arquivo não permitido. Use JPEG, PNG ou WebP.'));
+    }
+  },
+});
+
+export class VirtualStagingController {
+  /**
+   * Middleware do Multer para upload de imagem
+   */
+  public uploadMiddleware = upload.single('image');
+
+  /**
+   * Processa virtual staging usando ChatGPT + flux-kontext-pro
+   */
+  async processVirtualStaging(req: Request, res: Response): Promise<void> {
+    try {
+      // Validar se a imagem foi enviada
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'Nenhuma imagem foi enviada'
+        });
+        return;
+      }
+
+      // Validar dados do corpo da requisição
+      const { roomType, furnitureStyle, plan = 'free' } = req.body as CreateUploadRequest & { plan: string };
+      
+      if (!roomType || !furnitureStyle) {
+        res.status(400).json({
+          success: false,
+          message: 'roomType e furnitureStyle são obrigatórios'
+        });
+        return;
+      }
+
+      // Validar tipos permitidos
+      const validRoomTypes: RoomType[] = ['living_room', 'bedroom', 'kitchen', 'bathroom', 'dining_room', 'office', 'balcony'];
+      const validFurnitureStyles: FurnitureStyle[] = ['modern', 'japanese_minimalist', 'scandinavian', 'industrial', 'classic', 'contemporary', 'rustic', 'bohemian'];
+
+      if (!validRoomTypes.includes(roomType as RoomType)) {
+        res.status(400).json({
+          success: false,
+          message: 'roomType inválido'
+        });
+        return;
+      }
+
+      if (!validFurnitureStyles.includes(furnitureStyle as FurnitureStyle)) {
+        res.status(400).json({
+          success: false,
+          message: 'furnitureStyle inválido'
+        });
+        return;
+      }
+
+      // Obter ID do usuário
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado'
+        });
+        return;
+      }
+
+      // Verificar se os serviços estão configurados
+      if (!chatGPTService || !fluxKontextService.isConfigured()) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviços de IA não configurados'
+        });
+        return;
+      }
+
+      // Gerar nome único para o arquivo
+      const fileExtension = path.extname(req.file.originalname);
+      const fileName = `virtual-staging/input/${userId}/${uuidv4()}${fileExtension}`;
+
+      // Upload para S3
+      const uploadCommand = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+
+      await s3Client.send(uploadCommand);
+
+      // Gerar URL da imagem no S3
+      const inputImageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+
+      // Criar registro no banco de dados
+      const uploadRecord = await uploadRepository.create({
+        userId,
+        roomType: roomType as RoomType,
+        furnitureStyle: furnitureStyle as FurnitureStyle,
+        inputImageUrl,
+      });
+
+      // Iniciar processamento assíncrono
+      this.processVirtualStagingAsync(
+        uploadRecord.id, 
+        inputImageUrl, 
+        req.file.buffer,
+        roomType as RoomType, 
+        furnitureStyle as FurnitureStyle
+      );
+
+      // Retornar resposta imediata
+      res.status(200).json({
+        success: true,
+        data: {
+          uploadId: uploadRecord.id,
+          status: uploadRecord.status,
+          inputImageUrl: uploadRecord.inputImageUrl,
+          createdAt: uploadRecord.createdAt
+        }
+      });
+
+    } catch (error) {
+      console.error('Erro no processamento de virtual staging:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor'
+      });
+    }
+  }
+
+  /**
+   * Processamento assíncrono de virtual staging
+   */
+  private async processVirtualStagingAsync(
+    uploadId: string,
+    inputImageUrl: string,
+    imageBuffer: Buffer,
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ): Promise<void> {
+    try {
+      console.log(`Iniciando processamento de virtual staging para upload ${uploadId}`);
+
+      // Atualizar status para "processing"
+      await uploadRepository.updateStatus(uploadId, 'processing');
+
+      // Etapa 1: Analisar imagem com ChatGPT Vision
+      console.log('Analisando imagem com ChatGPT Vision...');
+      const imageBase64 = imageBuffer.toString('base64');
+      const imageAnalysis = await chatGPTService.analyzeImage(imageBase64);
+
+      console.log('Análise da imagem concluída:', {
+        dimensions: imageAnalysis.dimensions,
+        description: imageAnalysis.description.substring(0, 100) + '...'
+      });
+
+      // Etapa 2: Gerar prompt refinado com ChatGPT
+      console.log('Gerando prompt de design com ChatGPT...');
+      const stagingPrompt = await chatGPTService.generateVirtualStagingPrompt(
+        roomType,
+        furnitureStyle,
+        imageAnalysis
+      );
+
+      console.log('Prompt gerado:', {
+        prompt: stagingPrompt.prompt.substring(0, 100) + '...',
+        designPrinciples: stagingPrompt.designPrinciples,
+        suggestedElements: stagingPrompt.suggestedElements
+      });
+
+      // Etapa 3: Processar com flux-kontext-pro
+      console.log('Processando com flux-kontext-pro...');
+      const fluxResponse = await fluxKontextService.processVirtualStaging({
+        model: 'flux-kontext-pro',
+        prompt: stagingPrompt.prompt,
+        image: imageBase64,
+        width: imageAnalysis.dimensions.width,
+        height: imageAnalysis.dimensions.height,
+        steps: 25,
+        guidance: 7.5,
+        strength: 0.7,
+        output_format: 'jpeg'
+      });
+
+      // Etapa 4: Aguardar conclusão
+      console.log('Aguardando conclusão do processamento...');
+      const completedJob = await fluxKontextService.waitForCompletion(fluxResponse.id);
+
+      if (!completedJob.result?.image_url) {
+        throw new Error('Nenhuma imagem foi gerada');
+      }
+
+      // Etapa 5: Salvar imagem processada
+      console.log('Salvando imagem processada...');
+      const outputImageUrl = await this.saveProcessedImage(uploadId, completedJob.result.image_url);
+
+      // Atualizar registro com resultado
+      await uploadRepository.updateOutputImage(uploadId, outputImageUrl);
+      await uploadRepository.updateStatus(uploadId, 'completed');
+
+      console.log(`Virtual staging concluído para upload ${uploadId}`);
+
+    } catch (error) {
+      console.error(`Erro no processamento assíncrono do upload ${uploadId}:`, error);
+      
+      // Atualizar status para "failed" com mensagem de erro
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      await uploadRepository.updateStatus(uploadId, 'failed', errorMessage);
+    }
+  }
+
+  /**
+   * Salva a imagem processada no S3
+   */
+  private async saveProcessedImage(uploadId: string, imageUrl: string): Promise<string> {
+    try {
+      // Baixar a imagem processada
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Erro ao baixar imagem: ${response.status}`);
+      }
+
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+
+      // Gerar nome único para a imagem processada
+      const fileName = `virtual-staging/output/${uploadId}/${uuidv4()}.jpg`;
+
+      // Upload para S3
+      const uploadCommand = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: imageBuffer,
+        ContentType: 'image/jpeg',
+      });
+
+      await s3Client.send(uploadCommand);
+
+      // Retornar URL da imagem no S3
+      return `https://${BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+
+    } catch (error) {
+      console.error('Erro ao salvar imagem processada:', error);
+      throw new Error('Falha ao salvar imagem processada');
+    }
+  }
+
+  /**
+   * Busca o status de um processamento de virtual staging
+   */
+  async getVirtualStagingStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { uploadId } = req.params;
+      const userId = (req as any).user?.id;
+
+      if (!uploadId) {
+        res.status(400).json({
+          success: false,
+          message: 'uploadId é obrigatório'
+        });
+        return;
+      }
+
+      // Buscar upload no banco de dados
+      const upload = await uploadRepository.findById(uploadId);
+
+      if (!upload) {
+        res.status(404).json({
+          success: false,
+          message: 'Upload não encontrado'
+        });
+        return;
+      }
+
+      // Verificar se o upload pertence ao usuário
+      if (upload.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          message: 'Acesso negado'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          uploadId: upload.id,
+          status: upload.status,
+          inputImageUrl: upload.inputImageUrl,
+          outputImageUrl: upload.outputImageUrl,
+          roomType: upload.roomType,
+          furnitureStyle: upload.furnitureStyle,
+          errorMessage: upload.errorMessage,
+          createdAt: upload.createdAt,
+          updatedAt: upload.updatedAt
+        }
+      });
+
+    } catch (error) {
+      console.error('Erro ao buscar status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor'
+      });
+    }
+  }
+
+  /**
+   * Lista todos os processamentos de virtual staging do usuário
+   */
+  async getUserVirtualStagings(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado'
+        });
+        return;
+      }
+
+      // Buscar uploads do usuário
+      const uploads = await uploadRepository.findByUserId(userId, limit);
+
+      res.status(200).json({
+        success: true,
+        data: uploads.map(upload => ({
+          uploadId: upload.id,
+          status: upload.status,
+          inputImageUrl: upload.inputImageUrl,
+          outputImageUrl: upload.outputImageUrl,
+          roomType: upload.roomType,
+          furnitureStyle: upload.furnitureStyle,
+          createdAt: upload.createdAt,
+          updatedAt: upload.updatedAt
+        }))
+      });
+
+    } catch (error) {
+      console.error('Erro ao buscar uploads do usuário:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor'
+      });
+    }
+  }
+}
+
+export const virtualStagingController = new VirtualStagingController();

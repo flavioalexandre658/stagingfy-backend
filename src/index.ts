@@ -10,6 +10,7 @@ import authRoutes from '@/routes/auth';
 import uploadRoutes from '@/routes/upload.routes';
 import stripeRoutes from '@/routes/stripe.routes';
 import userRoutes from '@/routes/user.routes';
+import virtualStagingRoutes from '@/routes/virtual-staging.routes';
 import { initializeWorkers, closeWorkers } from '@/workers';
 
 // Load environment variables
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes);
 
 // API routes
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/virtual-staging', virtualStagingRoutes);
 app.use('/api/v1/stripe', stripeRoutes);
 app.use('/api/v1/user', userRoutes);
 
