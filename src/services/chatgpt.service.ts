@@ -21,75 +21,15 @@ class ChatGPTService {
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    // (Mantemos o uso dos “pacotes”)
-    const packageItems = this.getPackageCombination(roomType, furnitureStyle);
+    const roomLabel = this.getRoomTypeLabel(roomType); // e.g. "living room"
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g. "modern"
 
-    const roomLabel = this.getRoomTypeLabel(roomType); // e.g., "living room"
-    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g., "modern"
+    const prompt = `Add ${styleLabel} furniture to this ${roomLabel} while keeping the original room, lighting, and structure unchanged. 
+Do not modify walls, doors, windows, ceiling, floor, trims, or any architectural elements. 
+Preserve the exact lighting and perspective. 
+Only add furniture and décor items consistent with a ${styleLabel} interior style.`;
 
-    const constraints = this.getNonDestructiveConstraints();
-    const negatives = this.getAbsoluteProhibitions();
-
-    // Breve abertura, direta e assertiva (sem verbos “transform”)
-    const base =
-      `Add furniture and decor to the ${roomLabel} in the uploaded photo in a ${styleLabel} style. ` +
-      `This is STRICTLY additive virtual staging; the original scene must remain EXACTLY as captured.`;
-
-    // Regras duras — escritas no formato recomendado pelo guia (preserve X, keep Y)
-    const hardChecklist = [
-      'Keep the exact camera angle, subject placement, framing, perspective lines, and image boundaries identical.',
-      'Preserve all existing architecture and finishes: walls, floor, ceiling, beams, trims, baseboards, skirting, door leaf and frame, the door opening, any existing windows, sockets/outlets, switches.',
-      'Preserve the original lighting direction, intensity, and color temperature. No global relighting.',
-      'Do NOT repaint, re-texture, expand, crop, or retouch any part of the room. No rescaling of architectural elements.',
-      'Only place new items where they physically fit in the visible space without blocking circulation or the door opening.',
-      'Allow partial crops near the image edges if necessary; never shift the camera to fit an object.',
-    ];
-
-    // Escopo do que PODE ser adicionado (curto e preciso)
-    const allowedScope = constraints;
-
-    // “Proibições absolutas” para cortar qualquer tendência do modelo de mexer na estrutura
-    const prohibitions = [
-      ...negatives,
-      'No new doors, windows, curtains/blinds, or openings; do not alter existing ones.',
-      'No ceiling fans or new built-in ceiling fixtures; only floor and table lamps may be added.',
-      'No baseboard/trim changes, no added cornices, no added beams, no wall art that requires structural change.',
-      'No mirroring/duplication of the room; no replacement of backgrounds or outside views.',
-    ];
-
-    // Itens mandatórios do “pacote” (apenas se couberem sem violar regras)
-    const mandatoryList = packageItems.map(i => `• ${i}`).join('\n');
-
-    // Observações finais de composição/estilo — curtas e operacionais
-    const composition = [
-      'Use realistic scale and perspective matching the scene.',
-      'Anchor main seating or bed to a rug when appropriate; keep clear circulation paths.',
-      'Favor cohesive palettes; subtle texture layering; keep cables/clutter hidden.',
-      'Photorealistic materials and shadows consistent with the input lighting; no artificial glow.',
-    ];
-
-    const finalPrompt = `${base}
-
-NON-DESTRUCTIVE GUARANTEES (hard constraints):
-${hardChecklist.map(l => `• ${l}`).join('\n')}
-
-ALLOWED ADDITIONS (scope):
-${allowedScope.map(c => `• ${c}`).join('\n')}
-
-ABSOLUTE PROHIBITIONS:
-${prohibitions.map(n => `• ${n}`).join('\n')}
-
-MANDATORY PACKAGE ITEMS (add only if they fit without breaking constraints):
-${mandatoryList}
-
-Styling & composition:
-${composition.map(c => `• ${c}`).join('\n')}
-
-Output: produce a photo-real result that looks like a professionally staged real-estate photograph. 
-Never remove or modify any existing architectural element; add furniture and decor ONLY.`;
-
-    // Retorna o prompt pronto, sem pós-processamento
-    return finalPrompt;
+    return prompt;
   }
 
   // --------- Non-destructive policy helpers ---------
