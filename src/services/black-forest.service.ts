@@ -139,7 +139,7 @@ class BlackForestService {
   }
 
   /**
-   * Gera virtual staging usando o modelo flux-kontext-pro
+   * Gera virtual staging usando o modelo flux-kontext-dev
    */
   async generateVirtualStaging(
     imageBase64: string,
@@ -147,7 +147,7 @@ class BlackForestService {
   ): Promise<BlackForestApiResponse> {
     try {
       const requestBody = {
-        model: 'flux-kontext-pro',
+        model: 'flux-kontext-dev',
         prompt,
         image: imageBase64,
         steps: 50,
@@ -156,7 +156,7 @@ class BlackForestService {
         safety_tolerance: 2,
       };
 
-      const response = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
+      const response = await fetch(`${this.baseUrl}/flux-kontext-dev`, {
         method: 'POST',
         headers: {
           'x-key': this.apiKey,
@@ -175,7 +175,10 @@ class BlackForestService {
       const result = (await response.json()) as BlackForestApiResponse;
       return result;
     } catch (error) {
-      console.error('Error calling Black Forest API (flux-kontext-pro):', error);
+      console.error(
+        'Error calling Black Forest API (flux-kontext-dev):',
+        error
+      );
       throw new Error(
         `Failed to generate virtual staging: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
@@ -188,7 +191,7 @@ class BlackForestService {
   async checkJobStatus(jobId: string): Promise<BlackForestApiResponse> {
     try {
       console.log(`Verificando status do job: ${jobId}`);
-      
+
       const response = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
         method: 'GET',
         headers: {
@@ -204,19 +207,19 @@ class BlackForestService {
         console.error(`Black Forest API error for job ${jobId}:`, {
           status: response.status,
           statusText: response.statusText,
-          errorData
+          errorData,
         });
 
         // Tratamento específico para diferentes tipos de erro
-          if (response.status === 404) {
-            // Job não encontrado - pode ser que ainda não esteja pronto
-            const errorResponse: BlackForestApiResponse = {
-              id: jobId,
-              status: 'Task not found',
-              error: 'Job não encontrado na API'
-            };
-            return errorResponse;
-          }
+        if (response.status === 404) {
+          // Job não encontrado - pode ser que ainda não esteja pronto
+          const errorResponse: BlackForestApiResponse = {
+            id: jobId,
+            status: 'Task not found',
+            error: 'Job não encontrado na API',
+          };
+          return errorResponse;
+        }
 
         throw new Error(
           `Black Forest API error: ${response.status} - ${errorData}`
@@ -225,22 +228,23 @@ class BlackForestService {
 
       const result = (await response.json()) as BlackForestApiResponse;
       console.log(`Job ${jobId} status: ${result.status}`);
-      
+
       return result;
     } catch (error) {
       console.error(`Error checking job status for ${jobId}:`, {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        jobId
+        jobId,
       });
-      
+
       // Se for um erro de rede ou parsing, re-throw
-      if (error instanceof Error && !error.message.includes('Black Forest API error')) {
-        throw new Error(
-          `Network error checking job status: ${error.message}`
-        );
+      if (
+        error instanceof Error &&
+        !error.message.includes('Black Forest API error')
+      ) {
+        throw new Error(`Network error checking job status: ${error.message}`);
       }
-      
+
       throw error;
     }
   }
