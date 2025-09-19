@@ -25,6 +25,9 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "overrides": {
+    "openai>zod": "^4.1.9"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.892.0",
     "@aws-sdk/s3-request-presigner": "^3.892.0",
