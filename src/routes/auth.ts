@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 
 const router = Router();
 
-router.all('*', async (req, res) => {
+router.all('/api/auth/*', async (req, res) => {
   try {
     const url = new URL(
       req.originalUrl,
