@@ -21,15 +21,23 @@ class ChatGPTService {
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    const roomLabel = this.getRoomTypeLabel(roomType); // e.g. "living room"
-    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g. "modern"
+    const roomLabel = this.getRoomTypeLabel(roomType);
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
+    const packageItems = this.getPackageCombination(roomType, furnitureStyle);
 
-    const prompt = `Add ${styleLabel} furniture to this ${roomLabel} while keeping the original room, lighting, and structure unchanged. 
+    const basePrompt = `Add ${styleLabel} furniture to this ${roomLabel} while keeping the original room, lighting, and structure unchanged. 
 Do not modify walls, doors, windows, ceiling, floor, trims, or any architectural elements. 
 Preserve the exact lighting and perspective. 
 Only add furniture and décor items consistent with a ${styleLabel} interior style.`;
 
-    return prompt;
+    const enrichedDetails =
+      packageItems.length > 0
+        ? ` Include the following key items if they fit naturally in the scene:\n${packageItems
+            .map(i => `- ${i}`)
+            .join('\n')}`
+        : '';
+
+    return `${basePrompt}${enrichedDetails}`;
   }
 
   // --------- Non-destructive policy helpers ---------
