@@ -161,11 +161,11 @@ class BlackForestService {
         prompt_upsampling: false, // evita "enfeitar" o prompt e mexer na cena
         output_format: 'jpeg',
         safety_tolerance: 2,
-        // guidance: 5.0, // use somente se o provedor expõe este parâmetro para Kontext
+        guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
         ...(opts?.seed !== undefined && { seed: opts.seed }),
       };
 
-      const resp = await fetch(`${this.baseUrl}/flux-kontext-max`, {
+      const resp = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
         method: 'POST',
         headers: {
           'x-key': this.apiKey,
@@ -208,7 +208,7 @@ class BlackForestService {
     const height = this.roundToMultiple(ch, 32);
 
     const requestBody = {
-      model: 'flux-max-1.0-fill',
+      model: 'flux-pro-1.0-fill',
       prompt,
       image: imageBase64,
       mask: maskBase64,
@@ -220,7 +220,7 @@ class BlackForestService {
       safety_tolerance: 2,
     };
 
-    const resp = await fetch(`${this.baseUrl}/flux-max-1.0-fill`, {
+    const resp = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
       method: 'POST',
       headers: {
         'x-key': this.apiKey,
