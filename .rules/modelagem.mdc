@@ -1,0 +1,213 @@
+Modelagem de Dados — Virtual Staging SaaS
+📌 profiles
+
+Extensão do usuário (BetterAuth já cria users).
+
+profiles
+---------
+id (pk, uuid)
+user_id (fk → users.id, unique)
+name (string)
+role (enum: "user", "admin")
+credits (int) → saldo de fotos
+created_at (timestamp)
+updated_at (timestamp)
+
+📌 jobs
+
+Cada requisição de staging.
+
+jobs
+---------
+id (pk, uuid)
+user_id (fk → users.id)
+room_type_id (fk → room_types.id)
+furniture_style_id (fk → furniture_styles.id)
+lora_id (fk → loras.id, nullable)
+prompt (text)
+input_image_url (string) → S3 original
+output_image_url (string, nullable) → S3 final
+status (enum: "pending", "processing", "completed", "failed")
+error_message (text, nullable)
+model (string, default: "flux-pro")
+credits_used (int)
+is_premium_room_type (boolean, default: false)
+is_premium_furniture_style (boolean, default: false)
+created_at (timestamp)
+updated_at (timestamp)
+
+📌 room_types
+
+Tipos de cômodos (alguns premium).
+
+room_types
+---------
+id (pk, uuid)
+name (string) → slug (ex: "living_room")
+label (string) → ex: "Sala de Estar"
+premium_only (boolean, default: false)
+created_at (timestamp)
+updated_at (timestamp)
+
+
+Exemplos iniciais:
+
+living_room (false)
+
+bedroom (false)
+
+kitchen (true)
+
+bathroom (true)
+
+office (true)
+
+📌 furniture_styles
+
+Estilos de mobília (alguns premium).
+
+furniture_styles
+---------
+id (pk, uuid)
+name (string) → slug (ex: "scandinavian")
+label (string) → ex: "Escandinavo"
+premium_only (boolean, default: false)
+created_at (timestamp)
+updated_at (timestamp)
+
+
+Exemplos iniciais:
+
+modern (false)
+
+scandinavian (false)
+
+japanese_minimalist (true)
+
+industrial (true)
+
+luxury (true)
+
+📌 loras
+
+Adapters de estilos.
+
+loras
+---------
+id (pk, uuid)
+room_type_id (fk → room_types.id)
+furniture_style_id (fk → furniture_styles.id)
+name (string) → "lora_bedroom_scandinavian_v1"
+file_url (string) → caminho no S3
+active (boolean, default: true)
+created_at (timestamp)
+updated_at (timestamp)
+
+
+📌 plans
+
+Planos de assinatura.
+
+plans
+---------
+id (pk, uuid)
+name (string) → "Basic", "Standard", "Professional", "Enterprise"
+price_monthly (int) → em centavos
+price_yearly (int) → em centavos
+photos_per_month (int)
+is_popular (boolean, default: false)
+created_at (timestamp)
+updated_at (timestamp)
+
+📌 plan_features
+
+Recursos disponíveis no sistema.
+
+plan_features
+---------
+id (pk, uuid)
+name (string) → slug (ex: "unlimited_downloads")
+label (string) → ex: "Unlimited renders and downloads"
+description (text, nullable)
+created_at (timestamp)
+updated_at (timestamp)
+
+
+Exemplos:
+
+unlimited_downloads
+
+all_room_types
+
+furniture_removal
+
+no_watermark
+
+free_editing_trial
+
+fast_turnaround
+
+multi_view_staging
+
+image_storage_forever
+
+success_manager
+
+api_access
+
+enterprise_support
+
+📌 plan_feature_relations
+
+Relaciona planos com features.
+
+plan_feature_relations
+---------
+id (pk, uuid)
+plan_id (fk → plans.id)
+feature_id (fk → plan_features.id)
+created_at (timestamp)
+
+📌 subscriptions
+
+Assinaturas ativas dos usuários.
+
+subscriptions
+---------
+id (pk, uuid)
+user_id (fk → users.id)
+plan_id (fk → plans.id)
+stripe_subscription_id (string)
+status (enum: "active", "canceled", "past_due")
+current_period_start (timestamp)
+current_period_end (timestamp)
+renewal_at (timestamp)
+created_at (timestamp)
+updated_at (timestamp)
+
+📌 payments
+
+Histórico de pagamentos via Stripe.
+
+payments
+---------
+id (pk, uuid)
+user_id (fk → users.id)
+stripe_payment_intent_id (string)
+amount (int) → em centavos
+currency (string, default: "usd")
+status (enum: "pending", "succeeded", "failed")
+created_at (timestamp)
+updated_at (timestamp)
+
+📌 audit_logs
+
+Auditoria para rastrear ações.
+
+audit_logs
+---------
+id (pk, uuid)
+user_id (fk → users.id)
+action (string) → ex: "create_job", "update_subscription"
+metadata (jsonb)
+created_at (timestamp)
