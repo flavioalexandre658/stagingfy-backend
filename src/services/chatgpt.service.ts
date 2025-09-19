@@ -11,7 +11,6 @@ export interface ImageAnalysis {
 
 export interface VirtualStagingPrompt {
   prompt: string;
-  negativePrompt: string;
   designPrinciples: string[];
   suggestedElements: string[];
 }
@@ -71,8 +70,8 @@ class ChatGPTService {
   }
 
   /**
-   * Generate a refined virtual staging prompt using GPT-4o,
-   * acting as an expert interior designer and architect.
+   * Generate an optimized virtual staging prompt using GPT-4o,
+   * specifically designed for flux-kontext-pro to add furniture and interior decoration.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
@@ -80,28 +79,35 @@ class ChatGPTService {
     imageAnalysis: ImageAnalysis
   ): Promise<VirtualStagingPrompt> {
     try {
-      const systemPrompt = `You are an expert architect and interior designer specializing in virtual staging.
-Your task is to generate detailed prompts for generative AI (flux-kontext-pro) that add furniture and decor
-to empty or partially furnished spaces while preserving the original architecture.`;
+      const systemPrompt = `You are an expert interior designer specializing in virtual staging for AI image generation.
+Your task is to create optimized prompts for flux-kontext-pro that add furniture and interior decoration to empty spaces.
 
-      const userPrompt = `Based on the following room analysis, generate a detailed staging prompt:
+CRITICAL REQUIREMENTS:
+- ONLY add furniture, decorative objects, lighting fixtures, and interior accessories
+- NEVER modify walls, floors, ceilings, doors, windows, or architectural structure
+- Preserve the original lighting and architectural features
+- Focus on realistic furniture placement and interior decoration
+- Use specific, detailed descriptions for better AI generation results`;
+
+      const userPrompt = `Create an optimized flux-kontext-pro prompt for virtual staging:
 
 ROOM TYPE: ${this.getRoomTypeDescription(roomType)}
 FURNITURE STYLE: ${this.getFurnitureStyleDescription(furnitureStyle)}
 
-IMAGE ANALYSIS:
+ROOM ANALYSIS:
 - Dimensions: ${imageAnalysis.dimensions.width}x${imageAnalysis.dimensions.height}
-- Description: ${imageAnalysis.description}
-- Lighting: ${imageAnalysis.lighting}
+- Current state: ${imageAnalysis.description}
+- Lighting conditions: ${imageAnalysis.lighting}
 - Architecture: ${imageAnalysis.architecture}
-- Existing Elements: ${imageAnalysis.existingElements.join(', ')}
+- Existing elements: ${imageAnalysis.existingElements.join(', ')}
+
+Generate a detailed prompt that will add appropriate furniture and decoration while preserving all architectural elements.
 
 Return ONLY valid JSON:
 {
-  "prompt": "highly detailed generative AI prompt for staging",
-  "negativePrompt": "things to avoid (walls, floors, ceiling, structure)",
-  "designPrinciples": ["applied principles"],
-  "suggestedElements": ["list of furniture and decor suggestions"]
+  "prompt": "detailed flux-kontext-pro prompt for adding furniture and interior decoration",
+  "designPrinciples": ["key design principles applied"],
+  "suggestedElements": ["specific furniture and decor items to be added"]
 }`;
 
       const response = await this.openai.chat.completions.create({
@@ -110,9 +116,9 @@ Return ONLY valid JSON:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 1200,
-        temperature: 0.6,
-        response_format: { type: 'json_object' }, // ensures JSON
+        max_tokens: 1000,
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
       });
 
       const content = response.choices[0]?.message?.content;
