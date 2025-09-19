@@ -139,7 +139,7 @@ class BlackForestService {
   }
 
   /**
-   * Gera virtual staging usando o modelo flux-kontext-dev
+   * Gera virtual staging usando o modelo flux-kontext-pro
    */
   async generateVirtualStaging(
     imageBase64: string,
@@ -147,7 +147,7 @@ class BlackForestService {
   ): Promise<BlackForestApiResponse> {
     try {
       const requestBody = {
-        model: 'flux-kontext-dev',
+        model: 'flux-kontext-pro',
         prompt,
         image: imageBase64,
         steps: 50,
@@ -156,7 +156,7 @@ class BlackForestService {
         safety_tolerance: 2,
       };
 
-      const response = await fetch(`${this.baseUrl}/flux-kontext-dev`, {
+      const response = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
         method: 'POST',
         headers: {
           'x-key': this.apiKey,
@@ -176,7 +176,7 @@ class BlackForestService {
       return result;
     } catch (error) {
       console.error(
-        'Error calling Black Forest API (flux-kontext-dev):',
+        'Error calling Black Forest API (flux-kontext-pro):',
         error
       );
       throw new Error(
