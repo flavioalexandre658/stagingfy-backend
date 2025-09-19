@@ -174,75 +174,149 @@ export class VirtualStagingController {
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<void> {
-    try {
-      console.log(`Iniciando processamento de virtual staging para upload ${uploadId}`);
+    const startTime = Date.now();
+    console.log(`[${uploadId}] Iniciando processamento assíncrono de virtual staging`, {
+      uploadId,
+      inputImageUrl,
+      roomType,
+      furnitureStyle,
+      imageSize: imageBuffer.length,
+      timestamp: new Date().toISOString()
+    });
 
+    try {
       // Atualizar status para "processing"
+      console.log(`[${uploadId}] Atualizando status para 'processing'`);
       await uploadRepository.updateStatus(uploadId, 'processing');
 
       // Etapa 1: Analisar imagem com ChatGPT Vision
-      console.log('Analisando imagem com ChatGPT Vision...');
+      console.log(`[${uploadId}] Etapa 1: Analisando imagem com ChatGPT Vision...`);
       const imageBase64 = imageBuffer.toString('base64');
       const imageAnalysis = await chatGPTService.analyzeImage(imageBase64);
-
-      console.log('Análise da imagem concluída:', {
+      console.log(`[${uploadId}] Análise da imagem concluída:`, {
         dimensions: imageAnalysis.dimensions,
-        description: imageAnalysis.description.substring(0, 100) + '...'
+        lighting: imageAnalysis.lighting,
+        architecture: imageAnalysis.architecture,
+        existingElementsCount: imageAnalysis.existingElements.length
       });
 
       // Etapa 2: Gerar prompt refinado com ChatGPT
-      console.log('Gerando prompt de design com ChatGPT...');
+      console.log(`[${uploadId}] Etapa 2: Gerando prompt de design com ChatGPT...`);
       const stagingPrompt = await chatGPTService.generateVirtualStagingPrompt(
         roomType,
         furnitureStyle,
         imageAnalysis
       );
-
-      console.log('Prompt gerado:', {
-        prompt: stagingPrompt.prompt.substring(0, 100) + '...',
-        designPrinciples: stagingPrompt.designPrinciples,
-        suggestedElements: stagingPrompt.suggestedElements
+      console.log(`[${uploadId}] Prompt gerado:`, {
+        promptLength: stagingPrompt.prompt.length,
+        negativePromptLength: stagingPrompt.negativePrompt.length,
+        designPrinciplesCount: stagingPrompt.designPrinciples.length,
+        suggestedElementsCount: stagingPrompt.suggestedElements.length
       });
 
       // Etapa 3: Processar com flux-kontext-pro
-      console.log('Processando com flux-kontext-pro...');
+      console.log(`[${uploadId}] Etapa 3: Processando com flux-kontext-pro...`);
       const fluxResponse = await blackForestService.generateVirtualStaging(
         imageBase64,
         stagingPrompt.prompt
       );
 
+      // Salvar job ID no banco de dados
+      if (fluxResponse.id) {
+        console.log(`[${uploadId}] Salvando job ID ${fluxResponse.id} no banco de dados...`);
+        await uploadRepository.updateBlackForestJobId(uploadId, fluxResponse.id);
+      }
+
       // Etapa 4: Aguardar conclusão (se necessário)
-       console.log('Aguardando conclusão do processamento...');
+       console.log(`[${uploadId}] Etapa 4: Aguardando conclusão do processamento...`);
        let completedJob = fluxResponse;
        
        // Se retornou um job ID, aguardar conclusão
        if (fluxResponse.id && !fluxResponse.result) {
-         completedJob = await blackForestService.checkJobStatus(fluxResponse.id);
+         const maxAttempts = 30; // 1 minuto (2s * 30)
+         let attempts = 0;
          
-         // Aguardar até completar (polling simples)
-         while (completedJob.status === 'Pending' || completedJob.status === 'Request Moderated') {
-           await new Promise(resolve => setTimeout(resolve, 2000));
-           completedJob = await blackForestService.checkJobStatus(fluxResponse.id);
+         console.log(`[${uploadId}] Iniciando polling para job ${fluxResponse.id} (máximo ${maxAttempts} tentativas)`);
+         
+         while (attempts < maxAttempts) {
+           try {
+             console.log(`[${uploadId}] Verificando status do job (tentativa ${attempts + 1}/${maxAttempts})`);
+             completedJob = await blackForestService.checkJobStatus(fluxResponse.id);
+             
+             console.log(`[${uploadId}] Status atual: ${completedJob.status}`);
+             
+             // Verificar se completou com sucesso
+             if (completedJob.status === 'Ready' && completedJob.result) {
+               console.log(`[${uploadId}] Job concluído com sucesso!`);
+               break;
+             }
+             
+             // Verificar se falhou
+             if (completedJob.status === 'Error' || completedJob.status === 'Task not found') {
+               console.error(`[${uploadId}] Job falhou com status: ${completedJob.status}`);
+               throw new Error(`Processamento falhou: ${completedJob.status} - ${completedJob.error || 'Job não encontrado'}`);
+             }
+             
+             // Aguardar antes da próxima tentativa
+             console.log(`[${uploadId}] Aguardando 2 segundos antes da próxima verificação...`);
+             await new Promise(resolve => setTimeout(resolve, 2000));
+             attempts++;
+             
+           } catch (error) {
+             console.error(`[${uploadId}] Erro ao verificar status do job ${fluxResponse.id} (tentativa ${attempts + 1}):`, error);
+             attempts++;
+             
+             // Se for erro 404, aguardar um pouco mais antes de tentar novamente
+             if (error instanceof Error && error.message.includes('404')) {
+               console.log(`[${uploadId}] Erro 404 detectado, aguardando 5 segundos extras...`);
+               await new Promise(resolve => setTimeout(resolve, 5000));
+             }
+           }
+         }
+         
+         // Se esgotou as tentativas
+         if (attempts >= maxAttempts) {
+           console.error(`[${uploadId}] Timeout: Esgotadas ${maxAttempts} tentativas de verificação`);
+           throw new Error('Timeout: Processamento não foi concluído no tempo esperado');
          }
        }
 
       const imageUrl = completedJob.result?.sample || completedJob.result?.url;
       if (!imageUrl) {
+        console.error(`[${uploadId}] Erro: Nenhuma imagem foi gerada no resultado`);
         throw new Error('Nenhuma imagem foi gerada');
       }
 
+      console.log(`[${uploadId}] URL da imagem gerada: ${imageUrl}`);
+
       // Etapa 5: Salvar imagem processada
-      console.log('Salvando imagem processada...');
+      console.log(`[${uploadId}] Etapa 5: Salvando imagem processada...`);
       const outputImageUrl = await this.saveProcessedImage(uploadId, imageUrl);
+      console.log(`[${uploadId}] Imagem salva em: ${outputImageUrl}`);
 
       // Atualizar registro com resultado
+      console.log(`[${uploadId}] Atualizando registro no banco de dados...`);
       await uploadRepository.updateOutputImage(uploadId, outputImageUrl);
       await uploadRepository.updateStatus(uploadId, 'completed');
 
-      console.log(`Virtual staging concluído para upload ${uploadId}`);
+      const processingTime = Date.now() - startTime;
+      console.log(`[${uploadId}] Virtual staging concluído com sucesso!`, {
+        uploadId,
+        outputImageUrl,
+        processingTimeMs: processingTime,
+        processingTimeSeconds: Math.round(processingTime / 1000),
+        timestamp: new Date().toISOString()
+      });
 
     } catch (error) {
-      console.error(`Erro no processamento assíncrono do upload ${uploadId}:`, error);
+      const processingTime = Date.now() - startTime;
+      console.error(`[${uploadId}] Erro no processamento assíncrono:`, {
+        uploadId,
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        processingTimeMs: processingTime,
+        timestamp: new Date().toISOString()
+      });
       
       // Atualizar status para "failed" com mensagem de erro
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';

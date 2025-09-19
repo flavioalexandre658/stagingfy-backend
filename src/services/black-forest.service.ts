@@ -187,6 +187,8 @@ class BlackForestService {
    */
   async checkJobStatus(jobId: string): Promise<BlackForestApiResponse> {
     try {
+      console.log(`Verificando status do job: ${jobId}`);
+      
       const response = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
         method: 'GET',
         headers: {
@@ -195,20 +197,51 @@ class BlackForestService {
         },
       });
 
+      console.log(`Response status: ${response.status} para job ${jobId}`);
+
       if (!response.ok) {
         const errorData = await response.text();
+        console.error(`Black Forest API error for job ${jobId}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+
+        // Tratamento específico para diferentes tipos de erro
+          if (response.status === 404) {
+            // Job não encontrado - pode ser que ainda não esteja pronto
+            const errorResponse: BlackForestApiResponse = {
+              id: jobId,
+              status: 'Task not found',
+              error: 'Job não encontrado na API'
+            };
+            return errorResponse;
+          }
+
         throw new Error(
           `Black Forest API error: ${response.status} - ${errorData}`
         );
       }
 
       const result = (await response.json()) as BlackForestApiResponse;
+      console.log(`Job ${jobId} status: ${result.status}`);
+      
       return result;
     } catch (error) {
-      console.error('Error checking job status:', error);
-      throw new Error(
-        `Failed to check job status: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      console.error(`Error checking job status for ${jobId}:`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        jobId
+      });
+      
+      // Se for um erro de rede ou parsing, re-throw
+      if (error instanceof Error && !error.message.includes('Black Forest API error')) {
+        throw new Error(
+          `Network error checking job status: ${error.message}`
+        );
+      }
+      
+      throw error;
     }
   }
 
