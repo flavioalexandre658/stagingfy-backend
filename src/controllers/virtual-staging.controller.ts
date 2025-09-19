@@ -225,17 +225,16 @@ export class VirtualStagingController {
       );
       const stagingPrompt = await chatGPTService.generateVirtualStagingPrompt(
         roomType,
-        furnitureStyle,
-        imageBase64
+        furnitureStyle
       );
 
-      console.log('prompt', stagingPrompt.prompt);
+      console.log('prompt', stagingPrompt);
 
       // Etapa 2: Processar com flux-kontext-pro
       console.log(`[${uploadId}] Etapa 2: Processando com flux-kontext-pro...`);
       const fluxResponse = await blackForestService.generateVirtualStaging(
         imageBase64,
-        stagingPrompt.prompt
+        stagingPrompt
       );
 
       // Salvar job ID no banco de dados

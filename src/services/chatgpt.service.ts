@@ -9,12 +9,6 @@ export interface ImageAnalysis {
   existingElements: string[];
 }
 
-export interface VirtualStagingPrompt {
-  prompt: string;
-  designPrinciples: string[];
-  suggestedElements: string[];
-}
-
 class ChatGPTService {
   private openai: OpenAI;
 
@@ -26,12 +20,11 @@ class ChatGPTService {
 
   /**
    * Analyze an interior image using GPT-4o Vision
-   * to extract architectural and environmental details.
    */
   async analyzeImage(imageBase64: string): Promise<ImageAnalysis> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o', // Best multimodal model
+        model: 'gpt-4o',
         messages: [
           {
             role: 'user',
@@ -56,7 +49,7 @@ class ChatGPTService {
         ],
         max_tokens: 800,
         temperature: 0.2,
-        response_format: { type: 'json_object' }, // force valid JSON
+        response_format: { type: 'json_object' },
       });
 
       const content = response.choices[0]?.message?.content;
@@ -70,67 +63,49 @@ class ChatGPTService {
   }
 
   /**
-   * Generate an optimized virtual staging prompt using GPT-4o with visual context,
-   * specifically designed for flux-kontext-pro to add furniture and interior decoration.
+   * Generate a final staging prompt in English, ready for flux-kontext-pro
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle,
-    imageBase64: string
-  ): Promise<VirtualStagingPrompt> {
+    furnitureStyle: FurnitureStyle
+  ): Promise<string> {
     try {
       const systemPrompt = `You are an expert interior designer specializing in virtual staging for AI image generation.
-Your task is to analyze the provided room image and create optimized prompts for flux-kontext-pro that add furniture and interior decoration.
+Your job is to write ONE clear, final prompt in English for flux-kontext-pro.
 
-CRITICAL REQUIREMENTS:
-- ONLY add furniture, decorative objects, lighting fixtures, and interior accessories
-- NEVER modify walls, floors, ceilings, doors, windows, or architectural structure
-- Preserve the original lighting and architectural features
-- Focus on realistic furniture placement and interior decoration
-- Use specific, detailed descriptions for better AI generation results
-- Consider the existing space, lighting, and architectural elements visible in the image`;
+CRITICAL RULES:
+- ONLY add furniture, decorative objects, lighting fixtures, and accessories
+- NEVER modify walls, floors, ceilings, doors, windows, or lighting
+- Preserve all existing architectural and lighting elements
+- Keep descriptions realistic, detailed, and specific
+- Focus on furniture placement, proportions, and harmony of style
+- Output must be a single staging prompt in English, ready to send directly to flux-kontext-pro.`;
 
-      const userPrompt = `Analyze this room image and create an optimized flux-kontext-pro prompt for virtual staging:
+      const userPrompt = `Based on the following image analysis:
 
 ROOM TYPE: ${this.getRoomTypeDescription(roomType)}
 FURNITURE STYLE: ${this.getFurnitureStyleDescription(furnitureStyle)}
 
-Based on what you see in the image, generate a detailed prompt that will add appropriate furniture and decoration while preserving all existing architectural elements, lighting, and spatial characteristics.
+Write a final flux-kontext-pro prompt like this example:
 
-Return ONLY valid JSON:
-{
-  "prompt": "detailed flux-kontext-pro prompt for adding furniture and interior decoration based on the analyzed image",
-  "designPrinciples": ["key design principles applied based on the room's characteristics"],
-  "suggestedElements": ["specific furniture and decor items to be added that fit the space"]
-}`;
+"Furnish the empty bedroom in the uploaded image with modern furniture while preserving the existing walls, floor, ceiling, windows, and lighting. Add a queen-size bed featuring a sleek, minimalist headboard, positioned centrally against one wall. Include two contemporary nightstands on either side of the bed, each topped with stylish lamps. Incorporate a modern wardrobe or dresser aligned with the room’s proportions. Place a subtle area rug under the bed to enhance the cozy atmosphere. Maintain a cohesive modern interior design style throughout, without altering any architectural elements."
+
+Now write the final prompt for this case:`;
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
-          { 
-            role: 'user', 
-            content: [
-              { type: 'text', text: userPrompt },
-              { 
-                type: 'image_url', 
-                image_url: { 
-                  url: `data:image/jpeg;base64,${imageBase64}`,
-                  detail: 'high'
-                } 
-              }
-            ]
-          }
+          { role: 'user', content: userPrompt },
         ],
-        max_tokens: 1200,
+        max_tokens: 800,
         temperature: 0.7,
-        response_format: { type: 'json_object' },
       });
 
-      const content = response.choices[0]?.message?.content;
+      const content = response.choices[0]?.message?.content?.trim();
       if (!content) throw new Error('Empty response from GPT-4o');
 
-      return JSON.parse(content);
+      return content;
     } catch (error) {
       console.error('Error generating virtual staging prompt:', error);
       throw new Error('Prompt generation failed');
