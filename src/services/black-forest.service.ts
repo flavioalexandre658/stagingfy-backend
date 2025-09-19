@@ -204,15 +204,11 @@ class BlackForestService {
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.error(`Black Forest API error for job ${jobId}:`, {
-          status: response.status,
-          statusText: response.statusText,
-          errorData,
-        });
 
         // Tratamento específico para diferentes tipos de erro
         if (response.status === 404) {
-          // Job não encontrado - pode ser que ainda não esteja pronto
+          // Job não encontrado - pode ser que ainda não esteja pronto ou ainda sendo processado
+          console.log(`Job ${jobId} não encontrado (404) - pode estar sendo processado`);
           const errorResponse: BlackForestApiResponse = {
             id: jobId,
             status: 'Task not found',
@@ -220,6 +216,13 @@ class BlackForestService {
           };
           return errorResponse;
         }
+
+        // Para outros erros, logar como erro
+        console.error(`Black Forest API error for job ${jobId}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        });
 
         throw new Error(
           `Black Forest API error: ${response.status} - ${errorData}`

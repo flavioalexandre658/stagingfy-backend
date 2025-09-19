@@ -228,11 +228,6 @@ export class VirtualStagingController {
         furnitureStyle,
         imageBase64
       );
-      console.log(`[${uploadId}] Prompt gerado:`, {
-        promptLength: stagingPrompt.prompt.length,
-        designPrinciplesCount: stagingPrompt.designPrinciples.length,
-        suggestedElementsCount: stagingPrompt.suggestedElements.length,
-      });
 
       console.log('prompt', stagingPrompt.prompt);
 
@@ -269,6 +264,9 @@ export class VirtualStagingController {
           `[${uploadId}] Iniciando polling para job ${fluxResponse.id} (máximo ${maxAttempts} tentativas)`
         );
 
+        let consecutiveNotFoundCount = 0;
+        const maxConsecutiveNotFound = 10; // Máximo de 10 tentativas consecutivas de "not found"
+
         while (attempts < maxAttempts) {
           try {
             console.log(
@@ -286,24 +284,49 @@ export class VirtualStagingController {
               break;
             }
 
-            // Verificar se falhou
-            if (
-              completedJob.status === 'Error' ||
-              completedJob.status === 'Task not found'
-            ) {
+            // Verificar se falhou definitivamente
+            if (completedJob.status === 'Error') {
               console.error(
                 `[${uploadId}] Job falhou com status: ${completedJob.status}`
               );
               throw new Error(
-                `Processamento falhou: ${completedJob.status} - ${completedJob.error || 'Job não encontrado'}`
+                `Processamento falhou: ${completedJob.status} - ${completedJob.error || 'Erro no processamento'}`
               );
             }
 
-            // Aguardar antes da próxima tentativa
-            console.log(
-              `[${uploadId}] Aguardando 2 segundos antes da próxima verificação...`
-            );
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Tratamento especial para "Task not found"
+            if (completedJob.status === 'Task not found') {
+              consecutiveNotFoundCount++;
+              console.warn(
+                `[${uploadId}] Job não encontrado (${consecutiveNotFoundCount}/${maxConsecutiveNotFound}). Pode estar sendo processado...`
+              );
+
+              // Se muitas tentativas consecutivas de "not found", considerar como erro
+              if (consecutiveNotFoundCount >= maxConsecutiveNotFound) {
+                console.error(
+                  `[${uploadId}] Job não encontrado após ${maxConsecutiveNotFound} tentativas consecutivas`
+                );
+                throw new Error(
+                  `Processamento falhou: Job não encontrado na API após múltiplas tentativas`
+                );
+              }
+
+              // Aguardar mais tempo para jobs não encontrados
+              console.log(
+                `[${uploadId}] Aguardando 5 segundos antes da próxima verificação (job não encontrado)...`
+              );
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            } else {
+              // Reset contador se o job foi encontrado (mesmo que não esteja pronto)
+              consecutiveNotFoundCount = 0;
+
+              // Aguardar antes da próxima tentativa
+              console.log(
+                `[${uploadId}] Aguardando 2 segundos antes da próxima verificação...`
+              );
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
             attempts++;
           } catch (error) {
             console.error(
@@ -312,12 +335,18 @@ export class VirtualStagingController {
             );
             attempts++;
 
-            // Se for erro 404, aguardar um pouco mais antes de tentar novamente
-            if (error instanceof Error && error.message.includes('404')) {
+            // Se for erro de rede ou outro erro não relacionado ao status
+            if (
+              error instanceof Error &&
+              !error.message.includes('Processamento falhou')
+            ) {
               console.log(
-                `[${uploadId}] Erro 404 detectado, aguardando 5 segundos extras...`
+                `[${uploadId}] Erro de rede detectado, aguardando 3 segundos antes de tentar novamente...`
               );
-              await new Promise(resolve => setTimeout(resolve, 5000));
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+              // Se for erro de processamento, re-throw
+              throw error;
             }
           }
         }
