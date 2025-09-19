@@ -2,10 +2,7 @@ import OpenAI from 'openai';
 import { RoomType, FurnitureStyle } from '../interfaces/upload.interface';
 
 export interface ImageAnalysis {
-  dimensions: {
-    width: number;
-    height: number;
-  };
+  dimensions: { width: number; height: number };
   description: string;
   lighting: string;
   architecture: string;
@@ -29,62 +26,53 @@ class ChatGPTService {
   }
 
   /**
-   * Analisa a imagem usando GPT Vision para extrair informações arquitetônicas
+   * Analyze an interior image using GPT-4o Vision
+   * to extract architectural and environmental details.
    */
   async analyzeImage(imageBase64: string): Promise<ImageAnalysis> {
     try {
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: 'gpt-4o', // Best multimodal model
         messages: [
           {
-            role: "user",
+            role: 'user',
             content: [
               {
-                type: "text",
-                text: `Analise esta imagem de interior e forneça as seguintes informações em formato JSON:
+                type: 'text',
+                text: `Analyze this interior image and return ONLY valid JSON with the following structure:
                 {
-                  "dimensions": {"width": estimativa_largura, "height": estimativa_altura},
-                  "description": "descrição detalhada do ambiente",
-                  "lighting": "tipo e qualidade da iluminação",
-                  "architecture": "características arquitetônicas (pé direito, janelas, portas, etc)",
-                  "existingElements": ["lista", "de", "elementos", "já", "presentes"]
-                }
-                
-                Seja preciso e técnico na análise, focando em aspectos que influenciam o design de interiores.`
+                  "dimensions": {"width": estimated_width, "height": estimated_height},
+                  "description": "detailed description of the room",
+                  "lighting": "lighting type and quality",
+                  "architecture": "architectural features (ceiling height, windows, doors, etc.)",
+                  "existingElements": ["list of existing furniture or objects"]
+                }`,
               },
               {
-                type: "image_url",
-                image_url: {
-                  url: `data:image/jpeg;base64,${imageBase64}`
-                }
-              }
-            ]
-          }
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
+              },
+            ],
+          },
         ],
-        max_tokens: 1000,
-        temperature: 0.3
+        max_tokens: 800,
+        temperature: 0.2,
+        response_format: { type: 'json_object' }, // force valid JSON
       });
 
       const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('Resposta vazia do ChatGPT');
-      }
+      if (!content) throw new Error('Empty response from GPT-4o');
 
-      // Extrair JSON da resposta
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Formato de resposta inválido do ChatGPT');
-      }
-
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(content);
     } catch (error) {
-      console.error('Erro ao analisar imagem com ChatGPT:', error);
-      throw new Error('Falha na análise da imagem');
+      console.error('Error analyzing image with GPT-4o:', error);
+      throw new Error('Image analysis failed');
     }
   }
 
   /**
-   * Gera prompt refinado para virtual staging usando ChatGPT como arquiteto/designer
+   * Generate a refined virtual staging prompt using GPT-4o,
+   * acting as an expert interior designer and architect.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
@@ -92,93 +80,78 @@ class ChatGPTService {
     imageAnalysis: ImageAnalysis
   ): Promise<VirtualStagingPrompt> {
     try {
-      const systemPrompt = `Você é um arquiteto e designer de interiores especialista em virtual staging. 
-      Sua função é criar prompts detalhados para IA generativa (flux-kontext-pro) que adicionem móveis e elementos decorativos 
-      a ambientes vazios ou parcialmente mobiliados, mantendo o ambiente real sem alterações estruturais.
+      const systemPrompt = `You are an expert architect and interior designer specializing in virtual staging.
+Your task is to generate detailed prompts for generative AI (flux-kontext-pro) that add furniture and decor
+to empty or partially furnished spaces while preserving the original architecture.`;
 
-      Princípios que você deve seguir:
-      - Fluxo de circulação adequado
-      - Proporção e escala corretas
-      - Balanceamento visual
-      - Harmonia de cores e texturas
-      - Funcionalidade do espaço
-      - Respeitar a arquitetura existente
-      - Manter iluminação natural
-      - Adicionar apenas móveis e decoração (virtual staging)`;
+      const userPrompt = `Based on the following room analysis, generate a detailed staging prompt:
 
-      const userPrompt = `Com base na análise da imagem:
-      
-      AMBIENTE: ${this.getRoomTypeDescription(roomType)}
-      ESTILO: ${this.getFurnitureStyleDescription(furnitureStyle)}
-      
-      ANÁLISE DA IMAGEM:
-      - Dimensões estimadas: ${imageAnalysis.dimensions.width}x${imageAnalysis.dimensions.height}
-      - Descrição: ${imageAnalysis.description}
-      - Iluminação: ${imageAnalysis.lighting}
-      - Arquitetura: ${imageAnalysis.architecture}
-      - Elementos existentes: ${imageAnalysis.existingElements.join(', ')}
-      
-      Gere um prompt detalhado para adicionar móveis e decoração adequados, seguindo os princípios de design de interiores.
-      
-      Responda em formato JSON:
-      {
-        "prompt": "prompt detalhado para a IA generativa",
-        "negativePrompt": "elementos a evitar",
-        "designPrinciples": ["princípios", "aplicados"],
-        "suggestedElements": ["móveis", "e", "elementos", "sugeridos"]
-      }`;
+ROOM TYPE: ${this.getRoomTypeDescription(roomType)}
+FURNITURE STYLE: ${this.getFurnitureStyleDescription(furnitureStyle)}
+
+IMAGE ANALYSIS:
+- Dimensions: ${imageAnalysis.dimensions.width}x${imageAnalysis.dimensions.height}
+- Description: ${imageAnalysis.description}
+- Lighting: ${imageAnalysis.lighting}
+- Architecture: ${imageAnalysis.architecture}
+- Existing Elements: ${imageAnalysis.existingElements.join(', ')}
+
+Return ONLY valid JSON:
+{
+  "prompt": "highly detailed generative AI prompt for staging",
+  "negativePrompt": "things to avoid (walls, floors, ceiling, structure)",
+  "designPrinciples": ["applied principles"],
+  "suggestedElements": ["list of furniture and decor suggestions"]
+}`;
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: 'gpt-4o',
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
-        max_tokens: 1500,
-        temperature: 0.7
+        max_tokens: 1200,
+        temperature: 0.6,
+        response_format: { type: 'json_object' }, // ensures JSON
       });
 
       const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error('Resposta vazia do ChatGPT');
-      }
+      if (!content) throw new Error('Empty response from GPT-4o');
 
-      // Extrair JSON da resposta
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Formato de resposta inválido do ChatGPT');
-      }
-
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(content);
     } catch (error) {
-      console.error('Erro ao gerar prompt com ChatGPT:', error);
-      throw new Error('Falha na geração do prompt');
+      console.error('Error generating virtual staging prompt:', error);
+      throw new Error('Prompt generation failed');
     }
   }
 
   private getRoomTypeDescription(roomType: RoomType): string {
-    const descriptions = {
-      living_room: 'Sala de estar - espaço social para relaxamento e entretenimento',
-      bedroom: 'Quarto - ambiente íntimo para descanso e privacidade',
-      kitchen: 'Cozinha - área funcional para preparo de alimentos',
-      bathroom: 'Banheiro - espaço de higiene e bem-estar',
-      dining_room: 'Sala de jantar - ambiente para refeições e convívio',
-      office: 'Escritório - espaço de trabalho e produtividade',
-      balcony: 'Varanda - área externa de lazer e contemplação'
+    const descriptions: Record<RoomType, string> = {
+      living_room:
+        'Living Room — social space for relaxation and entertainment',
+      bedroom: 'Bedroom — intimate space for rest and privacy',
+      kitchen: 'Kitchen — functional area for food preparation',
+      bathroom: 'Bathroom — hygiene and wellness space',
+      dining_room: 'Dining Room — area for meals and gatherings',
+      office: 'Office — workspace for productivity',
+      balcony: 'Balcony — outdoor leisure and contemplation area',
     };
     return descriptions[roomType];
   }
 
   private getFurnitureStyleDescription(furnitureStyle: FurnitureStyle): string {
-    const descriptions = {
-      modern: 'Moderno - linhas limpas, minimalismo, materiais contemporâneos',
-      japanese_minimalist: 'Minimalismo japonês - simplicidade, funcionalidade, elementos naturais',
-      scandinavian: 'Escandinavo - aconchego, cores claras, madeira natural',
-      industrial: 'Industrial - materiais brutos, metal, concreto, estética urbana',
-      classic: 'Clássico - elegância atemporal, simetria, materiais nobres',
-      contemporary: 'Contemporâneo - tendências atuais, conforto, versatilidade',
-      rustic: 'Rústico - materiais naturais, texturas orgânicas, aconchego rural',
-      bohemian: 'Boêmio - ecletismo, cores vibrantes, texturas variadas, arte'
+    const descriptions: Record<FurnitureStyle, string> = {
+      modern: 'Modern — clean lines, minimalism, contemporary materials',
+      japanese_minimalist:
+        'Japanese Minimalist — simplicity, functionality, natural elements',
+      scandinavian: 'Scandinavian — cozy, light colors, natural wood',
+      industrial:
+        'Industrial — raw materials, metal, concrete, urban aesthetic',
+      classic: 'Classic — timeless elegance, symmetry, noble materials',
+      contemporary: 'Contemporary — current trends, comfort, versatility',
+      rustic: 'Rustic — natural materials, organic textures, rural coziness',
+      bohemian:
+        'Bohemian — eclecticism, vibrant colors, varied textures, artistic feel',
     };
     return descriptions[furnitureStyle];
   }
