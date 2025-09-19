@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { uploadRepository } from '../repositories/upload.repository';
 import { chatGPTService } from '../services/chatgpt.service';
-import { fluxKontextService } from '../services/flux-kontext.service';
+import { blackForestService } from '../services/black-forest.service';
 import { 
   CreateUploadRequest, 
   RoomType, 
@@ -102,7 +102,7 @@ export class VirtualStagingController {
       }
 
       // Verificar se os serviços estão configurados
-      if (!chatGPTService || !fluxKontextService.isConfigured()) {
+      if (!chatGPTService || !process.env.BLACK_FOREST_API_KEY) {
         res.status(500).json({
           success: false,
           message: 'Serviços de IA não configurados'
@@ -206,29 +206,34 @@ export class VirtualStagingController {
 
       // Etapa 3: Processar com flux-kontext-pro
       console.log('Processando com flux-kontext-pro...');
-      const fluxResponse = await fluxKontextService.processVirtualStaging({
-        model: 'flux-kontext-pro',
-        prompt: stagingPrompt.prompt,
-        image: imageBase64,
-        width: imageAnalysis.dimensions.width,
-        height: imageAnalysis.dimensions.height,
-        steps: 25,
-        guidance: 7.5,
-        strength: 0.7,
-        output_format: 'jpeg'
-      });
+      const fluxResponse = await blackForestService.generateVirtualStaging(
+        imageBase64,
+        stagingPrompt.prompt
+      );
 
-      // Etapa 4: Aguardar conclusão
-      console.log('Aguardando conclusão do processamento...');
-      const completedJob = await fluxKontextService.waitForCompletion(fluxResponse.id);
+      // Etapa 4: Aguardar conclusão (se necessário)
+       console.log('Aguardando conclusão do processamento...');
+       let completedJob = fluxResponse;
+       
+       // Se retornou um job ID, aguardar conclusão
+       if (fluxResponse.id && !fluxResponse.result) {
+         completedJob = await blackForestService.checkJobStatus(fluxResponse.id);
+         
+         // Aguardar até completar (polling simples)
+         while (completedJob.status === 'Pending' || completedJob.status === 'Request Moderated') {
+           await new Promise(resolve => setTimeout(resolve, 2000));
+           completedJob = await blackForestService.checkJobStatus(fluxResponse.id);
+         }
+       }
 
-      if (!completedJob.result?.image_url) {
+      const imageUrl = completedJob.result?.sample || completedJob.result?.url;
+      if (!imageUrl) {
         throw new Error('Nenhuma imagem foi gerada');
       }
 
       // Etapa 5: Salvar imagem processada
       console.log('Salvando imagem processada...');
-      const outputImageUrl = await this.saveProcessedImage(uploadId, completedJob.result.image_url);
+      const outputImageUrl = await this.saveProcessedImage(uploadId, imageUrl);
 
       // Atualizar registro com resultado
       await uploadRepository.updateOutputImage(uploadId, outputImageUrl);

@@ -90,7 +90,7 @@ class BlackForestService {
   }
 
   /**
-   * Envia uma imagem para processamento na Black Forest API
+   * Envia uma imagem para processamento na Black Forest API usando flux-pro-1.0-fill
    */
   async generateStagedImage(
     imageBase64: string,
@@ -134,6 +134,50 @@ class BlackForestService {
       console.error('Error calling Black Forest API:', error);
       throw new Error(
         `Failed to generate staged image: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Gera virtual staging usando o modelo flux-kontext-pro
+   */
+  async generateVirtualStaging(
+    imageBase64: string,
+    prompt: string
+  ): Promise<BlackForestApiResponse> {
+    try {
+      const requestBody = {
+        model: 'flux-kontext-pro',
+        prompt,
+        image: imageBase64,
+        steps: 50,
+        guidance: 7.5,
+        output_format: 'jpeg',
+        safety_tolerance: 2,
+      };
+
+      const response = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
+        method: 'POST',
+        headers: {
+          'x-key': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(
+          `Black Forest API error: ${response.status} - ${errorData}`
+        );
+      }
+
+      const result = (await response.json()) as BlackForestApiResponse;
+      return result;
+    } catch (error) {
+      console.error('Error calling Black Forest API (flux-kontext-pro):', error);
+      throw new Error(
+        `Failed to generate virtual staging: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
