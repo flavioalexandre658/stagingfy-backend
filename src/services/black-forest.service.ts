@@ -87,11 +87,11 @@ class BlackForestService {
     const payload = imageBase64.includes('base64,')
       ? imageBase64.split('base64,')[1]
       : imageBase64;
-    
+
     if (!payload) {
       throw new Error('Invalid base64 image data');
     }
-    
+
     const buf = Buffer.from(payload, 'base64');
     const meta = await sharp(buf).metadata();
     if (!meta.width || !meta.height) {
@@ -165,7 +165,7 @@ class BlackForestService {
         ...(opts?.seed !== undefined && { seed: opts.seed }),
       };
 
-      const resp = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
+      const resp = await fetch(`${this.baseUrl}/flux-kontext-max`, {
         method: 'POST',
         headers: {
           'x-key': this.apiKey,
@@ -208,7 +208,7 @@ class BlackForestService {
     const height = this.roundToMultiple(ch, 32);
 
     const requestBody = {
-      model: 'flux-pro-1.0-fill',
+      model: 'flux-max-1.0-fill',
       prompt,
       image: imageBase64,
       mask: maskBase64,
@@ -220,7 +220,7 @@ class BlackForestService {
       safety_tolerance: 2,
     };
 
-    const resp = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
+    const resp = await fetch(`${this.baseUrl}/flux-max-1.0-fill`, {
       method: 'POST',
       headers: {
         'x-key': this.apiKey,
