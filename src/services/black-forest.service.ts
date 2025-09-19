@@ -143,7 +143,7 @@ class BlackForestService {
    */
   async checkJobStatus(jobId: string): Promise<BlackForestApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/images/${jobId}`, {
+      const response = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
         method: 'GET',
         headers: {
           'x-key': this.apiKey,

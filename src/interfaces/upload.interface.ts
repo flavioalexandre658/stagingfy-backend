@@ -59,12 +59,17 @@ export interface BlackForestApiRequest {
 
 export interface BlackForestApiResponse {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'Task not found' | 'Pending' | 'Request Moderated' | 'Content Moderated' | 'Ready' | 'Error';
+  polling_url?: string; // Retornado na resposta inicial
   result?: {
-    url: string;
-    width: number;
-    height: number;
+    sample?: string; // URL da imagem gerada
+    url?: string; // Para compatibilidade
+    width?: number;
+    height?: number;
   };
+  progress?: number | null;
+  details?: object | null;
+  preview?: object | null;
   error?: string;
 }
 

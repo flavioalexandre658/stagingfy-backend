@@ -281,16 +281,22 @@ export class UploadController {
       try {
         const jobStatus = await blackForestService.checkJobStatus(jobId);
 
-        if (jobStatus.status === 'completed' && jobStatus.result?.url) {
+        if (jobStatus.status === 'Ready' && jobStatus.result?.sample) {
           // Download da imagem processada e upload para S3
-          const outputImageUrl = await this.saveProcessedImage(uploadId, jobStatus.result.url);
+          const outputImageUrl = await this.saveProcessedImage(uploadId, jobStatus.result.sample);
           
           // Atualizar registro com a URL final
           await uploadRepository.updateOutputImage(uploadId, outputImageUrl);
           return;
 
-        } else if (jobStatus.status === 'failed') {
+        } else if (jobStatus.status === 'Error') {
           await uploadRepository.updateStatus(uploadId, 'failed', jobStatus.error || 'Processamento falhou na Black Forest API');
+          return;
+        } else if (jobStatus.status === 'Task not found') {
+          await uploadRepository.updateStatus(uploadId, 'failed', 'Job não encontrado na Black Forest API');
+          return;
+        } else if (jobStatus.status === 'Request Moderated' || jobStatus.status === 'Content Moderated') {
+          await uploadRepository.updateStatus(uploadId, 'failed', 'Conteúdo foi moderado pela Black Forest API');
           return;
         }
 
