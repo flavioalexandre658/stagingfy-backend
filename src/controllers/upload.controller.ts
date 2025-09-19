@@ -203,11 +203,30 @@ export class UploadController {
       }
       const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
-      // Converter imagem para base64
-      const imageBase64 = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+      // Converter imagem para base64 (sem prefixo data URL)
+      const imageBase64 = imageBuffer.toString('base64');
 
       // Gerar máscara branca com as mesmas dimensões da imagem
-      const maskBase64 = await generateWhiteMaskBase64(imageBuffer);
+      const maskBase64String = await generateWhiteMaskBase64(imageBuffer);
+      // Remover prefixo data URL da máscara também
+      const maskBase64 = maskBase64String.replace(/^data:image\/png;base64,/, '');
+
+      // Validar tamanho da imagem base64 (limite de ~10MB em base64)
+      const maxBase64Size = 14 * 1024 * 1024; // ~10MB original = ~14MB em base64
+      if (imageBase64.length > maxBase64Size) {
+        throw new Error(`Imagem muito grande: ${imageBase64.length} bytes em base64. Máximo permitido: ${maxBase64Size} bytes`);
+      }
+
+      // Log para diagnóstico
+      console.log('Black Forest API Request Details:', {
+        uploadId,
+        imageSize: imageBuffer.length,
+        imageBase64Length: imageBase64.length,
+        maskBase64Length: maskBase64.length,
+        roomType,
+        furnitureStyle,
+        imageFormat: imageBuffer.subarray(0, 4).toString('hex') // Magic number para identificar formato
+      });
 
       // Chamar Black Forest API com imagem e máscara em base64
       const blackForestResponse = await blackForestService.generateStagedImage(
@@ -228,12 +247,26 @@ export class UploadController {
       }
 
     } catch (error) {
-      console.error(`Erro no processamento do upload ${uploadId}:`, error);
-      await uploadRepository.updateStatus(
-        uploadId, 
-        'failed', 
-        error instanceof Error ? error.message : 'Erro desconhecido'
-      );
+      console.error(`Erro no processamento do upload ${uploadId}:`, {
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined,
+        uploadId,
+        roomType,
+        furnitureStyle
+      });
+      
+      // Capturar detalhes específicos de erro da API Black Forest
+      let errorMessage = 'Erro desconhecido';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Se for erro da API Black Forest, tentar extrair mais detalhes
+        if (error.message.includes('Black Forest API error')) {
+          console.error('Detalhes do erro da Black Forest API:', error.message);
+        }
+      }
+      
+      await uploadRepository.updateStatus(uploadId, 'failed', errorMessage);
     }
   }
 
