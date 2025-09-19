@@ -26,6 +26,7 @@ export interface Upload {
   furnitureStyle: FurnitureStyle;
   inputImageUrl: string;
   outputImageUrl?: string;
+  maskUrl?: string;
   status: UploadStatus;
   errorMessage?: string;
   blackForestJobId?: string;
@@ -37,6 +38,7 @@ export interface CreateUploadRequest {
   roomType: RoomType;
   furnitureStyle: FurnitureStyle;
   plan?: 'free' | 'premium';
+  saveMask?: boolean;
 }
 
 export interface BlackForestApiRequest {

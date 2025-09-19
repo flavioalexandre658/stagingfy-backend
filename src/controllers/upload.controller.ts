@@ -61,7 +61,7 @@ export class UploadController {
       }
 
       // Validar dados do corpo da requisição
-      const { roomType, furnitureStyle, plan = 'free' } = req.body as CreateUploadRequest & { plan: string };
+      const { roomType, furnitureStyle, plan = 'free', saveMask = false } = req.body as CreateUploadRequest & { plan: string };
       
       if (!roomType || !furnitureStyle) {
         res.status(400).json({
@@ -115,19 +115,62 @@ export class UploadController {
         inputImageUrl,
       });
 
+      // Salvar máscara no S3 se solicitado
+      let maskUrl: string | undefined;
+      if (saveMask) {
+        try {
+          // Gerar máscara branca
+          const maskBase64 = await generateWhiteMaskBase64(req.file.buffer);
+          
+          // Remover o prefixo data:image/png;base64, para obter apenas o base64
+          const base64Data = maskBase64.replace(/^data:image\/png;base64,/, '');
+          const maskBuffer = Buffer.from(base64Data, 'base64');
+          
+          // Gerar nome único para a máscara
+          const maskFileName = `masks/${userId}/${uuidv4()}.png`;
+          
+          // Upload da máscara para S3
+          const maskUploadCommand = new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: maskFileName,
+            Body: maskBuffer,
+            ContentType: 'image/png',
+          });
+          
+          await s3Client.send(maskUploadCommand);
+          
+          // Gerar URL da máscara no S3
+          maskUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${maskFileName}`;
+          
+          // Atualizar o registro no banco com a URL da máscara
+          await uploadRepository.updateMaskUrl(upload.id, maskUrl);
+          
+        } catch (maskError) {
+          console.error('Erro ao salvar máscara:', maskError);
+          // Não falhar o upload principal se houver erro na máscara
+        }
+      }
+
       // Iniciar processamento assíncrono
       this.processImageAsync(upload.id, inputImageUrl, roomType as RoomType, furnitureStyle as FurnitureStyle);
 
       // Retornar resposta imediata
+      const responseData: any = {
+        uploadId: upload.id,
+        status: upload.status,
+        inputImageUrl: upload.inputImageUrl,
+        createdAt: upload.createdAt
+      };
+
+      // Incluir URL da máscara na resposta se foi salva
+      if (maskUrl) {
+        responseData.maskUrl = maskUrl;
+      }
+
       res.status(201).json({
         success: true,
         message: 'Upload realizado com sucesso. Processamento iniciado.',
-        data: {
-          uploadId: upload.id,
-          status: upload.status,
-          inputImageUrl: upload.inputImageUrl,
-          createdAt: upload.createdAt
-        }
+        data: responseData
       });
 
     } catch (error) {

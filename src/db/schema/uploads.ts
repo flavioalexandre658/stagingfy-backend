@@ -41,6 +41,7 @@ export const uploads = pgTable('uploads', {
   furnitureStyle: furnitureStyleEnum('furniture_style').notNull(),
   inputImageUrl: text('input_image_url').notNull(),
   outputImageUrl: text('output_image_url'),
+  maskUrl: text('mask_url'), // URL da máscara salva no S3
   status: uploadStatusEnum('status').default('pending').notNull(),
   errorMessage: text('error_message'),
   blackForestJobId: text('black_forest_job_id'), // ID do job na API da Black Forest

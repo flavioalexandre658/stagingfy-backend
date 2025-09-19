@@ -122,6 +122,25 @@ export class UploadRepository {
   }
 
   /**
+   * Atualiza a URL da máscara salva no S3
+   */
+  async updateMaskUrl(
+    id: string, 
+    maskUrl: string
+  ): Promise<Upload | null> {
+    const [updatedUpload] = await db
+      .update(uploads)
+      .set({ 
+        maskUrl,
+        updatedAt: new Date()
+      })
+      .where(eq(uploads.id, id))
+      .returning();
+
+    return updatedUpload ? (updatedUpload as Upload) : null;
+  }
+
+  /**
    * Busca uploads pendentes de processamento
    */
   async findPendingUploads(): Promise<Upload[]> {

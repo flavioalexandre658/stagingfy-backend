@@ -45,9 +45,10 @@ export function bufferToBase64(imageBuffer: Buffer): string {
 /**
  * Gera máscara branca e retorna em base64
  * @param imageBuffer Buffer da imagem original
- * @returns String base64 da máscara branca
+ * @returns String base64 da máscara branca com prefixo data:image/png;base64,
  */
 export async function generateWhiteMaskBase64(imageBuffer: Buffer): Promise<string> {
   const maskBuffer = await generateWhiteMask(imageBuffer);
-  return bufferToBase64(maskBuffer);
+  const base64String = bufferToBase64(maskBuffer);
+  return `data:image/png;base64,${base64String}`;
 }

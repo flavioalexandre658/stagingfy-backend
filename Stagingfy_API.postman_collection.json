@@ -256,6 +256,21 @@
                   "key": "image",
                   "type": "file",
                   "src": []
+                },
+                {
+                  "key": "roomType",
+                  "value": "living_room",
+                  "type": "text"
+                },
+                {
+                  "key": "furnitureStyle",
+                  "value": "modern",
+                  "type": "text"
+                },
+                {
+                  "key": "saveMask",
+                  "value": "true",
+                  "type": "text"
                 }
               ]
             },
