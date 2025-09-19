@@ -93,7 +93,7 @@ Write a final flux-kontext-pro prompt like this example:
 Now write the final prompt for this case:`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

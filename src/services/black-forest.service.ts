@@ -147,10 +147,8 @@ class BlackForestService {
   ): Promise<BlackForestApiResponse> {
     try {
       const requestBody = {
-        model: 'flux-kontext-pro',
         prompt,
-        image: imageBase64,
-        steps: 50,
+        input_image: imageBase64,
         guidance: 7.5,
         output_format: 'jpeg',
         safety_tolerance: 2,
@@ -208,7 +206,9 @@ class BlackForestService {
         // Tratamento específico para diferentes tipos de erro
         if (response.status === 404) {
           // Job não encontrado - pode ser que ainda não esteja pronto ou ainda sendo processado
-          console.log(`Job ${jobId} não encontrado (404) - pode estar sendo processado`);
+          console.log(
+            `Job ${jobId} não encontrado (404) - pode estar sendo processado`
+          );
           const errorResponse: BlackForestApiResponse = {
             id: jobId,
             status: 'Task not found',
