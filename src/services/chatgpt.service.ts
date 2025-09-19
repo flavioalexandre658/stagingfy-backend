@@ -3,105 +3,114 @@ import OpenAI from 'openai';
 import { RoomType, FurnitureStyle } from '../interfaces/upload.interface';
 
 class ChatGPTService {
-  // Mantemos a dependência aqui caso você queira usar LLM depois.
-  private openai: OpenAI | null;
+  private openai: OpenAI;
 
   constructor() {
-    this.openai = process.env.OPENAI_API_KEY
-      ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-      : null;
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
   /**
    * Generates ONE final prompt (English) for flux-kontext-pro.
-   * Non-destructive: additive-only, pixel/geometry/lighting preserving.
-   *
-   * ⚠️ Não chama LLM. Retorna a string final pronta para enviar ao flux-kontext-pro.
+   * Non-destructive, additive-only, pixel-preserving.
+   * Follows BFL Kontext i2i prompting guidance:
+   * - Be explicit about what to keep unchanged
+   * - Use precise action verbs (add/place/keep), avoid “transform”
+   * - Control composition: keep camera/framing/scale identical
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    // ⚠️ Usa o seu catálogo/pacotes pré-definidos:
+    // (Mantemos o uso dos “pacotes”)
     const packageItems = this.getPackageCombination(roomType, furnitureStyle);
 
-    const roomLabel = this.getRoomTypeLabel(roomType);
-    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
+    const roomLabel = this.getRoomTypeLabel(roomType); // e.g., "living room"
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g., "modern"
 
-    return this.buildKontextPrompt(roomLabel, styleLabel, packageItems);
-  }
-
-  /**
-   * Constrói UM prompt final para o flux-kontext-pro (inglês).
-   * Política não-destrutiva, apenas adição, preservando pixel/geom/iluminação.
-   */
-  private buildKontextPrompt(
-    roomLabel: string,
-    styleLabel: string,
-    packageItems: string[]
-  ) {
-    const hardConstraints = [
-      'Additive-only edit: add furniture/decor/accessories ONLY.',
-      'Do NOT change or repaint walls, floor, ceiling, beams, trims, baseboards, sockets/outlets, switches, doors, door frames, door opening, windows, curtains/blinds, or any architectural geometry.',
-      'Do NOT alter camera angle, lens, field of view, composition framing, or image boundaries.',
-      'Preserve all original lighting direction, intensity, color temperature, and shadows.',
-      'Respect true perspective, scale and vanishing lines of the existing scene.',
-      'If an item would collide with doors, paths, or require structural changes, SKIP it.',
-      'Edge crops are acceptable if an item sits near the frame.',
-    ];
-
-    const allowedScope = this.getNonDestructiveConstraints();
+    const constraints = this.getNonDestructiveConstraints();
     const negatives = this.getAbsoluteProhibitions();
 
-    const mustHaves =
-      packageItems && packageItems.length
-        ? packageItems.map(i => `- ${i}`).join('\n')
-        : '- If space and constraints allow, add a small, style-appropriate plant or framed artwork as a subtle finishing touch.';
+    // Breve abertura, direta e assertiva (sem verbos “transform”)
+    const base =
+      `Add furniture and decor to the ${roomLabel} in the uploaded photo in a ${styleLabel} style. ` +
+      `This is STRICTLY additive virtual staging; the original scene must remain EXACTLY as captured.`;
 
-    return [
-      `Furnish the ${roomLabel} in the uploaded photo in a ${styleLabel} style while preserving the original scene EXACTLY as captured. This is a non-destructive, additive-only virtual staging task.`,
-      '',
-      'HARD NON-DESTRUCTIVE CONSTRAINTS:',
-      ...hardConstraints.map(c => `• ${c}`),
-      '',
-      'ALLOWED ADDITIONS:',
-      ...allowedScope.map(c => `• ${c}`),
-      '',
-      'ABSOLUTE PROHIBITIONS:',
-      ...negatives.map(n => `• ${n}`),
-      '',
-      'MANDATORY PACKAGE ITEMS (include only if they fit without breaking constraints):',
-      mustHaves,
-      '',
-      'Composition & realism:',
-      '• Keep clear circulation; anchor seating/bed on the rug when applicable.',
-      '• Balance with one clear focal point; layer textures subtly; hide cables/clutter.',
-      '• Photorealistic materials consistent with the scene’s light; no artificial glow.',
-      '',
-      'Output: a photoreal result that looks like a professionally staged real-estate photograph. Do NOT remove or modify any existing architectural element; ADD furniture and decor ONLY.',
-    ].join('\n');
+    // Regras duras — escritas no formato recomendado pelo guia (preserve X, keep Y)
+    const hardChecklist = [
+      'Keep the exact camera angle, subject placement, framing, perspective lines, and image boundaries identical.',
+      'Preserve all existing architecture and finishes: walls, floor, ceiling, beams, trims, baseboards, skirting, door leaf and frame, the door opening, any existing windows, sockets/outlets, switches.',
+      'Preserve the original lighting direction, intensity, and color temperature. No global relighting.',
+      'Do NOT repaint, re-texture, expand, crop, or retouch any part of the room. No rescaling of architectural elements.',
+      'Only place new items where they physically fit in the visible space without blocking circulation or the door opening.',
+      'Allow partial crops near the image edges if necessary; never shift the camera to fit an object.',
+    ];
+
+    // Escopo do que PODE ser adicionado (curto e preciso)
+    const allowedScope = constraints;
+
+    // “Proibições absolutas” para cortar qualquer tendência do modelo de mexer na estrutura
+    const prohibitions = [
+      ...negatives,
+      'No new doors, windows, curtains/blinds, or openings; do not alter existing ones.',
+      'No ceiling fans or new built-in ceiling fixtures; only floor and table lamps may be added.',
+      'No baseboard/trim changes, no added cornices, no added beams, no wall art that requires structural change.',
+      'No mirroring/duplication of the room; no replacement of backgrounds or outside views.',
+    ];
+
+    // Itens mandatórios do “pacote” (apenas se couberem sem violar regras)
+    const mandatoryList = packageItems.map(i => `• ${i}`).join('\n');
+
+    // Observações finais de composição/estilo — curtas e operacionais
+    const composition = [
+      'Use realistic scale and perspective matching the scene.',
+      'Anchor main seating or bed to a rug when appropriate; keep clear circulation paths.',
+      'Favor cohesive palettes; subtle texture layering; keep cables/clutter hidden.',
+      'Photorealistic materials and shadows consistent with the input lighting; no artificial glow.',
+    ];
+
+    const finalPrompt = `${base}
+
+NON-DESTRUCTIVE GUARANTEES (hard constraints):
+${hardChecklist.map(l => `• ${l}`).join('\n')}
+
+ALLOWED ADDITIONS (scope):
+${allowedScope.map(c => `• ${c}`).join('\n')}
+
+ABSOLUTE PROHIBITIONS:
+${prohibitions.map(n => `• ${n}`).join('\n')}
+
+MANDATORY PACKAGE ITEMS (add only if they fit without breaking constraints):
+${mandatoryList}
+
+Styling & composition:
+${composition.map(c => `• ${c}`).join('\n')}
+
+Output: produce a photo-real result that looks like a professionally staged real-estate photograph. 
+Never remove or modify any existing architectural element; add furniture and decor ONLY.`;
+
+    // Retorna o prompt pronto, sem pós-processamento
+    return finalPrompt;
   }
 
   // --------- Non-destructive policy helpers ---------
 
-  /** O que PODE ser adicionado sem quebrar a política não-destrutiva. */
   private getNonDestructiveConstraints(): string[] {
+    // Lista concisa do que pode ser adicionado. Mantém a linguagem precisa (“Add/Place”),
+    // alinhada às boas práticas do guia.
     return [
-      'Furniture: sofas, beds, dining/coffee/side tables, consoles, TV stands, desks, wardrobes/dressers, nightstands, dining/desk chairs.',
-      'Lighting: floor/table lamps; pendant fixtures ONLY if placement does not require altering ceiling geometry.',
-      'Decor: framed artwork or mirrors, rugs, cushions/throws, books, bowls, vases, neutral accessories.',
-      'Plants: realistic indoor species in planters suited to the style.',
+      'Furniture: sofas, sectionals, armchairs, coffee tables, side tables, consoles, media units, beds, nightstands, desks, dining tables and chairs, wardrobes/dressers (freestanding only).',
+      'Lighting: floor lamps and table lamps only (no new ceiling fixtures).',
+      'Decor: framed artwork, mirrors, rugs, cushions, throws, books, bowls, vases, trays, minimal accessories.',
+      'Plants: realistic indoor species in planters appropriate to the style.',
     ];
   }
 
-  /** Lista de proibições absolutas para manter a cena intacta. */
   private getAbsoluteProhibitions(): string[] {
     return [
       'No deletion, movement, resizing, or repainting of door, door frame, or door opening.',
       'No changes to walls, floor, ceiling, beams, trims, baseboards, or window geometry.',
-      'No new structural features (niches, beams, sockets/outlets, cornices) and no removal of existing ones.',
-      'No perspective/lens changes, no room enlargement/shrinkage, no cropping/recropping.',
-      'No lighting overhaul: preserve direction, intensity, color temperature, and shadows.',
+      'No perspective/lens changes; no room enlargement/shrinkage; no cropping/reframing.',
+      'No relighting, no added light sources on the ceiling; keep native light behavior.',
     ];
   }
 
@@ -132,7 +141,6 @@ class ChatGPTService {
     };
     return labels[furnitureStyle];
   }
-
   private getPackageCombination(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
