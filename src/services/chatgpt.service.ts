@@ -3,91 +3,136 @@ import OpenAI from 'openai';
 import { RoomType, FurnitureStyle } from '../interfaces/upload.interface';
 
 class ChatGPTService {
-  private openai: OpenAI;
+  // Mantemos a dependência aqui caso você queira usar LLM depois.
+  private openai: OpenAI | null;
 
   constructor() {
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.openai = process.env.OPENAI_API_KEY
+      ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+      : null;
   }
+
   /**
    * Generates ONE final prompt (English) for flux-kontext-pro.
-   * Non-destructive: additive-only, pixel-preserving.
+   * Non-destructive: additive-only, pixel/geometry/lighting preserving.
+   *
+   * ⚠️ Não chama LLM. Retorna a string final pronta para enviar ao flux-kontext-pro.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
+    // ⚠️ Usa o seu catálogo/pacotes pré-definidos:
     const packageItems = this.getPackageCombination(roomType, furnitureStyle);
+
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
 
-    const constraints = this.getNonDestructiveConstraints();
-    const negatives = this.getAbsoluteProhibitions();
+    return this.buildKontextPrompt(roomLabel, styleLabel, packageItems);
+  }
 
-    const base =
-      `Furnish the ${roomLabel} in the uploaded photo in a ${styleLabel} style while preserving the original scene EXACTLY as captured. ` +
-      `This is additive, non-destructive virtual staging.`; // short intro
-
-    const checklist = [
-      '— Pixel-preserving: DO NOT alter, repaint, retouch, expand, crop, or re-light the room.',
-      '— Keep walls, floor, ceiling, beams, trims, baseboards, door leaf and frame, door opening, windows, sockets/outlets, switches, and architectural geometry IDENTICAL.',
-      '— Do not change camera perspective, lens distortion, field of view, or image boundaries.',
-      '— Add items ONLY if they fit within the visible space. If an item would overlap the door opening, circulation path, or require structural changes, SKIP it.',
-      '— Partial crops are allowed: if an item is near the edge, it may appear partially cropped.',
-      '— Respect scale, perspective lines, vanishing points, and realistic shadows consistent with existing light.',
+  /**
+   * Constrói UM prompt final para o flux-kontext-pro (inglês).
+   * Política não-destrutiva, apenas adição, preservando pixel/geom/iluminação.
+   */
+  private buildKontextPrompt(
+    roomLabel: string,
+    styleLabel: string,
+    packageItems: string[]
+  ) {
+    const hardConstraints = [
+      'Additive-only edit: add furniture/decor/accessories ONLY.',
+      'Do NOT change or repaint walls, floor, ceiling, beams, trims, baseboards, sockets/outlets, switches, doors, door frames, door opening, windows, curtains/blinds, or any architectural geometry.',
+      'Do NOT alter camera angle, lens, field of view, composition framing, or image boundaries.',
+      'Preserve all original lighting direction, intensity, color temperature, and shadows.',
+      'Respect true perspective, scale and vanishing lines of the existing scene.',
+      'If an item would collide with doors, paths, or require structural changes, SKIP it.',
+      'Edge crops are acceptable if an item sits near the frame.',
     ];
 
-    const mandatoryList = packageItems.map(i => `• ${i}`).join('\n');
+    const allowedScope = this.getNonDestructiveConstraints();
+    const negatives = this.getAbsoluteProhibitions();
 
-    const final = `${base}
+    const mustHaves =
+      packageItems && packageItems.length
+        ? packageItems.map(i => `- ${i}`).join('\n')
+        : '- If space and constraints allow, add a small, style-appropriate plant or framed artwork as a subtle finishing touch.';
 
-NON-DESTRUCTIVE GUARANTEES (hard constraints):
-${checklist.map(l => l).join('\n')}
-
-ALLOWED SCOPE (additions only):
-${constraints.map(c => `• ${c}`).join('\n')}
-
-ABSOLUTE PROHIBITIONS:
-${negatives.map(n => `• ${n}`).join('\n')}
-
-MANDATORY PACKAGE ITEMS (must appear if they fit without breaking constraints):
-${mandatoryList}
-
-Styling & composition:
-• Keep proportions and circulation clear; anchor the seating or bed to the rug where applicable.
-• Balance the composition with a clear focal point; layer textures subtly; keep cables/clutter invisible.
-• Photorealistic materials and lighting that match the scene; no artificial glow.
-
-Output: a photo-real result that looks like a professionally staged real-estate photograph. Do not remove or modify any existing architectural element; add furniture and decor ONLY.`;
-
-    // Retorna direto o prompt montado (evita “drift” ao pedir ao LLM reformular).
-    return final;
+    return [
+      `Furnish the ${roomLabel} in the uploaded photo in a ${styleLabel} style while preserving the original scene EXACTLY as captured. This is a non-destructive, additive-only virtual staging task.`,
+      '',
+      'HARD NON-DESTRUCTIVE CONSTRAINTS:',
+      ...hardConstraints.map(c => `• ${c}`),
+      '',
+      'ALLOWED ADDITIONS:',
+      ...allowedScope.map(c => `• ${c}`),
+      '',
+      'ABSOLUTE PROHIBITIONS:',
+      ...negatives.map(n => `• ${n}`),
+      '',
+      'MANDATORY PACKAGE ITEMS (include only if they fit without breaking constraints):',
+      mustHaves,
+      '',
+      'Composition & realism:',
+      '• Keep clear circulation; anchor seating/bed on the rug when applicable.',
+      '• Balance with one clear focal point; layer textures subtly; hide cables/clutter.',
+      '• Photorealistic materials consistent with the scene’s light; no artificial glow.',
+      '',
+      'Output: a photoreal result that looks like a professionally staged real-estate photograph. Do NOT remove or modify any existing architectural element; ADD furniture and decor ONLY.',
+    ].join('\n');
   }
 
   // --------- Non-destructive policy helpers ---------
 
+  /** O que PODE ser adicionado sem quebrar a política não-destrutiva. */
   private getNonDestructiveConstraints(): string[] {
     return [
-      'Furniture: sofas, beds, tables, nightstands, consoles, wardrobes/dressers, desks, chairs, side tables',
-      'Lighting: floor lamps, table lamps, pendant fixtures (only if they do not require changing ceiling geometry)',
-      'Decor: framed artwork, mirrors, rugs, cushions, throws, books, bowls, vases, neutral accessories',
-      'Plants: realistic indoor species in planters suited to the style',
+      'Furniture: sofas, beds, dining/coffee/side tables, consoles, TV stands, desks, wardrobes/dressers, nightstands, dining/desk chairs.',
+      'Lighting: floor/table lamps; pendant fixtures ONLY if placement does not require altering ceiling geometry.',
+      'Decor: framed artwork or mirrors, rugs, cushions/throws, books, bowls, vases, neutral accessories.',
+      'Plants: realistic indoor species in planters suited to the style.',
     ];
   }
 
+  /** Lista de proibições absolutas para manter a cena intacta. */
   private getAbsoluteProhibitions(): string[] {
     return [
-      'No deletion, movement, resizing, or repainting of door, door frame, or door opening',
-      'No changes to walls, floor, ceiling, beams, trims, baseboards, or window geometry',
-      'No new structural features (niches, beams, sockets/outlets, cornices) and no removal of existing ones',
-      'No perspective/lens changes, no room enlargement/shrinkage, no cropping/recropping',
-      'No lighting overhaul: preserve direction, intensity, color temperature, and shadows',
+      'No deletion, movement, resizing, or repainting of door, door frame, or door opening.',
+      'No changes to walls, floor, ceiling, beams, trims, baseboards, or window geometry.',
+      'No new structural features (niches, beams, sockets/outlets, cornices) and no removal of existing ones.',
+      'No perspective/lens changes, no room enlargement/shrinkage, no cropping/recropping.',
+      'No lighting overhaul: preserve direction, intensity, color temperature, and shadows.',
     ];
   }
 
-  /**
-   * Interior-design “packages” for every RoomType + FurnitureStyle combination.
-   * Each array item is a concise, production-ready requirement.
-   */
+  // ------- labels -------
+  private getRoomTypeLabel(roomType: RoomType): string {
+    const labels: Record<RoomType, string> = {
+      living_room: 'living room',
+      bedroom: 'bedroom',
+      kitchen: 'kitchen',
+      bathroom: 'bathroom',
+      dining_room: 'dining room',
+      office: 'home office',
+      balcony: 'balcony',
+    };
+    return labels[roomType];
+  }
+
+  private getFurnitureStyleLabel(furnitureStyle: FurnitureStyle): string {
+    const labels: Record<FurnitureStyle, string> = {
+      modern: 'modern',
+      japanese_minimalist: 'Japanese minimalist',
+      scandinavian: 'Scandinavian',
+      industrial: 'industrial',
+      classic: 'classic',
+      contemporary: 'contemporary',
+      rustic: 'rustic',
+      bohemian: 'bohemian',
+    };
+    return labels[furnitureStyle];
+  }
+
   private getPackageCombination(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
@@ -559,34 +604,6 @@ Output: a photo-real result that looks like a professionally staged real-estate 
     };
 
     return P[roomType]?.[furnitureStyle] ?? [];
-  }
-
-  // ------- labels -------
-  private getRoomTypeLabel(roomType: RoomType): string {
-    const labels: Record<RoomType, string> = {
-      living_room: 'living room',
-      bedroom: 'bedroom',
-      kitchen: 'kitchen',
-      bathroom: 'bathroom',
-      dining_room: 'dining room',
-      office: 'home office',
-      balcony: 'balcony',
-    };
-    return labels[roomType];
-  }
-
-  private getFurnitureStyleLabel(furnitureStyle: FurnitureStyle): string {
-    const labels: Record<FurnitureStyle, string> = {
-      modern: 'modern',
-      japanese_minimalist: 'Japanese minimalist',
-      scandinavian: 'Scandinavian',
-      industrial: 'industrial',
-      classic: 'classic',
-      contemporary: 'contemporary',
-      rustic: 'rustic',
-      bohemian: 'bohemian',
-    };
-    return labels[furnitureStyle];
   }
 }
 

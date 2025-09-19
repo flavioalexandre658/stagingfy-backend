@@ -1,16 +1,29 @@
+// src/services/black-forest.service.ts
+import sharp from 'sharp';
 import {
-  BlackForestApiRequest,
   BlackForestApiResponse,
   RoomType,
   FurnitureStyle,
   LoraConfig,
 } from '../interfaces/upload.interface';
 
+type KontextRequest = {
+  prompt: string;
+  input_image: string; // base64: "data:image/jpeg;base64,..."
+  width?: number; // manter tamanho original (múltiplo de 32)
+  height?: number;
+  aspect_ratio?: string; // "W:H" como fallback
+  prompt_upsampling?: boolean; // evitar reescrever o prompt
+  seed?: number; // opcional: reproduzibilidade
+  output_format?: 'jpeg' | 'png' | 'webp';
+  safety_tolerance?: number;
+  guidance?: number; // se suportado pelo provedor
+};
+
 class BlackForestService {
   private readonly apiKey: string;
   private readonly baseUrl: string;
 
-  // Configuração dos LoRAs para cada tipo de ambiente e estilo
   private readonly loraConfig: LoraConfig = {
     roomType: {
       living_room: 'living_room_lora',
@@ -36,234 +49,214 @@ class BlackForestService {
   constructor() {
     this.apiKey = process.env.BLACK_FOREST_API_KEY!;
     this.baseUrl = process.env.BLACK_FOREST_API_URL!;
+    if (!this.apiKey) throw new Error('BLACK_FOREST_API_KEY is required');
+    if (!this.baseUrl) throw new Error('BLACK_FOREST_API_URL is required');
+  }
 
-    if (!this.apiKey) {
-      throw new Error('BLACK_FOREST_API_KEY environment variable is required');
+  // ------------ helpers de tamanho ------------
+  private roundToMultiple(value: number, step = 32) {
+    return Math.max(step, Math.round(value / step) * step);
+  }
+
+  /**
+   * Limita mantendo proporção dentro do intervalo aceito pelo provedor.
+   * Ajuste os limites conforme sua conta/endpoint (ex.: 512–1536).
+   */
+  private clampToLimits(
+    width: number,
+    height: number,
+    minSide = 512,
+    maxSide = 1536
+  ) {
+    const ratio = width / height;
+
+    // Se algum lado estourar, escala proporcionalmente
+    const scaleDown = Math.max(width / maxSide, height / maxSide, 1); // >=1 reduz
+    const scaledW = Math.round(width / scaleDown);
+    const scaledH = Math.round(height / scaleDown);
+
+    const scaleUp = Math.max(minSide / scaledW, minSide / scaledH, 1); // >=1 aumenta
+    const finalW = Math.round(scaledW * scaleUp);
+    const finalH = Math.round(scaledH * scaleUp);
+
+    return { width: finalW, height: finalH, ratio };
+  }
+
+  private async getImageDimsFromBase64(imageBase64: string) {
+    // aceita tanto "data:image/...;base64,XXXX" quanto só o payload
+    const payload = imageBase64.includes('base64,')
+      ? imageBase64.split('base64,')[1]
+      : imageBase64;
+    
+    if (!payload) {
+      throw new Error('Invalid base64 image data');
     }
+    
+    const buf = Buffer.from(payload, 'base64');
+    const meta = await sharp(buf).metadata();
+    if (!meta.width || !meta.height) {
+      throw new Error('Unable to read image dimensions');
+    }
+    return { width: meta.width, height: meta.height };
   }
 
-  /**
-   * Gera o prompt baseado no tipo de ambiente e estilo de móveis
-   */
-  private generatePrompt(
-    roomType: RoomType,
-    furnitureStyle: FurnitureStyle
-  ): string {
+  // ------------ prompt básico (você pode manter/ajustar depois) ------------
+  private generatePrompt(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     const roomTypeMap: Record<RoomType, string> = {
-      living_room: 'sala de estar',
-      bedroom: 'quarto',
-      kitchen: 'cozinha',
-      bathroom: 'banheiro',
-      dining_room: 'sala de jantar',
-      office: 'escritório',
-      balcony: 'varanda',
+      living_room: 'living room',
+      bedroom: 'bedroom',
+      kitchen: 'kitchen',
+      bathroom: 'bathroom',
+      dining_room: 'dining room',
+      office: 'home office',
+      balcony: 'balcony',
     };
-
     const styleMap: Record<FurnitureStyle, string> = {
-      modern: 'moderno',
-      japanese_minimalist: 'minimalista japonês',
-      scandinavian: 'escandinavo',
+      modern: 'modern',
+      japanese_minimalist: 'Japanese minimalist',
+      scandinavian: 'Scandinavian',
       industrial: 'industrial',
-      classic: 'clássico',
-      contemporary: 'contemporâneo',
-      rustic: 'rústico',
-      bohemian: 'boêmio',
+      classic: 'classic',
+      contemporary: 'contemporary',
+      rustic: 'rustic',
+      bohemian: 'bohemian',
     };
 
-    return `Virtual staging of an empty ${roomTypeMap[roomType]}, furnished in ${styleMap[furnitureStyle]} style. Realistic lighting, proportions, and high-quality furniture placement. Professional interior design photography style.`;
+    return `Virtual staging of an empty ${roomTypeMap[roomType]} in ${styleMap[furnitureStyle]} style. Add only furniture and decor; do not change walls, floors, ceilings, doors, windows, lighting or architecture. Keep existing geometry and perspective intact. Photorealistic interior photography.`;
   }
 
-  /**
-   * Seleciona os LoRAs apropriados baseado nos parâmetros
-   */
   private selectLoras(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     return [
-      {
-        id: this.loraConfig.roomType[roomType],
-        weight: 0.8,
-      },
-      {
-        id: this.loraConfig.furnitureStyle[furnitureStyle],
-        weight: 0.7,
-      },
+      { id: this.loraConfig.roomType[roomType], weight: 0.8 },
+      { id: this.loraConfig.furnitureStyle[furnitureStyle], weight: 0.7 },
     ];
   }
 
   /**
-   * Envia uma imagem para processamento na Black Forest API usando flux-pro-1.0-fill
+   * Virtual staging com FLUX.1 Kontext Pro,
+   * preservando a dimensão da foto original.
    */
+  async generateVirtualStaging(
+    imageBase64: string,
+    prompt?: string,
+    opts?: { seed?: number }
+  ): Promise<BlackForestApiResponse> {
+    try {
+      // 1) Descobre o tamanho original
+      const { width: ow, height: oh } =
+        await this.getImageDimsFromBase64(imageBase64);
+
+      // 2) Limita a faixa suportada e arredonda a múltiplos de 32
+      const { width: cw, height: ch } = this.clampToLimits(ow, oh, 512, 1536);
+      const width = this.roundToMultiple(cw, 32);
+      const height = this.roundToMultiple(ch, 32);
+
+      // 3) Monta request body com W/H + aspect_ratio
+      const body: KontextRequest = {
+        prompt: prompt ?? 'Add modern furniture only; do not change structure.',
+        input_image: imageBase64,
+        width,
+        height,
+        aspect_ratio: `${width}:${height}`, // alguns provedores exigem; não faz mal incluir
+        prompt_upsampling: false, // evita "enfeitar" o prompt e mexer na cena
+        output_format: 'jpeg',
+        safety_tolerance: 2,
+        // guidance: 5.0, // use somente se o provedor expõe este parâmetro para Kontext
+        ...(opts?.seed !== undefined && { seed: opts.seed }),
+      };
+
+      const resp = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
+        method: 'POST',
+        headers: {
+          'x-key': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`Black Forest API error: ${resp.status} - ${txt}`);
+      }
+
+      const json = (await resp.json()) as BlackForestApiResponse;
+      return json;
+    } catch (error) {
+      console.error('Error calling FLUX.1 Kontext Pro:', error);
+      throw new Error(
+        `Failed to generate virtual staging: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
+  }
+
+  // Mantive aqui seu método de inpainting como estava (se quiser, também envie W/H).
   async generateStagedImage(
     imageBase64: string,
     maskBase64: string,
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<BlackForestApiResponse> {
-    try {
-      const prompt = this.generatePrompt(roomType, furnitureStyle);
+    const prompt = this.generatePrompt(roomType, furnitureStyle);
 
-      const requestBody: BlackForestApiRequest = {
-        model: 'flux-pro-1.0-fill',
-        prompt,
-        image: imageBase64,
-        mask: maskBase64,
-        steps: 50,
-        guidance: 30,
-        output_format: 'jpeg',
-        safety_tolerance: 2,
-      };
+    // (Opcional) igualar W/H no fill também
+    const { width: ow, height: oh } =
+      await this.getImageDimsFromBase64(imageBase64);
+    const { width: cw, height: ch } = this.clampToLimits(ow, oh, 512, 1536);
+    const width = this.roundToMultiple(cw, 32);
+    const height = this.roundToMultiple(ch, 32);
 
-      const response = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
-        method: 'POST',
-        headers: {
-          'x-key': this.apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+    const requestBody = {
+      model: 'flux-pro-1.0-fill',
+      prompt,
+      image: imageBase64,
+      mask: maskBase64,
+      steps: 40,
+      guidance: 7,
+      width,
+      height,
+      output_format: 'jpeg',
+      safety_tolerance: 2,
+    };
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(
-          `Black Forest API error: ${response.status} - ${errorData}`
-        );
-      }
+    const resp = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
+      method: 'POST',
+      headers: {
+        'x-key': this.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-      const result = (await response.json()) as BlackForestApiResponse;
-      return result;
-    } catch (error) {
-      console.error('Error calling Black Forest API:', error);
-      throw new Error(
-        `Failed to generate staged image: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`Black Forest API error: ${resp.status} - ${err}`);
     }
+    return (await resp.json()) as BlackForestApiResponse;
   }
 
-  /**
-   * Gera virtual staging usando o modelo flux-kontext-pro
-   */
-  async generateVirtualStaging(
-    imageBase64: string,
-    prompt: string
-  ): Promise<BlackForestApiResponse> {
-    try {
-      const requestBody = {
-        prompt,
-        input_image: imageBase64,
-        guidance: 7.5,
-        output_format: 'jpeg',
-        safety_tolerance: 2,
-      };
-
-      const response = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
-        method: 'POST',
-        headers: {
-          'x-key': this.apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(
-          `Black Forest API error: ${response.status} - ${errorData}`
-        );
-      }
-
-      const result = (await response.json()) as BlackForestApiResponse;
-      return result;
-    } catch (error) {
-      console.error(
-        'Error calling Black Forest API (flux-kontext-pro):',
-        error
-      );
-      throw new Error(
-        `Failed to generate virtual staging: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Verifica o status de um job na Black Forest API
-   */
   async checkJobStatus(jobId: string): Promise<BlackForestApiResponse> {
-    try {
-      console.log(`Verificando status do job: ${jobId}`);
-
-      const response = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
-        method: 'GET',
-        headers: {
-          'x-key': this.apiKey,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log(`Response status: ${response.status} para job ${jobId}`);
-
-      if (!response.ok) {
-        const errorData = await response.text();
-
-        // Tratamento específico para diferentes tipos de erro
-        if (response.status === 404) {
-          // Job não encontrado - pode ser que ainda não esteja pronto ou ainda sendo processado
-          console.log(
-            `Job ${jobId} não encontrado (404) - pode estar sendo processado`
-          );
-          const errorResponse: BlackForestApiResponse = {
-            id: jobId,
-            status: 'Task not found',
-            error: 'Job não encontrado na API',
-          };
-          return errorResponse;
-        }
-
-        // Para outros erros, logar como erro
-        console.error(`Black Forest API error for job ${jobId}:`, {
-          status: response.status,
-          statusText: response.statusText,
-          errorData,
-        });
-
-        throw new Error(
-          `Black Forest API error: ${response.status} - ${errorData}`
-        );
-      }
-
-      const result = (await response.json()) as BlackForestApiResponse;
-      console.log(`Job ${jobId} status: ${result.status}`);
-
-      return result;
-    } catch (error) {
-      console.error(`Error checking job status for ${jobId}:`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        jobId,
-      });
-
-      // Se for um erro de rede ou parsing, re-throw
-      if (
-        error instanceof Error &&
-        !error.message.includes('Black Forest API error')
-      ) {
-        throw new Error(`Network error checking job status: ${error.message}`);
-      }
-
-      throw error;
+    const resp = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
+      method: 'GET',
+      headers: { 'x-key': this.apiKey, 'Content-Type': 'application/json' },
+    });
+    if (!resp.ok) {
+      // 404: geralmente ainda processando
+      return {
+        id: jobId,
+        status: 'Task not found',
+        error: await resp.text(),
+      };
     }
+    return (await resp.json()) as BlackForestApiResponse;
   }
 
-  /**
-   * Valida se os parâmetros de entrada são válidos
-   */
-  validateParameters(
-    roomType: RoomType,
-    furnitureStyle: FurnitureStyle
-  ): boolean {
+  validateParameters(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     const validRoomTypes = Object.keys(this.loraConfig.roomType) as RoomType[];
     const validStyles = Object.keys(
       this.loraConfig.furnitureStyle
     ) as FurnitureStyle[];
-
     return (
       validRoomTypes.includes(roomType) && validStyles.includes(furnitureStyle)
     );
