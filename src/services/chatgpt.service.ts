@@ -21,23 +21,22 @@ class ChatGPTService {
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    const roomLabel = this.getRoomTypeLabel(roomType);
-    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
-    const packageItems = this.getPackageCombination(roomType, furnitureStyle);
+    const roomLabel = this.getRoomTypeLabel(roomType); // e.g. "living room"
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g. "modern"
 
-    const basePrompt = `Add ${styleLabel} furniture to this ${roomLabel} while keeping the original room, lighting, and structure unchanged. 
+    const prompt = `Add ${styleLabel} furniture and decor to this ${roomLabel} while keeping the original room, lighting, and structure unchanged. 
 Do not modify walls, doors, windows, ceiling, floor, trims, or any architectural elements. 
 Preserve the exact lighting and perspective. 
-Only add furniture and décor items consistent with a ${styleLabel} interior style.`;
 
-    const enrichedDetails =
-      packageItems.length > 0
-        ? ` Include the following key items if they fit naturally in the scene:\n${packageItems
-            .map(i => `- ${i}`)
-            .join('\n')}`
-        : '';
+Requirements:
+• Include one piece of wall art or decoration (painting, framed print, mirror, or tasteful wall decor). 
+• Add between 2 and 5 furniture items appropriate for a ${styleLabel} ${roomLabel}. 
+• Furniture should match scale, perspective, and the physical space available, without blocking doors, windows, or circulation paths. 
+• Décor must be realistic, photorealistic in materials and shadows, and consistent with the existing lighting. 
 
-    return `${basePrompt}${enrichedDetails}`;
+Output: a professionally staged photograph of the ${roomLabel}, non-destructive, additive-only.`;
+
+    return prompt;
   }
 
   // --------- Non-destructive policy helpers ---------
