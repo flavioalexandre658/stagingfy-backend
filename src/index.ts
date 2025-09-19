@@ -54,7 +54,7 @@ app.get('/health', (req, res) => {
 });
 
 // Authentication routes
-app.use('/', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // API routes
 app.use('/api/v1/upload', uploadRoutes);
