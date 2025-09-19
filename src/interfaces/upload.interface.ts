@@ -39,6 +39,7 @@ export interface CreateUploadRequest {
   furnitureStyle: FurnitureStyle;
   plan?: 'free' | 'premium';
   saveMask?: boolean;
+  hasMask?: boolean; // Indica se o usuário está enviando uma máscara personalizada
 }
 
 export interface BlackForestApiRequest {

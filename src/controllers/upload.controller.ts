@@ -42,17 +42,22 @@ const upload = multer({
 
 export class UploadController {
   /**
-   * Middleware do Multer para upload de arquivo único
+   * Middleware do Multer para upload de múltiplos arquivos (imagem obrigatória e máscara opcional)
    */
-  public uploadMiddleware = upload.single('image');
+  public uploadMiddleware = upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'mask', maxCount: 1 }
+  ]);
 
   /**
    * Upload de imagem e início do processamento
    */
   async uploadImage(req: Request, res: Response): Promise<void> {
     try {
-      // Validar se o arquivo foi enviado
-      if (!req.file) {
+      // Validar se os arquivos foram enviados
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      
+      if (!files || !files.image || files.image.length === 0) {
         res.status(400).json({
           success: false,
           message: 'Nenhuma imagem foi enviada'
@@ -60,8 +65,20 @@ export class UploadController {
         return;
       }
 
+      const imageFile = files.image[0];
+      const maskFile = files.mask && files.mask.length > 0 ? files.mask[0] : null;
+
+      // Verificar se imageFile existe (TypeScript safety)
+      if (!imageFile) {
+        res.status(400).json({
+          success: false,
+          message: 'Erro ao processar a imagem enviada'
+        });
+        return;
+      }
+
       // Validar dados do corpo da requisição
-      const { roomType, furnitureStyle, plan = 'free', saveMask = false } = req.body as CreateUploadRequest & { plan: string };
+      const { roomType, furnitureStyle, plan = 'free', saveMask = false, hasMask = false } = req.body as CreateUploadRequest & { plan: string };
       
       if (!roomType || !furnitureStyle) {
         res.status(400).json({
@@ -91,15 +108,15 @@ export class UploadController {
       }
 
       // Gerar nome único para o arquivo
-      const fileExtension = path.extname(req.file.originalname);
+      const fileExtension = path.extname(imageFile.originalname);
       const fileName = `input/${userId}/${uuidv4()}${fileExtension}`;
 
       // Upload para S3
       const uploadCommand = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: fileName,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
+        Body: imageFile.buffer,
+        ContentType: imageFile.mimetype,
       });
 
       await s3Client.send(uploadCommand);
@@ -115,26 +132,43 @@ export class UploadController {
         inputImageUrl,
       });
 
-      // Salvar máscara no S3 se solicitado
+      // Processar máscara (enviada pelo usuário ou gerada automaticamente)
       let maskUrl: string | undefined;
-      if (saveMask) {
+      if (saveMask || maskFile) {
         try {
-          // Gerar máscara branca
-          const maskBase64 = await generateWhiteMaskBase64(req.file.buffer);
-          
-          // Remover o prefixo data:image/png;base64, para obter apenas o base64
-          const base64Data = maskBase64.replace(/^data:image\/png;base64,/, '');
-          const maskBuffer = Buffer.from(base64Data, 'base64');
+          let maskBuffer: Buffer;
+          let contentType: string;
+
+          if (maskFile) {
+            // Usar máscara enviada pelo usuário
+            console.log('Usando máscara enviada pelo usuário:', {
+              originalName: maskFile.originalname,
+              size: maskFile.size,
+              mimetype: maskFile.mimetype
+            });
+            maskBuffer = maskFile.buffer;
+            contentType = maskFile.mimetype;
+          } else {
+            // Gerar máscara branca automaticamente
+            console.log('Gerando máscara branca automaticamente');
+            const maskBase64 = await generateWhiteMaskBase64(imageFile.buffer);
+            
+            // Remover o prefixo data:image/png;base64, para obter apenas o base64
+            const base64Data = maskBase64.replace(/^data:image\/png;base64,/, '');
+            maskBuffer = Buffer.from(base64Data, 'base64');
+            contentType = 'image/png';
+          }
           
           // Gerar nome único para a máscara
-          const maskFileName = `masks/${userId}/${uuidv4()}.png`;
+          const maskExtension = maskFile ? path.extname(maskFile.originalname) : '.png';
+          const maskFileName = `masks/${userId}/${uuidv4()}${maskExtension}`;
           
           // Upload da máscara para S3
           const maskUploadCommand = new PutObjectCommand({
             Bucket: BUCKET_NAME,
             Key: maskFileName,
             Body: maskBuffer,
-            ContentType: 'image/png',
+            ContentType: contentType,
           });
           
           await s3Client.send(maskUploadCommand);
@@ -146,13 +180,13 @@ export class UploadController {
           await uploadRepository.updateMaskUrl(upload.id, maskUrl);
           
         } catch (maskError) {
-          console.error('Erro ao salvar máscara:', maskError);
+          console.error('Erro ao processar máscara:', maskError);
           // Não falhar o upload principal se houver erro na máscara
         }
       }
 
       // Iniciar processamento assíncrono
-      this.processImageAsync(upload.id, inputImageUrl, roomType as RoomType, furnitureStyle as FurnitureStyle);
+      this.processImageAsync(upload.id, inputImageUrl, roomType as RoomType, furnitureStyle as FurnitureStyle, maskUrl);
 
       // Retornar resposta imediata
       const responseData: any = {
@@ -190,7 +224,8 @@ export class UploadController {
     uploadId: string,
     inputImageUrl: string,
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle
+    furnitureStyle: FurnitureStyle,
+    maskUrl?: string
   ): Promise<void> {
     try {
       // Atualizar status para processing
@@ -206,10 +241,24 @@ export class UploadController {
       // Converter imagem para base64 (sem prefixo data URL)
       const imageBase64 = imageBuffer.toString('base64');
 
-      // Gerar máscara branca com as mesmas dimensões da imagem
-      const maskBase64String = await generateWhiteMaskBase64(imageBuffer);
-      // Remover prefixo data URL da máscara também
-      const maskBase64 = maskBase64String.replace(/^data:image\/png;base64,/, '');
+      // Obter máscara (enviada pelo usuário ou gerar automaticamente)
+      let maskBase64: string;
+      if (maskUrl) {
+        // Usar máscara enviada pelo usuário
+        console.log('Usando máscara enviada pelo usuário:', maskUrl);
+        const maskResponse = await fetch(maskUrl);
+        if (!maskResponse.ok) {
+          throw new Error(`Erro ao baixar máscara: ${maskResponse.statusText}`);
+        }
+        const maskBuffer = Buffer.from(await maskResponse.arrayBuffer());
+        maskBase64 = maskBuffer.toString('base64');
+      } else {
+        // Gerar máscara branca com as mesmas dimensões da imagem
+        console.log('Gerando máscara branca automaticamente');
+        const maskBase64String = await generateWhiteMaskBase64(imageBuffer);
+        // Remover prefixo data URL da máscara também
+        maskBase64 = maskBase64String.replace(/^data:image\/png;base64,/, '');
+      }
 
       // Validar tamanho da imagem base64 (limite de ~10MB em base64)
       const maxBase64Size = 14 * 1024 * 1024; // ~10MB original = ~14MB em base64
