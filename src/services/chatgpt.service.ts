@@ -55,18 +55,6 @@ class ChatGPTService {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle); // << NEW
 
     // Compose room-aware guidance lines
-    const mainPiecesLine =
-      `Add ${plan.mainPiecesRange[0]}–${plan.mainPiecesRange[1]} main ${roomLabel} piece(s): ` +
-      `${this.joinHuman(plan.allowedMainItems)}. maintain all other aspects of the original image.`;
-
-    const wallDecorLine =
-      `Add ${plan.wallDecorRange[0]}–${plan.wallDecorRange[1]} wall decoration(s) on free wall surfaces only: ` +
-      `${this.joinHuman(plan.allowedWallDecor)}. maintain all other aspects of the original image.`;
-
-    const complementaryLine =
-      `Add ${plan.complementaryRange[0]}–${plan.complementaryRange[1]} complementary element(s): ` +
-      `${this.joinHuman(plan.allowedComplementary)}. maintain all other aspects of the original image.`;
-
     const roomSafety = plan.roomSafetyNotes.length
       ? `\nROOM-SPECIFIC SAFETY:\n• ${plan.roomSafetyNotes.join('\n• ')}\n`
       : '';
@@ -98,6 +86,22 @@ ${styleTraits}${styleEmphasis}
 
 FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
 ${topPicks}
+
+CURTAINS (optional, additive-only):
+• Add style-consistent, surface-mounted curtains to existing windows only if there is sufficient surrounding wall clearance.
+• Mount a visible rod 10–20 cm (4–8") above the window frame and extend 15–25 cm (6–10") beyond each side; do not imply drilling or construction changes.
+• Panels hang to the floor, without covering or altering the window frame, glass, handles, trims, vents, outlets, or wall finishes.
+• Keep the original wall color, window geometry, and lighting EXACTLY the same.
+• Skip curtains entirely if space is insufficient or if they would occlude doors, stairways, or circulation paths.
+• Material by style:
+  - modern: sheer white/ivory or light greige, ripple fold or simple pinch pleat;
+  - luxury: lined velvet or silk-blend, elegant header, subtle sheen;
+  - Scandinavian: light linen sheers, airy and natural;
+  - industrial: textured blackout in charcoal/ink on a thin black rod;
+  - coastal: white/soft-blue linen sheers, breezy look;
+  - farmhouse: natural linen/cotton in warm neutrals, simple pleat;
+  - mid-century: solid fabric with slight sheen, tailored header;
+  - standard: neutral fabric, classic pinch pleat.
 
 Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
