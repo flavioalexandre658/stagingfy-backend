@@ -82,10 +82,7 @@ class ChatGPTService {
       .join('\n');
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
-• ${mainPiecesLine}
-• ${wallDecorLine}
-• ${complementaryLine}
-
+Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
