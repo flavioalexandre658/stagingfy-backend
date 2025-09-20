@@ -39,15 +39,30 @@ class ChatGPTService {
       .join('\n');
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Do not modify any existing pixel of the scene.
+Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
 
-Keep all original architecture and finishes identical: walls and paint, floor, ceiling, trims/baseboards, STAIRS, doors, windows, vents, outlets, switches, and built-ins. Preserve the exact camera angle, framing, perspective, and lighting. No repainting, retexturing, relighting, cropping, expanding, cloning, or geometry changes. Do not add curtains, blinds, or any ceiling/built-in fixtures.
+PRESERVE PIXEL-FOR-PIXEL:
+• Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
+• Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
+• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
 
-Stairs are a protected no-placement zone. Do not place items that block stairways, door openings, or clear passage paths; only place objects where they clearly fit in the visible floor area. If something doesn’t fit, skip it.
+STAIR & CIRCULATION SAFETY:
+• Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
+• Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
+• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.
 
-Style intent: ${styleTraits}
+STYLE GUARDRAILS — ${styleLabel}:
+${styleTraits}
 
-Optional (only if they fit without any changes to the scene): one compact seating or table piece, a small side table or lamp, a subtle wall art on free wall surface, and a single indoor plant. Use realistic scale and shadows consistent with the existing light.
-`;
+FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
+${topPicks}
+
+Rendering notes:
+• Prefer compact pieces over bulky casegoods when space is tight.
+• Photorealistic materials and shadows matching the input light; no artificial glow.
+• Wall art only on available wall surfaces — never over windows/doors.
+
+Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
