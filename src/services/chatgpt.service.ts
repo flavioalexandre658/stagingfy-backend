@@ -11,39 +11,41 @@ class ChatGPTService {
 
   /**
    * Generates a refined prompt for flux-kontext-pro.
-   * Adds circulation rules, stronger style enforcement, and flexible package items.
+   * Enforces circulation rules, richness of style, and balanced staging.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    const roomLabel = this.getRoomTypeLabel(roomType); // e.g. "living room"
-    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle); // e.g. "modern"
-    const styleTraits = this.getFurnitureStyleTraits(furnitureStyle); // descriptive traits
-    const packageItems = this.getPackageCombination(roomType, furnitureStyle); // suggested items
+    const roomLabel = this.getRoomTypeLabel(roomType);
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
+    const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
+    const packageItems = this.getPackageCombination(roomType, furnitureStyle);
 
-    const packageList =
-      packageItems.length > 0
-        ? `Suggested furniture and décor for this style:\n${packageItems
-            .map(i => `• ${i}`)
-            .join('\n')}`
-        : '';
+    const prompt = `Virtually stage this ${roomLabel} with a complete ${styleLabel} interior design set.
 
-    const prompt = `Add 2–5 pieces of ${styleLabel} furniture and one wall decoration to this ${roomLabel}. 
-Keep the original room, lighting, and structure exactly as they are — do not modify them. 
-Do not alter walls, doors, windows, ceiling, floor, trims, stairs, or any architectural elements. 
-Preserve the exact perspective, framing, and lighting of the input photo. 
+Rules:
+• Add 2–5 main furniture pieces (e.g., sofa, armchairs, dining table, bed, or desk depending on the room).
+• Add 1–2 wall decorations (artwork, framed prints, or mirrors) only on available walls — never replace or alter doors or windows.
+• Add 1–2 complementary elements (plants, lamps, rugs, curtains, cushions, small accessories).
+• Ensure the result looks fully furnished and balanced, not sparse.
 
-Important circulation rule: never place furniture blocking doors, stairways, or clear passage paths. 
-Keep all circulation areas open and functional.
+Preservation rules:
+• Keep the room architecture, layout, lighting, windows, doors, stairs, and finishes exactly as they are.
+• Preserve the exact perspective, framing, and light direction of the input photo.
+• Do not crop, expand, repaint, or re-texture existing elements.
+• Maintain clear circulation: never block doors, stairways, or passage paths with furniture.
 
-Style guidance: ${styleTraits} 
-All added furniture and décor must reflect this ${styleLabel} interior design style consistently.
+Style guidance:
+${styleTraits}
 
-${packageList}
+Mandatory inspirations for this combination:
+${packageItems.map(i => `• ${i}`).join('\n')}
 
-Output: produce a photo-realistic result that looks like a professionally staged real-estate photograph. 
-Never remove or replace existing elements; only add furniture and decor consistent with the described style.`;
+Output:
+A photo-realistic, professionally staged ${roomLabel} in a ${styleLabel} style. 
+The space must look complete, cohesive, and high-end — similar to luxury real-estate photography. 
+Never remove existing elements; only add furniture and décor according to these rules.`;
 
     return prompt;
   }
@@ -90,7 +92,7 @@ Never remove or replace existing elements; only add furniture and decor consiste
       midcentury:
         'tapered legs, warm wood tones, geometric patterns, bold accent colors, sleek and functional design from the 1950s-60s.',
       luxury:
-        'high-end materials, rich fabrics like velvet and silk, gold or brass accents, sophisticated and elegant aesthetic.',
+        'plush fabrics like velvet and silk, tufted or sculptural seating, marble or glass tables, gold/brass accents, statement lighting, elegant accessories.',
       coastal:
         'light and airy feel, natural textures like rattan and jute, blues and whites, weathered wood, nautical-inspired elements.',
       farmhouse:
@@ -100,422 +102,240 @@ Never remove or replace existing elements; only add furniture and decor consiste
   }
 
   /**
-   * Suggested packages per roomType + furnitureStyle.
-   * Flexible, NOT mandatory — model may use if fits circulation rules.
+   * Example package combos to enrich staging while keeping flexibility.
    */
   private getPackageCombination(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): string[] {
-    const P: Record<RoomType, Record<FurnitureStyle, string[]>> = {
-      living_room: {
-        modern: [
-          'A low-profile sofa with neutral upholstery',
-          'A minimalist coffee table with slim legs',
-          'A soft area rug in muted tones',
-          'One framed abstract artwork above sofa',
-          'A floor lamp with a simple metallic finish',
-        ],
-        scandinavian: [
-          'A light fabric sofa with wooden legs',
-          'A round light-wood coffee table',
-          'A pale wool rug',
-          'Two small framed prints above the sofa',
-          'A monstera plant in a ceramic pot',
-        ],
-        industrial: [
-          'A leather sofa in cognac or charcoal',
-          'A reclaimed-wood coffee table with metal legs',
-          'A dark textured rug',
-          'A black-framed poster or abstract artwork',
-        ],
-        standard: [
-          'A neutral upholstered sofa',
-          'A rectangular wooden coffee table',
-          'A bordered rug',
-          'A framed landscape print',
-        ],
-        midcentury: [
-          'A sofa with tapered wooden legs',
-          'A round wooden coffee table',
-          'A patterned rug with geometric shapes',
-          'A bold accent chair',
-        ],
-        luxury: [
-          'A velvet or silk sofa with metallic legs',
-          'A marble or glass coffee table',
-          'A statement rug with elegant patterns',
-          'A large framed modern artwork',
-        ],
-        coastal: [
-          'A light fabric sofa in white or beige',
-          'A rattan coffee table',
-          'A striped cotton rug in blue/white',
-          'A framed coastal or botanical print',
-        ],
-        farmhouse: [
-          'A slipcovered sofa in neutral tones',
-          'A solid-wood coffee table',
-          'A jute rug',
-          'A vintage-style framed artwork',
-        ],
+    // 1) Paletas/acabamentos por ESTILO (2025)
+    const STYLE: Record<
+      FurnitureStyle,
+      {
+        palette: string;
+        metal: string;
+        wood: string;
+        textile: string;
+        accent: string;
+        pattern: string;
+        extras?: string[];
+      }
+    > = {
+      standard: {
+        palette: 'neutral palette (white, beige, warm gray)',
+        metal: 'brushed nickel hardware',
+        wood: 'warm oak or walnut veneers',
+        textile: 'cotton/linen blends',
+        accent: 'soft taupe accents',
+        pattern: 'subtle herringbone or chevron',
+        extras: ['classic framed prints', 'balanced proportions'],
       },
-      bedroom: {
-        modern: [
-          'A queen bed with a minimalist upholstered headboard',
-          'Two sleek nightstands',
-          'Matching bedside lamps',
-          'A low-pile rug extending beyond the bed',
-          'A framed abstract artwork above the headboard',
-        ],
-        scandinavian: [
-          'A wooden bed with light fabric bedding',
-          'Two light-wood nightstands',
-          'Fabric-shade bedside lamps',
-          'A soft wool rug under the bed',
-        ],
-        industrial: [
-          'A metal or dark-wood bed',
-          'Two reclaimed-wood nightstands',
-          'Industrial lamps with exposed bulbs',
-          'A dark woven rug',
-        ],
-        farmhouse: [
-          'A rustic wooden bed frame',
-          'Two distressed nightstands',
-          'Linen lamps',
-          'A jute rug',
-        ],
-        coastal: [
-          'A bed with light wood frame',
-          'Two wicker nightstands',
-          'Blue or white ceramic lamps',
-          'A striped rug',
-        ],
-        midcentury: [
-          'A platform bed with tapered legs',
-          'Two teak nightstands',
-          'Retro-style lamps',
-          'A patterned rug',
-        ],
-        luxury: [
-          'A tufted velvet bed',
-          'Two mirrored nightstands',
-          'Crystal or brass lamps',
-          'A silk rug',
-        ],
-        standard: [
-          'A simple upholstered bed',
-          'Two basic nightstands',
-          'Neutral lamps',
-        ],
+      modern: {
+        palette:
+          'neutral palette (warm gray, greige, off-white) with a single muted accent',
+        metal: 'matte black or satin chrome',
+        wood: 'straight-grain oak/ash in light to medium tones',
+        textile: 'matte weaves and bouclé',
+        accent: 'clay, sand, or muted sage',
+        pattern: 'large-scale abstract or tone-on-tone geometry',
+        extras: ['clean lines', 'low-profile silhouettes'],
       },
-      // outros ambientes podem ser adicionados conforme necessário...
-      // --------- KITCHEN ---------
-      kitchen: {
-        modern: [
-          'A compact dining set with sleek chairs',
-          'A slim pendant light above the table',
-          'A low-profile runner rug',
-          'Minimal counter styling (bowl of fruit, herb plant)',
-        ],
-        scandinavian: [
-          'A light-wood dining table with spindle chairs',
-          'A white dome pendant',
-          'A cotton runner rug',
-          'A framed botanical print',
-        ],
-        industrial: [
-          'A bistro table with metal chairs',
-          'An exposed-bulb pendant',
-          'A dark-patterned runner',
-          'A black-framed poster',
-        ],
-        midcentury: [
-          'A teak dining table with retro chairs',
-          'A bold geometric print on the wall',
-          'A slim pendant lamp',
-          'A patterned rug',
-        ],
-        luxury: [
-          'A marble-top dining table',
-          'Upholstered chairs with metallic legs',
-          'A crystal chandelier',
-          'A silk runner rug',
-        ],
-        coastal: [
-          'A whitewashed wood dining table',
-          'Rattan or wicker chairs',
-          'A striped runner rug',
-          'A framed coastal print',
-        ],
-        farmhouse: [
-          'A rustic wooden table',
-          'Mismatched wooden chairs',
-          'A lantern pendant',
-          'A jute runner',
-        ],
-        standard: [
-          'A rectangular wooden dining table',
-          'Neutral upholstered chairs',
-          'A simple framed print',
-        ],
+      scandinavian: {
+        palette:
+          'light, airy palette (white, ivory, pale gray) with soft pastels',
+        metal: 'brushed steel or white powder-coat',
+        wood: 'pale oak/beech with natural oil',
+        textile: 'cotton/wool, chunky knit throws',
+        accent: 'warm beige and muted green',
+        pattern: 'small-scale geometric or micro-checks',
+        extras: ['cozy layered textiles', 'light sheer curtains'],
       },
-
-      // --------- BATHROOM ---------
-      bathroom: {
-        modern: [
-          'A minimalist vanity stool or console (if space allows)',
-          'Neutral folded towels',
-          'A small framed abstract print',
-          'A compact potted plant',
-        ],
-        scandinavian: [
-          'A light-wood ladder towel rack',
-          'White cotton towels',
-          'A framed botanical print',
-          'A woven bath mat',
-        ],
-        industrial: [
-          'A metal shelf with wood accents',
-          'Dark striped towels',
-          'A concrete planter with snake plant',
-          'A black-framed wall print',
-        ],
-        midcentury: [
-          'A teak stool or vanity table',
-          'Retro patterned towels',
-          'A framed geometric print',
-          'A textured rug',
-        ],
-        luxury: [
-          'A marble-top vanity table or stool',
-          'Rolled plush towels',
-          'Crystal soap dispenser set',
-          'A framed elegant artwork',
-        ],
-        coastal: [
-          'A wicker storage basket',
-          'Blue and white striped towels',
-          'A framed seashell print',
-          'A jute bath mat',
-        ],
-        farmhouse: [
-          'A rustic wood stool or shelf',
-          'Neutral earth-tone towels',
-          'A ceramic planter with greenery',
-          'A vintage framed print',
-        ],
-        standard: [
-          'A simple towel rack',
-          'Plain folded towels',
-          'A small neutral wall print',
-        ],
+      industrial: {
+        palette: 'charcoal, ink, tobacco, and concrete neutrals',
+        metal: 'blackened steel and iron',
+        wood: 'reclaimed or rustic walnut',
+        textile: 'leather, denim-weave, heavy canvas',
+        accent: 'cognac or rust',
+        pattern: 'distressed or raw textures',
+        extras: ['exposed-bulb lighting', 'metal mesh or angle-iron details'],
       },
-
-      // --------- DINING ROOM ---------
-      dining_room: {
-        modern: [
-          'A rectangular dining table with sleek legs',
-          'Upholstered modern chairs',
-          'A linear pendant above table',
-          'A neutral rug',
-          'A large framed abstract artwork',
-        ],
-        scandinavian: [
-          'A light-wood table with spindle chairs',
-          'A pale wool rug',
-          'A white dome pendant',
-          'Two framed prints',
-        ],
-        industrial: [
-          'A slab wood table with metal legs',
-          'Metal or leather chairs',
-          'An industrial pendant',
-          'A dark rug',
-        ],
-        midcentury: [
-          'A teak oval dining table',
-          'Retro chairs with tapered legs',
-          'A patterned rug',
-          'A bold geometric print',
-        ],
-        luxury: [
-          'A glass or marble dining table',
-          'Elegant upholstered chairs',
-          'A chandelier',
-          'A silk rug',
-        ],
-        coastal: [
-          'A whitewashed table',
-          'Rattan or wicker chairs',
-          'A striped cotton rug',
-          'A framed coastal landscape',
-        ],
-        farmhouse: [
-          'A rustic wood table',
-          'Bench + wooden chairs',
-          'A lantern pendant',
-          'A jute rug',
-        ],
-        standard: [
-          'A wooden dining table',
-          'Neutral upholstered chairs',
-          'A framed still-life print',
-        ],
+      midcentury: {
+        palette: 'warm neutrals with saffron/teal/olive accents',
+        metal: 'brass or black',
+        wood: 'teak or warm walnut',
+        textile: 'linen tweed, boucle',
+        accent: 'mustard or teal',
+        pattern: 'geometrics and atomic motifs',
+        extras: ['tapered legs', 'low credenzas'],
       },
-
-      // --------- HOME OFFICE ---------
-      home_office: {
-        modern: [
-          'A minimalist desk',
-          'An ergonomic chair',
-          'A slim desk lamp',
-          'Floating shelves with books',
-        ],
-        scandinavian: [
-          'A light-wood desk',
-          'A comfortable fabric chair',
-          'A fabric-shade lamp',
-          'A framed botanical print',
-        ],
-        industrial: [
-          'A wood-and-metal desk',
-          'A leather chair',
-          'An exposed-bulb desk lamp',
-          'A black-framed wall print',
-        ],
-        midcentury: [
-          'A teak desk with tapered legs',
-          'A retro upholstered chair',
-          'A geometric desk lamp',
-          'A bold print on wall',
-        ],
-        luxury: [
-          'A marble or glass desk',
-          'A velvet chair',
-          'A brass desk lamp',
-          'A framed elegant artwork',
-        ],
-        coastal: [
-          'A whitewashed wood desk',
-          'A wicker chair with cushion',
-          'A striped rug',
-          'A framed coastal print',
-        ],
-        farmhouse: [
-          'A rustic wood desk',
-          'A vintage upholstered chair',
-          'A lantern-style desk lamp',
-          'A framed country print',
-        ],
-        standard: [
-          'A simple wooden desk',
-          'A neutral chair',
-          'A small wall print',
-        ],
+      luxury: {
+        palette: 'rich neutrals (ivory, greige) with jewel accents',
+        metal: 'polished brass and champagne gold',
+        wood: 'dark stained walnut/ebony',
+        textile: 'velvet, silk-blend, high-pile',
+        accent: 'merlot, deep emerald, or navy',
+        pattern: 'subtle damask or fine abstract',
+        extras: ['mitered details', 'marble and mirror surfaces'],
       },
-
-      // --------- KIDS ROOM ---------
-      kids_room: {
-        modern: [
-          'A low-profile twin bed',
-          'A simple desk with chair',
-          'A colorful rug',
-          'A framed playful artwork',
-        ],
-        scandinavian: [
-          'A light wood bed with soft bedding',
-          'A toy storage bench',
-          'A pale rug',
-          'A framed animal print',
-        ],
-        industrial: [
-          'A metal frame bed',
-          'A wooden desk',
-          'A dark rug',
-          'A black-framed wall print',
-        ],
-        midcentury: [
-          'A retro bed with tapered legs',
-          'A small desk with geometric accents',
-          'A patterned rug',
-          'A playful retro print',
-        ],
-        luxury: [
-          'A tufted upholstered bed',
-          'A mirrored nightstand',
-          'A velvet rug',
-          'A framed elegant artwork',
-        ],
-        coastal: [
-          'A whitewashed bed',
-          'A wicker chair',
-          'A striped rug',
-          'A framed beach print',
-        ],
-        farmhouse: [
-          'A rustic wooden bed',
-          'A vintage toy chest',
-          'A braided rug',
-          'A framed country artwork',
-        ],
-        standard: ['A basic twin bed', 'A small desk', 'A colorful poster'],
+      coastal: {
+        palette: 'white, sand, driftwood with soft blues',
+        metal: 'brushed brass or weathered nickel',
+        wood: 'whitewashed oak/rattan',
+        textile: 'linen, cotton, light sheers',
+        accent: 'sea-salt blue and sea-grass green',
+        pattern: 'stripes and airy botanicals',
+        extras: ['natural fibers (jute, sisal)', 'light curtains'],
       },
-
-      // --------- OUTDOOR ---------
-      outdoor: {
-        modern: [
-          'Low-profile lounge chairs',
-          'A small metal side table',
-          'A neutral outdoor rug',
-          'Two structured planters',
-        ],
-        scandinavian: [
-          'Light wood chairs with cushions',
-          'A small round table',
-          'A woven rug',
-          'Planters with greenery',
-        ],
-        industrial: [
-          'Metal-framed chairs',
-          'A compact metal table',
-          'A dark rug',
-          'Concrete planters',
-        ],
-        midcentury: [
-          'Retro patio chairs',
-          'A low teak table',
-          'A bold patterned outdoor rug',
-          'A geometric wall art (if surface exists)',
-        ],
-        luxury: [
-          'A cushioned outdoor sofa',
-          'A marble or glass table',
-          'A silk-textured outdoor rug',
-          'Large planters with manicured greenery',
-        ],
-        coastal: [
-          'White or rattan chairs',
-          'A driftwood table',
-          'A striped rug',
-          'A nautical wall decor (if surface exists)',
-        ],
-        farmhouse: [
-          'Wooden rocking chairs',
-          'A rustic table',
-          'A jute rug',
-          'A vintage lantern décor',
-        ],
-        standard: [
-          'A simple patio set',
-          'A neutral rug',
-          'A small potted plant',
-        ],
+      farmhouse: {
+        palette: 'warm whites, oatmeal, and earthy browns',
+        metal: 'antique bronze/black',
+        wood: 'knotty oak, reclaimed pine',
+        textile: 'linen/canvas, plaid knits',
+        accent: 'sage and terracotta',
+        pattern: 'gingham, simple florals, ticking stripes',
+        extras: ['shaker profiles', 'hand-thrown ceramics'],
       },
     };
 
-    return P[roomType]?.[furnitureStyle] ?? [];
+    // 2) Blueprints por CÔMODO (essenciais)
+    const ROOM: Record<
+      RoomType,
+      (s: (typeof STYLE)[typeof furnitureStyle]) => string[]
+    > = {
+      living_room: s => [
+        `sofa or sectional with ${s.textile} upholstery in the ${s.palette}`,
+        `one–two accent armchairs with ${s.metal} details`,
+        `coffee table (stone/wood/glass) — top to echo ${s.wood} or marble`,
+        `large area rug (${s.pattern}) sized to anchor all front legs of seating`,
+        `media console or low credenza in ${s.wood} with ${s.metal} pulls`,
+        `floor lamp and/or table lamp matching ${s.metal}`,
+        `side tables (pair) — profiles aligned with ${s.extras?.[0] ?? 'the style'}`,
+        `decorative cushions/throw in ${s.accent} accent`,
+        `big indoor plant (fiddle-leaf fig/ficus) in matte planter`,
+        `framed wall art (abstract/botanical) sized to sofa width × 2/3`,
+      ],
+      bedroom: s => [
+        `queen/king bed with upholstered or wood headboard in ${s.textile}`,
+        `layered bedding (duvet + quilt) with pillows in ${s.accent} accents`,
+        `two nightstands in ${s.wood} with ${s.metal} hardware`,
+        `pair of bedside lamps (${s.metal} bases with fabric shades)`,
+        `low dresser/wardrobe in ${s.wood} with clean fronts`,
+        `bench or ottoman at foot of bed (${s.textile} upholstery)`,
+        `area rug (${s.pattern}) extending beyond bed sides`,
+        `large art or mirror centered above headboard`,
+        `accent chair or compact reading nook with small side table`,
+        `plant (rubber plant/peace lily) in neutral pot`,
+      ],
+      kitchen: s => [
+        `counter or island stools with ${s.metal} footrests and ${s.textile} seats`,
+        `pendant lighting above island in ${s.metal} (no ceiling changes implied)`,
+        `compact bistro/dining set echoing ${s.wood}/${s.metal}`,
+        `runner rug (${s.pattern}) along prep/circulation zone`,
+        `styled counter vignette: cutting board + bowl in ${s.wood} + ceramic jar`,
+        `herb planters (basil/rosemary) on sill or counter`,
+        `simple framed print (culinary or botanical)`,
+        `discreet tray with oils/salt-pepper in ${s.metal}`,
+      ],
+      bathroom: s => [
+        `coordinated towel set (bath/hand) in ${s.palette} with ${s.accent} trim`,
+        `vanity accessories: soap dispenser + tray in ${s.metal}/${s.wood}`,
+        `floor bath mat (low-pile, ${s.pattern})`,
+        `framed art or mirror with ${s.metal} frame`,
+        `plant tolerant to humidity (fern/pothos) in ceramic pot`,
+        `stool or small caddy in ${s.wood} if space allows`,
+        `laundry basket or woven hamper (tone-on-tone)`,
+      ],
+      dining_room: s => [
+        `dining table (oval/rectangular) — top in ${s.wood} or stone`,
+        `4–6 dining chairs with ${s.textile} seats and ${s.metal} accents`,
+        `linear or drum pendant centered above table in ${s.metal}`,
+        `area rug (${s.pattern}) sized to chairs pulled back`,
+        `sideboard/credenza in ${s.wood} with styled decor`,
+        `wall art or large mirror (proportional to table width)`,
+        `centerpiece: vase with stems/branches in palette ${s.accent}`,
+        `subtle window treatment (sheer/linen) if context allows`,
+      ],
+      home_office: s => [
+        `desk with cable management; top in ${s.wood} with ${s.metal} base`,
+        `ergonomic chair upholstered in ${s.textile}`,
+        `task lamp in ${s.metal} with soft white bulb`,
+        `open shelving or low credenza in ${s.wood}`,
+        `area rug (${s.pattern}) under chair/desk zone`,
+        `framed art or pinboard aligned to ${s.palette}`,
+        `plant (snake plant/zz plant) in matte pot`,
+        `organizers: trays, bookends, and storage boxes`,
+      ],
+      kids_room: s => [
+        `twin bed (or bunk) with playful ${s.textile} bedding`,
+        `nightstand with soft-glow lamp in ${s.metal}`,
+        `desk + chair — rounded edges in ${s.wood}`,
+        `bookshelf or cubby storage with labeled bins`,
+        `area rug (${s.pattern}) soft underfoot`,
+        `wall prints (animals/letters) in ${s.accent} tones`,
+        `toy storage baskets (woven)`,
+        `cozy reading nook with floor cushion/beanbag`,
+        `small plant (pothos) out of reach`,
+      ],
+      outdoor: s => [
+        `outdoor sofa/lounge chairs with weatherproof ${s.textile}`,
+        `coffee/side tables in powder-coated ${s.metal} or ${s.wood}`,
+        `outdoor rug in ${s.pattern} (UV-resistant)`,
+        `planters with layered greenery (olive tree/fern/grass)`,
+        `lanterns or string lights in ${s.metal}`,
+        `outdoor cushions/pillows in ${s.accent} tones`,
+        `tray with decor (ceramic/teak)`,
+        `umbrella or shade element if composition allows`,
+      ],
+    };
+
+    // 3) Pequenos ajustes por estilo + cômodo (adiciona riqueza)
+    const ADJUST: Partial<
+      Record<RoomType, Partial<Record<FurnitureStyle, string[]>>>
+    > = {
+      living_room: {
+        luxury: [
+          'marble side tables with brass edge',
+          'velvet drapery with blackout lining',
+        ],
+        modern: ['low media wall styling with books and sculptural vase'],
+        scandinavian: ['sheer curtains and woven basket for throws'],
+        industrial: ['vintage leather ottoman and metal wall shelf'],
+        midcentury: ['teak credenza and sputnik-inspired lamp'],
+        coastal: ['rattan accent chair and linen drapes'],
+        farmhouse: ['distressed wood console and ceramic jugs'],
+        standard: ['paired table lamps and classic framed prints'],
+      },
+      bedroom: {
+        luxury: ['channel-tufted headboard and mirrored nightstands'],
+        modern: ['floating nightstands and linear sconces (surface-mounted)'],
+        scandinavian: ['light oak slat bench and knitted throw'],
+        industrial: ['metal bedside lamps and trunk bench'],
+        midcentury: ['spindle-leg nightstands and sunburst mirror'],
+        coastal: ['linen bed skirt and woven pendant (if feasible)'],
+        farmhouse: ['shaker dresser and quilted throw'],
+        standard: ['classic framed landscape above bed'],
+      },
+      dining_room: {
+        luxury: ['crystal chandelier and velvet chairs with piping'],
+        modern: ['minimal LED linear pendant and slab-front sideboard'],
+        scandinavian: ['wishbone-style chairs and pale wool rug'],
+        industrial: ['metal cage pendant and reclaimed wood buffet'],
+        midcentury: ['oval table with tulip-base and starburst art'],
+        coastal: ['rattan chairs and driftwood centerpiece'],
+        farmhouse: ['cross-back chairs and lantern pendant'],
+        standard: ['beveled mirror above sideboard'],
+      },
+    };
+
+    // 4) Montagem final (blueprint + ajustes + extras de estilo)
+    const s = STYLE[furnitureStyle];
+    const base = ROOM[roomType](s);
+    const tweaks = ADJUST[roomType]?.[furnitureStyle] ?? [];
+    const extras = s.extras ?? [];
+    const pack = [...base, ...tweaks, ...extras];
+
+    // Limita a um pacote robusto (10–14 itens) sem perder riqueza
+    return pack.slice(0, 14);
   }
 }
 
