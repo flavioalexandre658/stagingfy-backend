@@ -39,7 +39,10 @@ class ChatGPTService {
       .join('\n');
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Do not modify any existing pixel of the scene.
-Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
+• Add 2–5 main furniture pieces (e.g., sofa, armchairs, dining table, bed, or desk depending on the room).
+• Add 1–2 wall decorations (artwork, framed prints, or mirrors) only on available walls — never replace or alter doors or windows.
+• Add 1–2 complementary elements (plants, lamps, rugs, curtains, cushions, small accessories).
+• Ensure the result looks fully furnished and balanced, not sparse.
 
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
