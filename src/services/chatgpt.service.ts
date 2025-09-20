@@ -57,15 +57,15 @@ class ChatGPTService {
     // Compose room-aware guidance lines
     const mainPiecesLine =
       `Add ${plan.mainPiecesRange[0]}–${plan.mainPiecesRange[1]} main ${roomLabel} piece(s): ` +
-      `${this.joinHuman(plan.allowedMainItems)}.`;
+      `${this.joinHuman(plan.allowedMainItems)}. maintain all other aspects of the original image.`;
 
     const wallDecorLine =
       `Add ${plan.wallDecorRange[0]}–${plan.wallDecorRange[1]} wall decoration(s) on free wall surfaces only: ` +
-      `${this.joinHuman(plan.allowedWallDecor)}. Do not place over doors/windows.`;
+      `${this.joinHuman(plan.allowedWallDecor)}. maintain all other aspects of the original image.`;
 
     const complementaryLine =
       `Add ${plan.complementaryRange[0]}–${plan.complementaryRange[1]} complementary element(s): ` +
-      `${this.joinHuman(plan.allowedComplementary)}.`;
+      `${this.joinHuman(plan.allowedComplementary)}. maintain all other aspects of the original image.`;
 
     const roomSafety = plan.roomSafetyNotes.length
       ? `\nROOM-SPECIFIC SAFETY:\n• ${plan.roomSafetyNotes.join('\n• ')}\n`
@@ -81,8 +81,9 @@ class ChatGPTService {
       .map(i => `• ${i}`)
       .join('\n');
 
-    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Do not modify any existing pixel of the scene.
+    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
 • ${mainPiecesLine}
+• ${wallDecorLine}
 • ${complementaryLine}
 
 PRESERVE PIXEL-FOR-PIXEL:
