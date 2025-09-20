@@ -10,43 +10,44 @@ class ChatGPTService {
   }
 
   /**
-   * Preservation-first + style-rich prompt for flux-kontext-pro.
-   * - Mantém o ambiente intacto (pixels preservados).
-   * - Estilo guiado por "traits".
-   * - Itens sugeridos (2–5) escolhidos pelo modelo conforme espaço REAL.
+   * Ultra-lean, preservation-first prompt for flux-kontext-pro.
+   * - Mantém 100% da cena original (inclui ESCADA explicitamente).
+   * - Sugestões de estilo são opcionais (soft), nunca mandatórias.
+   * - O modelo escolhe 2–5 itens apenas se couberem no espaço visível.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<string> {
-    const room = this.getRoomTypeLabel(roomType); // ex.: "living room"
-    const style = this.getFurnitureStyleLabel(furnitureStyle); // ex.: "luxury"
+    const room = this.getRoomTypeLabel(roomType);
+    const style = this.getFurnitureStyleLabel(furnitureStyle);
     const traits = this.getFurnitureStyleTraits(furnitureStyle);
     const kit = this.getPackageCombination(roomType, furnitureStyle);
     const rugs = this.getRugOptions(furnitureStyle);
 
     const prompt = [
-      // 1) Núcleo de preservação (curto e autoritário)
-      `Add 2–5 pieces of ${style} furniture and decor to this ${room}. Only add new objects.`,
-      `Keep every other aspect of the original photo EXACTLY the same — do not modify any existing pixel.`,
-      `Do not change walls or paint, floor, ceiling, trims/baseboards, STAIRS, doors, windows, vents, outlets, switches, built-ins, or fixtures.`,
-      `Preserve the exact camera angle, framing, perspective, and lighting.`,
-      `Do not add curtains or built-in/ceiling fixtures. If something does not fit, skip it.`,
-      `Never place items blocking door openings, the stairway, or clear passage paths.`,
+      // BLOCO DE PRESERVAÇÃO (curto e autoritário)
+      `Add 2–5 pieces of ${style} furniture/decor to this ${room}.`,
+      `Preserve the original photo EXACTLY: do not modify any existing pixel.`,
+      `Do not change walls/paint, floor, ceiling, trims/baseboards, STAIRS (keep exactly as-is), doors, windows, vents, outlets, switches, or built-ins.`,
+      `Preserve the exact camera angle, framing, perspective and lighting. No cropping, no relighting.`,
+      `Do NOT add curtains, blinds, ceiling fixtures or any built-in elements.`,
+      `Respect circulation: never block the stairway, door swings, or clear passage paths.`,
+      `If an item does not physically fit in the visible space, SKIP it.`,
 
-      // 2) Intenção de estilo (curta)
+      // INTENÇÃO DE ESTILO (soft)
       `Style intent: ${traits}`,
 
-      // 3) Kit de sugestões (o modelo escolhe as que couberem)
-      `From the list below, choose only items that physically fit in the visible floor area. These are suggestions — not requirements. Skip any item that would overlap doors/windows/vents/thermostats or require structural changes.`,
+      // SUGESTÕES (soft) — o modelo escolhe apenas se couber
+      `Optional suggestions only if they fit without overlapping architecture:`,
       this.renderBullets(kit),
 
-      // 4) Opções de tapete: alternativas para enriquecer sem fixar 1 único look
-      `Rug options (choose at most one if appropriate and only if it fits under the main grouping):`,
+      // TAPETES (soft)
+      `Optional rug (choose at most one if it fits under the main grouping):`,
       this.renderBullets(rugs),
 
-      // 5) Fecho
-      `Use realistic scale and shadows consistent with the existing light. Produce a photoreal, professionally staged ${room} in a ${style} style.`,
+      // FECHO
+      `Render photorealistic materials and shadows consistent with the existing light.`,
     ].join(' ');
 
     return prompt;
@@ -87,7 +88,7 @@ class ChatGPTService {
   }
 
   /**
-   * Traços concisos para “forçar” o look sem encorajar mudanças estruturais.
+   * Traços concisos para “forçar” o look sem induzir alterações estruturais.
    */
   private getFurnitureStyleTraits(furnitureStyle: FurnitureStyle): string {
     const traits: Record<FurnitureStyle, string> = {
@@ -112,14 +113,13 @@ class ChatGPTService {
   }
 
   /**
-   * “Kits” por cômodo + estilo: sugestões ricas porém seguras (aditivas).
-   * Nunca mencionamos cortinas embutidas, sancas, pintura etc.
+   * Kits por cômodo + estilo: sugestões ricas porém seguras (aditivas).
+   * Tudo são “opções”, nunca ordens — reduz deriva estrutural.
    */
   private getPackageCombination(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): string[] {
-    // Materiais por estilo para rechear descrições com consistência
     const STYLE: Record<
       FurnitureStyle,
       { metal: string; wood: string; textile: string; accent: string }
@@ -178,14 +178,14 @@ class ChatGPTService {
 
     const ROOM: Record<RoomType, string[]> = {
       living_room: [
-        `sofa or compact sectional in ${s.textile} with ${s.metal} or ${s.wood} legs`,
+        `sofa or compact sectional in ${s.textile} with ${s.metal}/${s.wood} legs`,
         `one or two accent chairs coordinated with the sofa`,
-        `coffee table (stone, wood, or glass) sized to the seating layout`,
-        `side tables (single or pair) to support lamps or books`,
+        `coffee table (stone/wood/glass) sized to the seating layout`,
+        `one or two side tables to support lighting or books`,
         `floor or table lamp with ${s.metal} base`,
         `media console or low credenza in ${s.wood}`,
-        `decorative cushions/throw in ${s.accent} tones`,
-        `large framed artwork or mirror on a free wall (never over windows/doors)`,
+        `decor cushions/throw in ${s.accent} tones`,
+        `framed artwork or mirror on a free wall (never over windows/doors)`,
         `tall indoor plant in a neutral planter`,
       ],
       bedroom: [
@@ -203,10 +203,10 @@ class ChatGPTService {
         `small bistro table with 2–4 chairs (only if space allows)`,
         `styled counter vignette (board + bowl + jar) matching ${s.wood}/${s.metal}`,
         `herb planter (basil/rosemary)`,
-        `single framed culinary/botanical print for a free wall`,
+        `single framed culinary/botanical print on a free wall`,
       ],
       bathroom: [
-        `coordinated towel set (bath/hand) in neutral palette with subtle ${s.accent}`,
+        `coordinated towel set in neutral palette with a hint of ${s.accent}`,
         `accessory set (tray, soap dispenser) in ${s.metal}/${s.wood}`,
         `small stool or caddy for storage (if space allows)`,
         `framed art or mirror on an empty wall area`,
@@ -219,25 +219,22 @@ class ChatGPTService {
         `decorative centerpiece (vase with branches/flowers)`,
         `pair of table lamps on the sideboard (if present)`,
         `one large framed artwork or mirror on a free wall`,
-        `subtle sheer/linen drape only if an existing rod is already present`,
       ],
       home_office: [
-        `clean desk surface in ${s.wood} with simple ${s.metal} base`,
+        `desk in ${s.wood} with simple ${s.metal} base`,
         `ergonomic upholstered chair (${s.textile})`,
         `task lamp with ${s.metal} arm`,
         `low credenza or open shelving in ${s.wood}`,
         `framed prints or pinboard on free wall space`,
         `plant (snake plant/zz) in matte planter`,
-        `desk organizers (tray, bookends)`,
       ],
       kids_room: [
         `twin bed (or bunk) with playful ${s.textile} bedding`,
         `nightstand with soft-glow lamp`,
-        `desk with rounded corners and a compact chair`,
+        `desk with rounded corners and compact chair`,
         `bookshelf or cubby storage with labeled bins`,
         `fun wall prints (animals/letters) on free wall`,
         `toy baskets (woven)`,
-        `reading nook with floor cushion/beanbag`,
       ],
       outdoor: [
         `outdoor lounge chairs or compact sofa with weatherproof ${s.textile}`,
@@ -245,7 +242,6 @@ class ChatGPTService {
         `planters with layered greenery (olive tree/fern/ornamental grass)`,
         `lanterns for soft ambience (battery/LED)`,
         `outdoor cushions in ${s.accent} tones`,
-        `serving tray with decorative objects`,
       ],
     };
 
@@ -253,15 +249,14 @@ class ChatGPTService {
   }
 
   /**
-   * Opções de tapete por estilo — fornecidas como alternativas,
-   * para variar look sem fixar um único “carpet”.
+   * Opções de tapete por estilo — alternativas (soft), não mandatório.
    */
   private getRugOptions(style: FurnitureStyle): string[] {
     const RUGS: Record<FurnitureStyle, string[]> = {
       standard: [
         'neutral low-pile rug with subtle border',
         'tone-on-tone geometric rug',
-        'heathered wool blend rug in warm gray',
+        'heathered wool-blend rug in warm gray',
       ],
       modern: [
         'large low-pile rug in soft greige',
@@ -271,20 +266,20 @@ class ChatGPTService {
       scandinavian: [
         'light wool rug with faint diamond pattern',
         'off-white flat-weave with subtle stripe',
-        'pale gray shaggy rug (short pile) for coziness',
+        'pale gray short-pile shag rug',
       ],
       industrial: [
-        'charcoal flat-weave rug with distressed texture',
+        'charcoal flat-weave with distressed texture',
         'dark heathered rug that grounds the seating',
         'vintage-look gray rug with faded pattern',
       ],
       midcentury: [
         'warm neutral rug with simple geometric motif',
-        'low-pile rug in ivory with thin contrasting border',
+        'ivory low-pile rug with thin contrasting border',
         'teal-accent rug with restrained pattern',
       ],
       luxury: [
-        'silky low-pile rug in ivory or greige that reflects light softly',
+        'silky low-pile rug in ivory/greige with soft sheen',
         'fine abstract rug with marble-like veining',
         'bordered rug with subtle damask micro-pattern',
       ],
