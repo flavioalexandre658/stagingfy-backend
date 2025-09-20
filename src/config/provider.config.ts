@@ -37,7 +37,7 @@ export class ProviderConfigManager {
       baseUrl: process.env.INSTANT_DECO_BASE_URL || 'https://api.instantdeco.com',
       timeout: parseInt(process.env.INSTANT_DECO_TIMEOUT || '60000'),
       retryAttempts: parseInt(process.env.INSTANT_DECO_RETRY_ATTEMPTS || '2'),
-      webhookUrl: process.env.INSTANT_DECO_WEBHOOK_URL || '',
+      webhookUrl: 'https://api.stagingfy.com/api/v1/webhooks/instant-deco',
     });
   }
 

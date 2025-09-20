@@ -1,0 +1,53 @@
+### Test InstantDeco Webhook - Success Response (Single Image)
+POST https://api.stagingfy.com/api/v1/webhooks/instant-deco
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "job_id": "test-job-123",
+  "result": {
+    "images": [
+      {
+        "url": "https://example.com/staged-image.jpg",
+        "width": 1024,
+        "height": 768
+      }
+    ]
+  }
+}
+
+### Test InstantDeco Webhook - Success Response (Multiple Images)
+POST https://api.stagingfy.com/api/v1/webhooks/instant-deco
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "job_id": "test-job-456",
+  "result": {
+    "images": [
+      {
+        "url": "https://example.com/staged-image-1.jpg",
+        "width": 1024,
+        "height": 768
+      },
+      {
+        "url": "https://example.com/staged-image-2.jpg",
+        "width": 1024,
+        "height": 768
+      }
+    ]
+  }
+}
+
+### Test InstantDeco Webhook - Failed Response
+POST https://api.stagingfy.com/api/v1/webhooks/instant-deco
+Content-Type: application/json
+
+{
+  "status": "failed",
+  "job_id": "test-job-789",
+  "error": {
+    "message": "Processing failed due to invalid image format",
+    "code": "INVALID_IMAGE_FORMAT"
+  }
+}

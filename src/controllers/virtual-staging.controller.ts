@@ -273,14 +273,15 @@ export class VirtualStagingController {
       const imageBase64 = imageBuffer.toString('base64');
 
       // Usar o service unificado para processar virtual staging
-      const webhookUrl = process.env.INSTANT_DECO_WEBHOOK_URL || undefined;
+      // Webhook URL fixo da nossa aplicação para receber respostas do InstantDeco
+      const webhookUrl = 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
       const result = await this.virtualStagingService.processVirtualStaging({
         imageBase64,
         imageUrl: inputImageUrl,
         roomType,
         furnitureStyle,
         uploadId,
-        ...(webhookUrl && { webhookUrl }),
+        webhookUrl,
       }, provider);
 
       let finalImageUrl: string | null = null;
