@@ -31,11 +31,8 @@ class ChatGPTService {
 
   /**
    * Generates a refined prompt for flux-kontext-pro.
-   * Dynamic furniture count (2–5), strict scene preservation, and rich style guidance.
-   */
-  /**
-   * Generates a refined prompt for flux-kontext-pro.
-   * Dynamic furnishing (2–5 items), pixel-preserving, with a protected stair zone.
+   * Dynamic furnishing (2–5 items), pixel-preserving, with explicit wall-art/curtain gating
+   * and a protected stair/circulation zone. The model must choose quantity that fits the visible space.
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
@@ -44,17 +41,21 @@ class ChatGPTService {
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
     const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
+
+    // Inspiration package (rich but flexible — model will pick subset)
     const packageItems = this.getPackageCombination(roomType, furnitureStyle)
-      // favorece peças de baixo volume primeiro
+      // favor lower-volume pieces first; avoid items que frequentemente forçam estrutura
       .filter(
         i =>
           !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
             i
           )
       );
-    const plan = this.getRoomStagingPlan(roomType, furnitureStyle); // << NEW
 
-    // Compose room-aware guidance lines
+    // Room-aware ranges, allowed items e notas de segurança
+    const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
+
+    // Linhas auxiliares derivadas do plano (mantemos a lógica simples e direta)
     const roomSafety = plan.roomSafetyNotes.length
       ? `\nROOM-SPECIFIC SAFETY:\n• ${plan.roomSafetyNotes.join('\n• ')}\n`
       : '';
@@ -64,37 +65,55 @@ class ChatGPTService {
         ? `\nStyle emphasis for ${styleLabel}: ${plan.styleEmphasis!.join('; ')}.\n`
         : '';
 
+    // Seleção enxuta de sugestões para não alongar demais o prompt
     const topPicks = packageItems
       .slice(0, 6)
       .map(i => `• ${i}`)
       .join('\n');
 
-    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
-Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
-add style-consistent curtains to existing windows according to the selected style, only if there’s adequate surrounding wall clearance; skip if space is limited. This is STRICTLY additive—do not alter window geometry, trims, or wall finishes.
+    // ---- PROMPT FINAL (en-US) ----
+    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Maintain all other aspects of the original image EXACTLY as they are.
+Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging — do not modify any existing pixel of the scene.
 
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
-• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
+• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new openings. No new window treatments unless specifically allowed below.
 
 STAIR & CIRCULATION SAFETY:
-• Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
+• Treat the staircase and its landings as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
 • Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
-• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
+• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, a door swing, a heater/vent, or a passage path, SKIP it.${roomSafety}
+
+WALL ART (SPACE-GATED):
+• Only add framed wall art or mirrors on clearly visible, unobstructed wall areas. Place art ONLY if there is sufficient free wall surface; NEVER over doors/windows, trims, radiators, or switches. If the wall area is too small or visually busy, SKIP wall art entirely.
+
+CURTAINS (STYLE-GATED):
+• Add style-consistent curtains to existing windows ONLY if there is adequate surrounding wall clearance and an obvious mounting position. Mount within the existing opening. Do NOT alter window geometry, trims, finishes, or outside view. If clearance is insufficient, SKIP curtains.
+
+KITCHEN ISLAND STOOLS (CONDITIONAL):
+• If a kitchen island or counter with overhang is visible, add 2–4 style-matched bar stools with appropriate knee/foot clearance (seat height ~65–75 cm). This is STRICTLY additive — do not modify cabinetry, counters, or appliances.
+
+MULTI-ZONE PHOTOS (CONDITIONAL):
+• If the photo shows multiple connected rooms/zones, furnish each zone appropriately within its existing boundaries while preserving circulation. Do NOT shift walls, openings, or camera framing.
 
 STYLE GUARDRAILS — ${styleLabel}:
 ${styleTraits}${styleEmphasis}
 
-FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
+FURNISHING GUIDANCE (flexible; apply only if items fit without breaking rules):
 ${topPicks}
+
+Rendering notes:
+• Prefer compact pieces over bulky casegoods when space is tight.
+• Photorealistic materials and shadows matching the input light; no artificial glow or global relighting.
+• Wall decor only on truly free wall surfaces — skip if no space is available.
 
 Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
 
-  // ---------- NEW: room-aware, style-aware plan ----------
+  // ---------- Room-aware, style-aware plan ----------
   private getRoomStagingPlan(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
@@ -106,16 +125,20 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     > = {
       living_room: {
         mainPiecesRange: [2, 4],
-        wallDecorRange: [1, 2],
+        wallDecorRange: [0, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
-          'sofa or sectional',
+          'sofa or compact sectional',
           'one or two accent armchairs',
           'coffee table',
           'media console or low credenza',
           'side tables',
         ],
-        allowedWallDecor: ['framed artwork', 'framed photography', 'mirror'],
+        allowedWallDecor: [
+          'framed artwork',
+          'framed photography',
+          'mirror (on free wall only)',
+        ],
         allowedComplementary: [
           'area rug sized to anchor seating',
           'floor lamp or table lamp',
@@ -124,14 +147,14 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           'books, bowls, vases',
         ],
         roomSafetyNotes: [
-          'Keep a clear seating circulation path (at least one side of the seating open)',
+          'Keep at least one clear circulation path around the seating group',
           'Do not block balcony/door thresholds with furniture',
         ],
       },
 
       bedroom: {
         mainPiecesRange: [2, 4],
-        wallDecorRange: [1, 2],
+        wallDecorRange: [0, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
           'bed (queen/king depending on space)',
@@ -139,7 +162,10 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           'dresser or wardrobe',
           'bench or ottoman at the foot of the bed',
         ],
-        allowedWallDecor: ['framed artwork above headboard', 'mirror'],
+        allowedWallDecor: [
+          'framed artwork above headboard (only if free wall)',
+          'mirror (on free wall)',
+        ],
         allowedComplementary: [
           'bedside lamps',
           'area rug extending beyond bed sides',
@@ -167,7 +193,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           'counter vignette (board + bowl + ceramic jar)',
         ],
         roomSafetyNotes: [
-          'Do not place items that obstruct cabinet doors, appliance doors or walking lanes',
+          'Do not place items that obstruct cabinet/appliance doors or walking lanes',
           'Keep cooktop and sink areas unobstructed',
         ],
       },
@@ -193,25 +219,25 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       dining_room: {
-        mainPiecesRange: [2, 4], // table + 2–6 chairs (count as 1–3 main groups)
-        wallDecorRange: [1, 2],
+        mainPiecesRange: [2, 4], // table + 2–6 chairs (contam como 1–3 grupos principais)
+        wallDecorRange: [0, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
           'dining table (oval/rectangular)',
-          'set of dining chairs (4–6)',
-          'sideboard or credenza',
+          'set of dining chairs (4–6 or more proportionally)',
+          'sideboard or credenza (only if space allows)',
         ],
         allowedWallDecor: [
-          'large framed artwork',
-          'mirror proportional to table',
+          'large framed artwork (on free wall)',
+          'mirror proportional to table (on free wall)',
         ],
         allowedComplementary: [
           'area rug sized to chairs pulled back',
           'centerpiece (vase with stems/branches)',
-          'subtle window treatment if context allows',
+          'subtle window treatment if a rod exists',
         ],
         roomSafetyNotes: [
-          'Keep chairs fully usable; do not push table too close to walls/doors',
+          'Keep chairs fully usable; do not push the table too close to walls/doors',
           'Maintain clear path around table perimeter',
         ],
       },
@@ -227,7 +253,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         ],
         allowedWallDecor: [
           'framed artwork',
-          'pinboard or simple wall organizer on free wall',
+          'pinboard or simple wall organizer (on free wall)',
         ],
         allowedComplementary: [
           'task lamp',
@@ -243,7 +269,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
 
       kids_room: {
         mainPiecesRange: [2, 4],
-        wallDecorRange: [1, 2],
+        wallDecorRange: [0, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
           'bed (twin/full)',
@@ -252,8 +278,8 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           'bookshelf or cubby storage',
         ],
         allowedWallDecor: [
-          'playful framed prints (animals/letters)',
-          'mirror (safe height)',
+          'playful framed prints (animals/letters) on free wall',
+          'mirror (safe height, on free wall)',
         ],
         allowedComplementary: [
           'soft area rug',
@@ -275,7 +301,9 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           'outdoor sofa or lounge chairs',
           'outdoor table (coffee/side)',
         ],
-        allowedWallDecor: ['outdoor-safe wall decor (if applicable)'],
+        allowedWallDecor: [
+          'outdoor-safe wall decor (if applicable) on free wall only',
+        ],
         allowedComplementary: [
           'outdoor rug (UV-resistant)',
           'planters with greenery',
@@ -289,7 +317,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
     };
 
-    // Style emphasis (light touch, avoids forcing structure)
+    // Light style emphasis (helps ancorar materiais/tons sem forçar estrutura)
     const styleEmphasisByStyle: Record<FurnitureStyle, string[]> = {
       standard: ['balanced proportions', 'neutral palette'],
       modern: ['clean lines', 'matte finishes', 'low-profile silhouettes'],
@@ -299,7 +327,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       luxury: [
         'velvet/silk accents',
         'brass or gold details',
-        'marble or glass highlights',
+        'marble or mirror highlights',
       ],
       coastal: [
         'rattan/jute textures',
@@ -310,7 +338,6 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     };
 
     const plan = baseByRoom[roomType];
-
     return {
       ...plan,
       styleEmphasis: styleEmphasisByStyle[furnitureStyle],
@@ -496,7 +523,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         `dresser/wardrobe in ${s.wood} with clean fronts`,
         `bench/ottoman at foot of bed in ${s.textile}`,
         `area rug (${s.pattern}) extending beyond bed sides`,
-        `large art or mirror centered above headboard`,
+        `large art or mirror centered above headboard (only if free wall area exists)`,
         `reading chair with small side table`,
         `plant (rubber plant/peace lily) in neutral pot`,
       ],
@@ -506,13 +533,13 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         `runner rug (${s.pattern}) along prep/circulation zone`,
         `styled counter vignette: ${s.wood} board + ceramic bowl`,
         `herb planters (basil/rosemary)`,
-        `small framed print (culinary/botanical)`,
+        `small framed print (culinary/botanical) on free wall only`,
       ],
       bathroom: s => [
         `coordinated towel set in the ${s.palette} with ${s.accent} trim`,
         `vanity accessories: soap dispenser + tray in ${s.metal}/${s.wood}`,
         `low-pile bath mat (${s.pattern})`,
-        `framed art or mirror with ${s.metal} frame`,
+        `framed art or mirror with ${s.metal} frame (free wall only)`,
         `humidity-tolerant plant (fern/pothos)`,
         `wood stool/caddy in ${s.wood} if space allows`,
       ],
@@ -520,8 +547,8 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         `dining table (oval/rectangular) — top in ${s.wood} or stone`,
         `4–8 dining chairs with ${s.textile} seats and ${s.metal} accents`,
         `area rug (${s.pattern}) sized to chairs pulled back`,
-        `sideboard/credenza in ${s.wood} with styled decor`,
-        `wall art or large mirror proportional to table width`,
+        `sideboard/credenza in ${s.wood} with styled decor (only if space allows)`,
+        `wall art or large mirror proportional to table width (free wall only)`,
         `centerpiece: vase with stems/branches in ${s.accent}`,
         `subtle window treatment (sheer/linen) only if a rod exists`,
       ],
@@ -531,7 +558,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         `task lamp in ${s.metal} with soft white bulb`,
         `open shelving/low credenza in ${s.wood}`,
         `area rug (${s.pattern}) under desk zone`,
-        `framed art or pinboard aligned to ${s.palette}`,
+        `framed art or pinboard aligned to ${s.palette} (free wall)`,
         `plant (snake plant/zz) in matte pot`,
         `desktop organizers (trays/bookends/boxes)`,
       ],
@@ -541,7 +568,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         `rounded-edge desk + chair in ${s.wood}`,
         `cubby storage with labeled bins`,
         `area rug (${s.pattern}) soft underfoot`,
-        `wall prints (animals/letters) in ${s.accent} tones`,
+        `wall prints (animals/letters) in ${s.accent} tones (free wall)`,
         `reading nook with floor cushion/beanbag`,
       ],
       outdoor: s => [
@@ -555,7 +582,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       ],
     };
 
-    // Style+room tweaks for extra richness
+    // Style+room tweaks para mais riqueza
     const ADJUST: Partial<
       Record<RoomType, Partial<Record<FurnitureStyle, string[]>>>
     > = {
@@ -563,7 +590,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         luxury: [
           'marble side tables with brass edge',
           'velvet accent pillows with contrast piping',
-          'mirror with thin brass frame (only on free wall)',
+          'thin-brass-frame mirror (free wall only)',
         ],
         modern: ['low media styling with sculptural vase and books'],
         scandinavian: [
@@ -589,7 +616,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
       dining_room: {
         luxury: [
-          'velvet dining chairs with nailhead detail; crystal table lamp pair on sideboard',
+          'velvet dining chairs with nailhead detail; crystal table lamps on sideboard',
         ],
         modern: ['slab-front sideboard; minimalist LED table lamp on buffet'],
         scandinavian: ['wishbone-style chairs; pale wool rug'],
