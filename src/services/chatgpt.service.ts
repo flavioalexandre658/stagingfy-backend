@@ -10,8 +10,11 @@ class ChatGPTService {
   }
 
   /**
-   * Generates a refined prompt for flux-kontext-pro.
-   * Non-destructive, circulation-aware, rich styling, with rug variants.
+   * Prompt final para flux-kontext-pro.
+   * - Adição somente (pixel-preserving)
+   * - Respeito estrito ao roomType (whitelist/blacklist por cômodo)
+   * - Regras de circulação (escadas/portas/passagens)
+   * - Estilo forçado + pacote inspiracional
    */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
@@ -21,49 +24,68 @@ class ChatGPTService {
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
     const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
     const packageItems = this.getPackageCombination(roomType, furnitureStyle);
-    const rugVariants = this.getRugVariants(furnitureStyle, roomType);
+    const rugVariants = this.getRugVariants(furnitureStyle);
+    const guard = this.getRoomGuard(roomType); // whitelist/blacklist
 
-    const prompt = `Virtually stage this ${roomLabel} with a complete ${styleLabel} interior, using additive edits only.
-Keep the original scene EXACTLY as captured — this is pixel-preserving virtual staging.
-
-HARD PRESERVATION:
-• Do not modify or replace walls, paint, trims, baseboards, ceilings, beams, floors, windows, blinds/curtains, doors, frames, staircases, railings, vents, sockets, or any built-in elements.
-• Do not add new openings, windows, doors, cornices, sockets/outlets, HVAC grilles, or built-in/ceiling fixtures; do not alter existing ones.
-• Keep camera angle, perspective, framing, scale, and lighting direction/intensity/temperature identical. No relighting, no cropping/expanding, no background replacement.
-
-CIRCULATION & SAFETY:
-• Keep all passage routes clear: never block doors, door swings, hallways, or stairways/landings.
-• Do not place consoles/tables under or in front of stair runs if they intrude on clear passage.
-• Only add items that physically fit within the visible space; partial crops at image edges are acceptable when necessary.
-
-STYLE ENFORCEMENT:
-${styleTraits}
-All added items must read clearly as ${styleLabel} and feel cohesive and high-end.
-
-SCOPE (balanced completeness):
-• Add 2–5 primary furniture pieces appropriate to a ${roomLabel}.
-• Add 1–2 wall decorations (artwork or framed prints) ONLY on blank wall areas — never over windows/doors or by inventing new surfaces.
-• Add 1–2 complementary elements (plants, lamps, cushions/throws, curated accessories).
-
-RUG — CHOOSE ONE (must fit scale; DO NOT modify the floor finish):
-${rugVariants.map(r => `• ${r}`).join('\n')}
-
-INSPIRATION (flexible, do not violate constraints):
-${packageItems.map(i => `• ${i}`).join('\n')}
-
-COMPOSITION NOTES:
-• Use realistic scale and shadowing that matches the existing light; no artificial glow.
-• Anchor seating, dining, or bed zones to the chosen rug; keep walk paths to doors and stairs clear.
-• Hide cable clutter; keep styling elegant and minimal.
-
-OUTPUT:
-A photo-real, professionally staged ${roomLabel} in ${styleLabel} style, with the original architecture and lighting fully intact. Add furniture and décor ONLY — never change the room.`;
+    const prompt = [
+      // ---- HEADLINE LOCKS (curtas, enfáticas) ----
+      `Additive virtual staging ONLY for this ${roomLabel} in ${styleLabel} style.`,
+      `Everything else must remain EXACTLY the same, pixel-for-pixel. Do not transform the room.`,
+      `Keep ALL other aspects of the original image unchanged.`,
+      '',
+      // ---- HARD PRESERVATION ----
+      'HARD PRESERVATION (non-negotiable):',
+      '• Do NOT modify or replace: walls, paint, trims, baseboards, ceilings, beams, floors, stairs/railings, windows, blinds/curtains, doors/frames, openings, vents, sockets/switches, radiators, built-ins, or any existing furniture.',
+      '• Do NOT add new doors/windows/openings or any built-in/ceiling fixture. No repainting or retexturing. No relighting. No crop/expand. No perspective changes.',
+      '• Preserve camera angle, framing, vanishing lines, scale, and the exact lighting direction, intensity, and color temperature.',
+      '',
+      // ---- CIRCULATION ----
+      'CIRCULATION & SAFETY:',
+      '• Keep all passage routes clear: never block door swings, hallways, or staircase starts/landings.',
+      '• Do not place consoles/tables in front of stair runs or intruding into obvious walk paths.',
+      '• Add items ONLY if they physically fit in visible space; partial crops at the image edge are acceptable.',
+      '',
+      // ---- ROOM GUARD ----
+      `ROOM GUARD — This scene IS a "${roomLabel}" and must remain a "${roomLabel}".`,
+      `Allowed item families: ${guard.allowed.join(', ')}.`,
+      `Forbidden in this room: ${guard.forbidden.join(', ')}.`,
+      'If any requested item conflicts with these rules, SKIP it instead of changing the room.',
+      '',
+      // ---- STYLE ENFORCEMENT ----
+      'STYLE ENFORCEMENT:',
+      `${styleTraits}`,
+      'All added items must clearly read as this style and feel cohesive/high-end.',
+      '',
+      // ---- SCOPE ----
+      'SCOPE & QUANTITY:',
+      '• Add 2–5 primary furniture pieces appropriate to this room.',
+      '• Add 1–2 wall decorations ONLY on available blank wall areas (never over windows/doors and never invent surfaces).',
+      '• Add 1–2 complementary elements (plant, lamp, cushions/throws, curated accessories).',
+      '• If fewer items fit without violating any rule, add fewer. Never alter the scene to force fit.',
+      '',
+      // ---- RUG CATALOG ----
+      'RUG (choose ONE that fits; the floor finish itself must remain unchanged):',
+      ...rugVariants.map(r => `• ${r}`),
+      '',
+      // ---- PACKAGE (inspiration) ----
+      'INSPIRATION (flexible; use only if it fits without breaking constraints):',
+      ...packageItems.map(i => `• ${i}`),
+      '',
+      // ---- COMPOSITION ----
+      'COMPOSITION:',
+      '• Correct scale/shadows matching the existing light; no glow.',
+      '• Anchor seating/dining/bed zones to the rug; keep walk paths open.',
+      '• Hide cable clutter; styling elegant and minimal.',
+      '',
+      // ---- OUTPUT ----
+      `OUTPUT: a photo-real, professionally staged ${roomLabel} in ${styleLabel} style,`,
+      'with the original architecture and lighting fully intact. Add furniture and décor ONLY.',
+    ].join('\n');
 
     return prompt;
   }
 
-  // -------------------- helpers --------------------
-
+  // -------------------- labels --------------------
   private getRoomTypeLabel(roomType: RoomType): string {
     const labels: Record<RoomType, string> = {
       bedroom: 'bedroom',
@@ -92,9 +114,7 @@ A photo-real, professionally staged ${roomLabel} in ${styleLabel} style, with th
     return labels[furnitureStyle];
   }
 
-  /**
-   * Traits to force finishes/look for each style (2025 interior trends).
-   */
+  // -------------------- style traits --------------------
   private getFurnitureStyleTraits(furnitureStyle: FurnitureStyle): string {
     const traits: Record<FurnitureStyle, string> = {
       standard:
@@ -104,7 +124,7 @@ A photo-real, professionally staged ${roomLabel} in ${styleLabel} style, with th
       scandinavian:
         'Light woods (oak/beech), airy fabrics, organic rounded forms; whites/ivories/beiges; cozy layered textiles; minimal yet warm; brushed steel/white accents.',
       industrial:
-        'Raw wood + blackened steel; robust shapes; dark leather/fabric; exposed-joint vibe; charcoal and tobacco neutrals; cage/exposed-bulb lamps.',
+        'Raw wood + blackened steel; robust shapes; dark leather/fabric; exposed-joint vibe; charcoal/tobacco neutrals; cage/exposed-bulb lamps.',
       midcentury:
         'Tapered legs; warm walnut/teak; linen tweeds/bouclé; geometric patterns; bold accents (saffron/teal/olive); sleek functional forms.',
       luxury:
@@ -117,61 +137,227 @@ A photo-real, professionally staged ${roomLabel} in ${styleLabel} style, with th
     return traits[furnitureStyle];
   }
 
-  /**
-   * Rich rug catalog by style (model must pick ONE).
-   */
-  private getRugVariants(style: FurnitureStyle, room: RoomType): string[] {
+  // -------------------- rug variants --------------------
+  private getRugVariants(style: FurnitureStyle): string[] {
     const scale =
-      'size the rug so that at least the front legs of major seating rest on it (dining: all chair legs on when pulled back; bedroom: extend ~45–60cm beyond sides/foot).';
+      'size correctly: seating (front legs on rug), dining (all chair legs on when pulled back), bedroom (extend ~45–60cm beyond sides/foot).';
 
     const variants: Record<FurnitureStyle, string[]> = {
       luxury: [
-        `hand-knotted silk/wool blend in soft ivory with subtle abstract veining; ${scale}`,
-        `low-sheen viscose in warm greige with faint marble-like pattern; ${scale}`,
-        `bordered wool in champagne with tone-on-tone damask; ${scale}`,
-        `fine Persian-inspired rug in desaturated taupe/ivory; ${scale}`,
-        `broadloom-cut rug with carved geometric relief in ivory; ${scale}`,
+        `hand-knotted silk/wool in soft ivory with subtle abstract veining — ${scale}`,
+        `low-sheen viscose in warm greige with faint marble pattern — ${scale}`,
+        `bordered wool in champagne with tone-on-tone damask — ${scale}`,
+        `Persian-inspired fine weave in desaturated taupe/ivory — ${scale}`,
+        `broadloom-cut rug with carved geometric relief in ivory — ${scale}`,
       ],
       modern: [
-        `low-pile warm gray rug with oversized abstract geometry; ${scale}`,
-        `flatweave greige rug with tone-on-tone stripe; ${scale}`,
-        `micro-pattern off-white rug with soft shadow border; ${scale}`,
+        `low-pile warm gray with oversized abstract geometry — ${scale}`,
+        `flatweave greige with tone-on-tone stripe — ${scale}`,
+        `micro-pattern off-white with soft shadow border — ${scale}`,
       ],
       scandinavian: [
-        `wool Berber-style in ivory with light gray lattice; ${scale}`,
-        `flatwoven cotton in pale beige with micro-check; ${scale}`,
-        `hand-loomed oatmeal heather wool; ${scale}`,
+        `wool Berber-style in ivory with light gray lattice — ${scale}`,
+        `flatwoven cotton in pale beige with micro-check — ${scale}`,
+        `hand-loomed oatmeal heather wool — ${scale}`,
       ],
       industrial: [
-        `distressed charcoal rug with concrete-like texture; ${scale}`,
-        `flatweave denim/charcoal mix with subtle herringbone; ${scale}`,
-        `overdyed vintage rug in graphite; ${scale}`,
+        `distressed charcoal with concrete-like texture — ${scale}`,
+        `flatweave denim/charcoal with subtle herringbone — ${scale}`,
+        `overdyed vintage in graphite — ${scale}`,
       ],
       midcentury: [
-        `tufted rug in warm beige with atomic/geom accents; ${scale}`,
-        `cut-pile ivory rug with saffron border; ${scale}`,
-        `low-pile rug with simple teal linework; ${scale}`,
+        `tufted warm beige with atomic/geom accents — ${scale}`,
+        `cut-pile ivory with saffron border — ${scale}`,
+        `low-pile with simple teal linework — ${scale}`,
       ],
       coastal: [
-        `woven jute/sisal-look with cotton border (sand); ${scale}`,
-        `flatweave stripe in sea-salt blue and ivory; ${scale}`,
-        `hand-loomed driftwood beige; ${scale}`,
+        `woven jute/sisal-look with cotton border (sand) — ${scale}`,
+        `flatweave stripe in sea-salt blue and ivory — ${scale}`,
+        `hand-loomed driftwood beige — ${scale}`,
       ],
       farmhouse: [
-        `hand-loomed jute + wool blend in oatmeal; ${scale}`,
-        `vintage-inspired floral in faded beige/olive; ${scale}`,
-        `woven cotton with ticking-stripe pattern; ${scale}`,
+        `hand-loomed jute + wool blend in oatmeal — ${scale}`,
+        `vintage-inspired floral in faded beige/olive — ${scale}`,
+        `woven cotton with ticking-stripe — ${scale}`,
       ],
       standard: [
-        `neutral low-pile warm gray with simple border; ${scale}`,
-        `cut-pile beige with subtle tone-on-tone pattern; ${scale}`,
-        `flatwoven taupe with simple geometric motif; ${scale}`,
+        `neutral low-pile warm gray with simple border — ${scale}`,
+        `cut-pile beige with tone-on-tone pattern — ${scale}`,
+        `flatwoven taupe with modest geometric motif — ${scale}`,
       ],
     };
 
     return variants[style];
   }
 
+  // -------------------- room guard (whitelist/blacklist) --------------------
+  private getRoomGuard(roomType: RoomType): {
+    allowed: string[];
+    forbidden: string[];
+  } {
+    const guardMap: Record<
+      RoomType,
+      { allowed: string[]; forbidden: string[] }
+    > = {
+      living_room: {
+        allowed: [
+          'sofas/sectionals',
+          'armchairs/occasional chairs',
+          'coffee tables',
+          'side tables',
+          'media consoles/credenzas (freestanding)',
+          'floor/table lamps',
+          'rugs',
+          'plants',
+          'framed artwork/mirrors',
+          'decorative cushions/throws',
+        ],
+        forbidden: [
+          'beds/headboards',
+          'wardrobes/dressers',
+          'dining tables and dining chair sets',
+          'kitchen islands/appliances',
+          'bathtubs/showers/toilets/vanities',
+          'built-in ceiling fixtures or new windows/doors',
+        ],
+      },
+      bedroom: {
+        allowed: [
+          'beds/headboards',
+          'nightstands',
+          'bedside lamps',
+          'dressers/wardrobes (freestanding)',
+          'benches/ottomans',
+          'rugs',
+          'plants',
+          'framed artwork/mirrors',
+          'one small accent chair with side table',
+        ],
+        forbidden: [
+          'sofas/sectionals',
+          'media consoles/TV walls',
+          'dining tables/sets',
+          'kitchen islands/appliances',
+          'bathtubs/showers/toilets/vanities',
+          'built-in ceiling fixtures or new windows/doors',
+        ],
+      },
+      dining_room: {
+        allowed: [
+          'dining table',
+          'dining chairs (4–8)',
+          'sideboard/credenza',
+          'rugs',
+          'centerpiece vases',
+          'framed art/mirrors',
+          'plants',
+          'floor/table lamps',
+        ],
+        forbidden: [
+          'beds',
+          'sofas/sectionals',
+          'media consoles/TV walls',
+          'kitchen/bath fixtures',
+          'office desks',
+          'built-in ceiling fixtures or new windows/doors',
+        ],
+      },
+      home_office: {
+        allowed: [
+          'desk',
+          'task/office chair',
+          'bookcase/shelving',
+          'low credenza',
+          'task lamp',
+          'rugs',
+          'plants',
+          'framed art/pinboard',
+          'organizers (trays/boxes/bookends)',
+        ],
+        forbidden: [
+          'beds',
+          'sofas/sectionals',
+          'dining sets',
+          'kitchen/bath fixtures',
+          'built-in ceiling fixtures or new windows/doors',
+        ],
+      },
+      kitchen: {
+        allowed: [
+          'counter/island stools (if counter exists)',
+          'small bistro/dinette set (only if space allows)',
+          'countertop styling (trays, boards, bowls, herbs)',
+          'runner rugs (overlay only)',
+          'small framed prints',
+          'plants/herbs',
+        ],
+        forbidden: [
+          'sofas/sectionals',
+          'beds',
+          'dining tables for 6+ (use dining room instead)',
+          'bath fixtures',
+          'altering cabinetry/counters/backsplash or adding built-ins',
+          'new ceiling fixtures or new windows/doors',
+        ],
+      },
+      bathroom: {
+        allowed: [
+          'towel sets',
+          'vanity accessories (soap dispenser/trays)',
+          'small freestanding stool/caddy (only if space allows)',
+          'small plants (fern/pothos)',
+          'bath mat/rug overlay',
+          'framed print or mirror (on existing free wall)',
+          'laundry basket/hamper',
+        ],
+        forbidden: [
+          'beds/sofas/dining/office furniture',
+          'new sanitary ware (bathtub/vanity/shower/toilet)',
+          'cabinetry changes',
+          'new windows/doors/ceiling fixtures',
+        ],
+      },
+      kids_room: {
+        allowed: [
+          'twin/bunk bed',
+          'nightstand + small lamp',
+          'desk + chair (rounded edges)',
+          'bookcase/cubbies',
+          'soft rug',
+          'play baskets',
+          'playful wall prints',
+          'beanbag/floor cushion',
+          'small plant (out of reach)',
+        ],
+        forbidden: [
+          'sectionals/sofas',
+          'dining sets',
+          'kitchen/bath fixtures',
+          'massive wardrobes that block circulation',
+          'new windows/doors/ceiling fixtures',
+        ],
+      },
+      outdoor: {
+        allowed: [
+          'outdoor lounge seating',
+          'outdoor coffee/side tables',
+          'outdoor rugs',
+          'planters',
+          'lanterns/string lights (freestanding)',
+          'outdoor cushions/throws',
+          'decor trays',
+        ],
+        forbidden: [
+          'indoor beds/dining sets meant for interior',
+          'kitchen/bath fixtures',
+          'built-in pergolas/roofs',
+          'new windows/doors/walls',
+        ],
+      },
+    };
+
+    return guardMap[roomType];
+  }
   /**
    * Rich, contemporary furniture/decor packages for every RoomType + FurnitureStyle.
    * These are inspirations (flexible) and never override non-destructive rules.
