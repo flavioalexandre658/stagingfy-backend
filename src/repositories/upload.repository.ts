@@ -12,6 +12,16 @@ import {
 
 export class UploadRepository {
   /**
+   * Converte dados do banco para interface Upload
+   */
+  private convertToUpload(dbUpload: any): Upload {
+    return {
+      ...dbUpload,
+      outputImageUrls: dbUpload.outputImageUrls ? JSON.parse(dbUpload.outputImageUrls) : undefined
+    };
+  }
+
+  /**
    * Cria um novo registro de upload
    */
   async create(data: {
@@ -33,7 +43,7 @@ export class UploadRepository {
       })
       .returning();
 
-    return upload as Upload;
+    return this.convertToUpload(upload);
   }
 
   /**
@@ -46,7 +56,7 @@ export class UploadRepository {
       .where(eq(uploads.id, id))
       .limit(1);
 
-    return upload ? (upload as Upload) : null;
+    return upload ? this.convertToUpload(upload) : null;
   }
 
   /**
@@ -60,7 +70,7 @@ export class UploadRepository {
       .orderBy(desc(uploads.createdAt))
       .limit(limit);
 
-    return userUploads as Upload[];
+    return userUploads.map(upload => this.convertToUpload(upload));
   }
 
   /**
@@ -81,7 +91,7 @@ export class UploadRepository {
       .where(eq(uploads.id, id))
       .returning();
 
-    return updatedUpload ? (updatedUpload as Upload) : null;
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
   }
 
   /**
@@ -101,7 +111,7 @@ export class UploadRepository {
       .where(eq(uploads.id, id))
       .returning();
 
-    return updatedUpload ? (updatedUpload as Upload) : null;
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
   }
 
   /**
@@ -121,7 +131,7 @@ export class UploadRepository {
       .where(eq(uploads.id, id))
       .returning();
 
-    return updatedUpload ? (updatedUpload as Upload) : null;
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
   }
 
   /**
@@ -134,7 +144,7 @@ export class UploadRepository {
       .where(eq(uploads.instantDecoRequestId, requestId))
       .limit(1);
 
-    return upload ? (upload as Upload) : null;
+    return upload ? this.convertToUpload(upload) : null;
   }
 
   /**
@@ -142,19 +152,27 @@ export class UploadRepository {
    */
   async updateOutputImage(
     id: string, 
-    outputImageUrl: string
+    outputImageUrl: string,
+    outputImageUrls?: string[]
   ): Promise<Upload | null> {
+    const updateData: any = { 
+      outputImageUrl,
+      status: 'completed',
+      updatedAt: new Date()
+    };
+
+    // Se múltiplas URLs foram fornecidas, salvar como JSON string
+    if (outputImageUrls && outputImageUrls.length > 0) {
+      updateData.outputImageUrls = JSON.stringify(outputImageUrls);
+    }
+
     const [updatedUpload] = await db
       .update(uploads)
-      .set({ 
-        outputImageUrl,
-        status: 'completed',
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(uploads.id, id))
       .returning();
 
-    return updatedUpload ? (updatedUpload as Upload) : null;
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
   }
 
   /**
@@ -173,7 +191,7 @@ export class UploadRepository {
       .where(eq(uploads.id, id))
       .returning();
 
-    return updatedUpload ? (updatedUpload as Upload) : null;
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
   }
 
   /**
@@ -186,7 +204,7 @@ export class UploadRepository {
       .where(eq(uploads.status, 'pending'))
       .orderBy(uploads.createdAt);
 
-    return pendingUploads as Upload[];
+    return pendingUploads.map(upload => this.convertToUpload(upload));
   }
 
   /**
@@ -199,7 +217,7 @@ export class UploadRepository {
       .where(eq(uploads.status, 'processing'))
       .orderBy(uploads.createdAt);
 
-    return processingUploads as Upload[];
+    return processingUploads.map(upload => this.convertToUpload(upload));
   }
 
   /**
@@ -218,7 +236,7 @@ export class UploadRepository {
       ))
       .orderBy(desc(uploads.createdAt));
 
-    return userUploads as Upload[];
+    return userUploads.map(upload => this.convertToUpload(upload));
   }
 
   /**

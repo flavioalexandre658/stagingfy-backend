@@ -7,6 +7,7 @@ export interface VirtualStagingResult {
   success: boolean;
   requestId?: string;
   outputImageUrl?: string;
+  outputImageUrls?: string[]; // Suporte para múltiplas imagens
   errorMessage?: string;
   metadata?: Record<string, any>;
 }

@@ -30,6 +30,7 @@ export interface Upload {
   provider: Provider;
   inputImageUrl: string;
   outputImageUrl?: string;
+  outputImageUrls?: string[]; // Suporte para múltiplas imagens de saída
   maskUrl?: string;
   status: UploadStatus;
   errorMessage?: string;

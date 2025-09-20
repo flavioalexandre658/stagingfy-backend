@@ -128,6 +128,14 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
         num_images: Math.min(options?.numImages || 1, 4), // Max 4 images
       };
 
+      // Log detalhado do payload
+      this.logOperation('Sending request to InstantDeco', {
+        url: this.baseUrl,
+        payload: requestBody,
+        hasApiKey: !!this.config.apiKey,
+        apiKeyLength: this.config.apiKey?.length || 0
+      });
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
@@ -161,15 +169,26 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
       const { status, output, request_id } = webhookData;
 
       if (status === 'succeeded') {
-        return {
+        // Suporte para múltiplas imagens
+        const outputUrls = Array.isArray(output) ? output : [output];
+        
+        const result: VirtualStagingResult = {
           success: true,
-          outputImageUrl: output,
           requestId: request_id,
+          outputImageUrls: outputUrls, // Novo campo para múltiplas imagens
           metadata: {
             status: 'completed',
             provider: 'instant-deco',
+            numImages: outputUrls.length,
           }
         };
+
+        // Adicionar outputImageUrl apenas se houver URLs válidas
+        if (outputUrls.length > 0 && outputUrls[0]) {
+          result.outputImageUrl = outputUrls[0];
+        }
+
+        return result;
       }
 
       return {
@@ -254,42 +273,48 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
         roomType: params.roomType,
         furnitureStyle: params.furnitureStyle,
         hasWebhook: !!params.webhookUrl,
+        numImages: params.options?.numImages ?? 3,
       });
 
-      // Converter imageBase64 para URL (InstantDeco espera URL)
-      // Por enquanto, assumimos que a imagem já está disponível como URL
-      const imageUrl = params.imageBase64 || params.imageUrl || '';
+      // Validar parâmetros
+      this.validateParams(params);
 
-      // Usar o serviço existente do InstantDeco
-      const webhookUrl = params.webhookUrl || '';
+      const imageUrl = params.imageUrl || params.imageBase64;
+      if (!imageUrl) {
+        throw new Error('Image URL or base64 is required');
+      }
+
+      // Se não há webhook, processar de forma síncrona (não recomendado para InstantDeco)
+      if (!params.webhookUrl) {
+        throw new Error('InstantDeco requires webhook URL for async processing');
+      }
+
+      // Gerar virtual staging com 3 imagens por padrão
       const response = await this.generateVirtualStagingInternal(
         params.roomType,
         params.furnitureStyle,
         imageUrl,
-        webhookUrl
+        params.webhookUrl,
+        {
+          highDetailsResolution: params.options?.highResolution ?? true,
+          numImages: params.options?.numImages ?? 3, // Padrão de 3 imagens
+        }
       );
 
-      if (response.status !== 'success') {
-        return {
-          success: false,
-          errorMessage: response.response?.message || 'InstantDeco processing failed',
-        };
-      }
-
-      // InstantDeco sempre retorna um requestId para processamento assíncrono
       return {
         success: true,
         requestId: response.response.request_id,
         metadata: {
           status: 'processing',
           provider: 'instant-deco',
-          webhookConfigured: !!params.webhookUrl,
-          apiStatus: response.response.status,
+          message: response.response.message,
+          numImages: params.options?.numImages ?? 3,
         }
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('InstantDeco processing error:', error as Error);
+      this.logger.error('InstantDeco processing failed:', error as Error);
+      
       return {
         success: false,
         errorMessage: `InstantDeco processing failed: ${errorMessage}`,

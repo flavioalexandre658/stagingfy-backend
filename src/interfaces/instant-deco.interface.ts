@@ -124,7 +124,7 @@ export interface InstantDecoInitialResponse {
 }
 
 export interface InstantDecoWebhookResponse {
-  output: string; // URL of the processed image
+  output: string | string[]; // URL(s) of the processed image(s) - can be single or multiple
   status: 'succeeded' | 'failed';
   request_id: string;
 }

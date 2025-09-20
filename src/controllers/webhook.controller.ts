@@ -35,19 +35,25 @@ export class WebhookController extends BaseController {
       // Processar resposta do webhook usando o provider InstantDeco
       const result = await this.instantDecoProvider.processWebhookResponse!(webhookData);
       
-      if (result.success && result.outputImageUrl) {
+      if (result.success && (result.outputImageUrl || result.outputImageUrls)) {
         // Buscar upload pelo request_id
         const upload = await uploadRepository.findByInstantDecoRequestId(result.requestId!);
         
         if (upload) {
-          // Atualizar com a imagem final
-          await uploadRepository.updateOutputImage(upload.id, result.outputImageUrl);
+          // Atualizar com as imagens finais (múltiplas URLs quando disponíveis)
+          await uploadRepository.updateOutputImage(
+            upload.id, 
+            result.outputImageUrl || (result.outputImageUrls && result.outputImageUrls[0]) || '', 
+            result.outputImageUrls
+          );
           await uploadRepository.updateStatus(upload.id, 'completed');
           
           logger.info('InstantDeco processing completed', {
             uploadId: upload.id,
             requestId: result.requestId,
-            imageUrl: result.outputImageUrl
+            imageUrl: result.outputImageUrl,
+            imageUrls: result.outputImageUrls,
+            numImages: result.outputImageUrls?.length || 1
           });
         } else {
           logger.warn('Upload not found for InstantDeco request', {

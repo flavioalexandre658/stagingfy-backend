@@ -284,11 +284,13 @@ export class VirtualStagingController {
       }, provider);
 
       let finalImageUrl: string | null = null;
+      let finalImageUrls: string[] | null = null;
 
       if (result.success) {
-        if (result.outputImageUrl) {
+        if (result.outputImageUrl || result.outputImageUrls) {
           // Resultado imediato (ex: alguns providers síncronos)
-          finalImageUrl = result.outputImageUrl;
+          finalImageUrl = result.outputImageUrl || null;
+          finalImageUrls = result.outputImageUrls || null;
         } else if (result.requestId) {
           // Processamento assíncrono - aguardar resultado
           if (provider === 'black-forest') {
@@ -301,15 +303,21 @@ export class VirtualStagingController {
       }
 
       // Atualizar registro com resultado final (apenas para Black Forest)
-      if (finalImageUrl) {
+      if (finalImageUrl || finalImageUrls) {
         console.log(`[${uploadId}] Atualizando registro no banco de dados...`);
-        await uploadRepository.updateOutputImage(uploadId, finalImageUrl);
+        await uploadRepository.updateOutputImage(
+          uploadId, 
+          finalImageUrl || (finalImageUrls && finalImageUrls[0]) || '', 
+          finalImageUrls || undefined
+        );
         await uploadRepository.updateStatus(uploadId, 'completed');
 
         const processingTime = Date.now() - startTime;
         console.log(`[${uploadId}] Virtual staging concluído com sucesso!`, {
           uploadId,
           outputImageUrl: finalImageUrl,
+          outputImageUrls: finalImageUrls,
+          numImages: finalImageUrls?.length || 1,
           processingTimeMs: processingTime,
           processingTimeSeconds: Math.round(processingTime / 1000),
           timestamp: new Date().toISOString(),
@@ -442,6 +450,7 @@ export class VirtualStagingController {
           status: upload.status,
           inputImageUrl: upload.inputImageUrl,
           outputImageUrl: upload.outputImageUrl,
+          outputImageUrls: upload.outputImageUrls, // Múltiplas URLs de imagem
           roomType: upload.roomType,
           furnitureStyle: upload.furnitureStyle,
           errorMessage: upload.errorMessage,
@@ -484,6 +493,7 @@ export class VirtualStagingController {
           status: upload.status,
           inputImageUrl: upload.inputImageUrl,
           outputImageUrl: upload.outputImageUrl,
+          outputImageUrls: upload.outputImageUrls, // Múltiplas URLs de imagem
           roomType: upload.roomType,
           furnitureStyle: upload.furnitureStyle,
           createdAt: upload.createdAt,

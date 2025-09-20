@@ -49,6 +49,7 @@ export const uploads = pgTable('uploads', {
   provider: providerEnum('provider').default('black-forest').notNull(),
   inputImageUrl: text('input_image_url').notNull(),
   outputImageUrl: text('output_image_url'),
+  outputImageUrls: text('output_image_urls'), // JSON string array para múltiplas URLs
   maskUrl: text('mask_url'), // URL da máscara salva no S3
   status: uploadStatusEnum('status').default('pending').notNull(),
   errorMessage: text('error_message'),
