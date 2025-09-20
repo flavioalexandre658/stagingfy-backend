@@ -13,6 +13,10 @@ class ChatGPTService {
    * Generates a refined prompt for flux-kontext-pro.
    * Dynamic furniture count (2–5), strict scene preservation, and rich style guidance.
    */
+  /**
+   * Generates a refined prompt for flux-kontext-pro.
+   * Dynamic furnishing (2–5 items), pixel-preserving, with a protected stair zone.
+   */
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
@@ -20,37 +24,45 @@ class ChatGPTService {
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
     const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
-    const packageItems = this.getPackageCombination(roomType, furnitureStyle);
+    const packageItems = this.getPackageCombination(roomType, furnitureStyle)
+      // favorece peças de baixo volume primeiro
+      .filter(
+        i =>
+          !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
+            i
+          )
+      );
 
-    const prompt = `Virtually stage this ${roomLabel} with a cohesive ${styleLabel} interior.
+    const topPicks = packageItems
+      .slice(0, 6)
+      .map(i => `• ${i}`)
+      .join('\n');
 
-Dynamic quantity (space-aware):
-• Add 2–5 furniture pieces and 1–3 decor items ONLY if they clearly fit the visible space. 
-• If an item would crowd the room, block doors/windows/stairways/passages, or require structural changes, SKIP it.
-• The model chooses the final count based on free floor area and clear circulation.
+    const prompt = `Virtually stage this ${roomLabel} with ${styleLabel} furniture and decor.
+Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
 
-Hard preservation rules (non-destructive, pixel-preserving):
-• Keep architecture, finishes, and colors EXACT: walls (paint color/texture), floor, ceiling, beams, trims/baseboards, stairs/handrail/balusters, doors, door frames and openings, windows and frames/blinds, vents/thermostats/outlets/switches.
-• Do NOT repaint or retexture any surface. Do NOT recolor walls or ceilings. 
-• Preserve the existing light fixtures and their on/off state; do not add or change ceiling fixtures or fans.
-• Keep camera angle, perspective lines, framing, and image boundaries identical. No cropping, expanding, warping, or relighting.
+PRESERVE PIXEL-FOR-PIXEL:
+• Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
+• Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
+• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
 
-Circulation & placement:
-• Never place items on or in front of stairs, doors, windows that need access, vents, or electrical panels.
-• Maintain clear walk paths from the camera viewpoint to doors and across the room.
-• Partial crops near image edges are allowed; never shift the camera to fit an object.
+STAIR & CIRCULATION SAFETY:
+• Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
+• Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
+• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.
 
-Style enforcement:
+STYLE GUARDRAILS — ${styleLabel}:
 ${styleTraits}
-• Consistently apply this ${styleLabel} look across all added items (materials, silhouettes, hardware, palette, and accents).
-• Curtains are allowed ONLY if a window rod is already visible; otherwise omit all window treatments.
 
-Inspiration set for this combination (choose a subset that fits without breaking rules):
-${packageItems.map(i => `• ${i}`).join('\n')}
+FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
+${topPicks}
 
-Output:
-A photo-real, professionally staged ${roomLabel} that looks naturally photographed in the same room. 
-Add furniture and decor ONLY; never remove, replace, repaint, or modify any existing architectural element.`;
+Rendering notes:
+• Prefer compact pieces over bulky casegoods when space is tight.
+• Photorealistic materials and shadows matching the input light; no artificial glow.
+• Wall art only on available wall surfaces — never over windows/doors.
+
+Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
