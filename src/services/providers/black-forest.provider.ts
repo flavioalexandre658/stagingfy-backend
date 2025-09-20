@@ -1,11 +1,7 @@
-// src/services/black-forest.service.ts
+import { IVirtualStagingProvider, VirtualStagingParams, VirtualStagingResult, ProviderConfig, ProviderCapabilities } from '../../interfaces/virtual-staging-provider.interface';
+import { BaseService } from '../base.service';
+import { Provider, RoomType, FurnitureStyle, BlackForestApiResponse, LoraConfig } from '../../interfaces/upload.interface';
 import sharp from 'sharp';
-import {
-  BlackForestApiResponse,
-  RoomType,
-  FurnitureStyle,
-  LoraConfig,
-} from '../interfaces/upload.interface';
 
 type KontextRequest = {
   prompt: string;
@@ -20,9 +16,15 @@ type KontextRequest = {
   guidance?: number; // se suportado pelo provedor
 };
 
-class BlackForestService {
-  private readonly apiKey: string;
-  private readonly baseUrl: string;
+/**
+ * Adapter para o Black Forest que implementa a interface comum
+ */
+export class BlackForestProvider extends BaseService implements IVirtualStagingProvider {
+  readonly name: Provider = 'black-forest';
+  readonly version = '1.0.0';
+  readonly isAsync = true;
+  readonly supportsWebhooks = false;
+  readonly config: ProviderConfig;
 
   private readonly loraConfig: LoraConfig = {
     roomType: {
@@ -47,11 +49,9 @@ class BlackForestService {
     },
   };
 
-  constructor() {
-    this.apiKey = process.env.BLACK_FOREST_API_KEY!;
-    this.baseUrl = process.env.BLACK_FOREST_API_URL!;
-    if (!this.apiKey) throw new Error('BLACK_FOREST_API_KEY is required');
-    if (!this.baseUrl) throw new Error('BLACK_FOREST_API_URL is required');
+  constructor(config: ProviderConfig) {
+    super();
+    this.config = config;
   }
 
   // ------------ helpers de tamanho ------------
@@ -167,10 +167,10 @@ class BlackForestService {
         ...(opts?.seed !== undefined && { seed: opts.seed }),
       };
 
-      const resp = await fetch(`${this.baseUrl}/flux-kontext-pro`, {
+      const resp = await fetch(`${this.config.baseUrl}/flux-kontext-pro`, {
         method: 'POST',
         headers: {
-          'x-key': this.apiKey,
+          'x-key': this.config.apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -222,10 +222,10 @@ class BlackForestService {
       safety_tolerance: 2,
     };
 
-    const resp = await fetch(`${this.baseUrl}/flux-pro-1.0-fill`, {
+    const resp = await fetch(`${this.config.baseUrl}/flux-pro-1.0-fill`, {
       method: 'POST',
       headers: {
-        'x-key': this.apiKey,
+        'x-key': this.config.apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
@@ -238,10 +238,10 @@ class BlackForestService {
     return (await resp.json()) as BlackForestApiResponse;
   }
 
-  async checkJobStatus(jobId: string): Promise<BlackForestApiResponse> {
-    const resp = await fetch(`${this.baseUrl}/get_result?id=${jobId}`, {
+  async checkJobStatusInternal(jobId: string): Promise<BlackForestApiResponse> {
+    const resp = await fetch(`${this.config.baseUrl}/get_result?id=${jobId}`, {
       method: 'GET',
-      headers: { 'x-key': this.apiKey, 'Content-Type': 'application/json' },
+      headers: { 'x-key': this.config.apiKey, 'Content-Type': 'application/json' },
     });
     if (!resp.ok) {
       // 404: geralmente ainda processando
@@ -254,7 +254,7 @@ class BlackForestService {
     return (await resp.json()) as BlackForestApiResponse;
   }
 
-  validateParameters(roomType: RoomType, furnitureStyle: FurnitureStyle) {
+  validateParametersInternal(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     const validRoomTypes = Object.keys(this.loraConfig.roomType) as RoomType[];
     const validStyles = Object.keys(
       this.loraConfig.furnitureStyle
@@ -263,6 +263,207 @@ class BlackForestService {
       validRoomTypes.includes(roomType) && validStyles.includes(furnitureStyle)
     );
   }
-}
 
-export const blackForestService = new BlackForestService();
+  /**
+   * Processa virtual staging usando Black Forest
+   */
+  async processVirtualStaging(params: VirtualStagingParams): Promise<VirtualStagingResult> {
+    try {
+      this.validateParams(params);
+
+      this.logOperation('Processing virtual staging with Black Forest', {
+        roomType: params.roomType,
+        furnitureStyle: params.furnitureStyle,
+        uploadId: params.uploadId,
+      });
+
+      // Usar os métodos internos do provider
+      const response = await this.generateStagedImage(
+        params.imageBase64 || '',
+        '', // mask não é usado no fluxo atual
+        params.roomType,
+        params.furnitureStyle
+      );
+
+      if (response.error) {
+        return {
+          success: false,
+          errorMessage: response.error,
+        };
+      }
+
+      // Para Black Forest, sempre retorna um job ID para polling
+      if (response.id) {
+        return {
+          success: true,
+          requestId: response.id,
+          metadata: {
+            status: response.status,
+            polling_url: response.polling_url,
+            progress: response.progress,
+          }
+        };
+      }
+
+      throw new Error('Unexpected response format from Black Forest');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Black Forest processing error:', error as Error);
+      return {
+        success: false,
+        errorMessage: `Black Forest processing failed: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Verifica status de job
+   */
+  async checkJobStatus(requestId: string): Promise<VirtualStagingResult> {
+    try {
+      const response = await this.checkJobStatusInternal(requestId);
+
+      if (response.error) {
+        return {
+          success: false,
+          errorMessage: response.error,
+        };
+      }
+
+      const status = response.status;
+      
+      if (status === 'Ready' && response.result?.sample) {
+        return {
+          success: true,
+          outputImageUrl: response.result.sample,
+          metadata: {
+            status: 'completed',
+            progress: response.progress,
+            width: response.result.width,
+            height: response.result.height,
+          }
+        };
+      } else if (status === 'Error') {
+        return {
+          success: false,
+          errorMessage: response.error || 'Job failed',
+        };
+      } else {
+        // Still processing
+        return {
+          success: true,
+          requestId,
+          metadata: {
+            status: status.toLowerCase(),
+            progress: response.progress,
+          }
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        errorMessage: `Error checking job status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  /**
+   * Valida os parâmetros de entrada
+   */
+  validateParams(params: VirtualStagingParams): void {
+    if (!params.imageBase64 && !params.imageUrl) {
+      throw new Error('Either imageBase64 or imageUrl is required');
+    }
+    
+    if (!params.roomType) {
+      throw new Error('roomType is required');
+    }
+    
+    if (!params.furnitureStyle) {
+      throw new Error('furnitureStyle is required');
+    }
+    
+    if (!params.uploadId) {
+      throw new Error('uploadId is required');
+    }
+
+    const capabilities = this.getCapabilities();
+    
+    if (!capabilities.supportedRoomTypes.includes(params.roomType)) {
+      throw new Error(`Unsupported room type: ${params.roomType}`);
+    }
+
+    if (!capabilities.supportedFurnitureStyles.includes(params.furnitureStyle)) {
+      throw new Error(`Unsupported furniture style: ${params.furnitureStyle}`);
+    }
+  }
+
+  /**
+   * Retorna as capacidades do provedor
+   */
+  getCapabilities(): ProviderCapabilities {
+    return {
+      maxImageSize: 10 * 1024 * 1024, // 10MB
+      supportedFormats: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+      supportedRoomTypes: [
+        'bedroom',
+        'living_room', 
+        'kitchen',
+        'bathroom',
+        'home_office',
+        'dining_room',
+        'kids_room',
+        'outdoor'
+      ] as RoomType[],
+      supportedFurnitureStyles: [
+        'standard',
+        'modern',
+        'scandinavian',
+        'industrial',
+        'midcentury',
+        'luxury',
+        'coastal',
+        'farmhouse'
+      ] as FurnitureStyle[],
+      maxImagesPerRequest: 1,
+      supportsCustomPrompts: true,
+      supportsHighResolution: true,
+      estimatedProcessingTime: 30, // 30 segundos
+    };
+  }
+
+  /**
+   * Valida se o provedor está configurado corretamente
+   */
+  validateConfiguration(): boolean {
+    try {
+      const required = ['apiKey', 'baseUrl'];
+      const missing = required.filter(key => !this.config[key]);
+      
+      if (missing.length > 0) {
+        this.logger.error(`Black Forest configuration missing: ${missing.join(', ')}`);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error('Black Forest configuration validation error:', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * Retorna informações sobre o provedor
+   */
+  getProviderInfo() {
+    return {
+      name: this.name,
+      version: this.version,
+      capabilities: this.getCapabilities(),
+      supportsWebhooks: false,
+      supportsPolling: true,
+      asyncOnly: false,
+    };
+  }
+}

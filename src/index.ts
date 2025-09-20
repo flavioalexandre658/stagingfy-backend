@@ -11,6 +11,7 @@ import uploadRoutes from '@/routes/upload.routes';
 import stripeRoutes from '@/routes/stripe.routes';
 import userRoutes from '@/routes/user.routes';
 import virtualStagingRoutes from '@/routes/virtual-staging.routes';
+import webhookRoutes from '@/routes/webhook.routes';
 import { initializeWorkers, closeWorkers } from '@/workers';
 
 // Load environment variables
@@ -62,6 +63,7 @@ app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/virtual-staging', virtualStagingRoutes);
 app.use('/api/v1/stripe', stripeRoutes);
 app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
 
 app.use('/api/v1', (req, res) => {
   res.status(200).json({ message: 'API v1 is running' });

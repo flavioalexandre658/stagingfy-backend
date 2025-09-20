@@ -5,12 +5,15 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { uploadRepository } from '../repositories/upload.repository';
-import { blackForestService } from '../services/black-forest.service';
+import { VirtualStagingService } from '../services/virtual-staging.service';
+import { BlackForestProvider } from '../services/providers/black-forest.provider';
 import { 
   CreateUploadRequest, 
   RoomType, 
-  FurnitureStyle 
+  FurnitureStyle,
+  Provider 
 } from '../interfaces/upload.interface';
+import { ProviderConfig } from '../interfaces/virtual-staging-provider.interface';
 import { generateWhiteMaskBase64 } from '../utils/image-mask.util';
 
 // Configuração do S3
@@ -41,6 +44,17 @@ const upload = multer({
 });
 
 export class UploadController {
+  private blackForestProvider: BlackForestProvider;
+
+  constructor() {
+    // Configuração do provider Black Forest
+    const config: ProviderConfig = {
+      apiKey: process.env.BLACK_FOREST_API_KEY || '',
+      baseUrl: process.env.BLACK_FOREST_BASE_URL || 'https://api.blackforestlabs.ai',
+    };
+    this.blackForestProvider = new BlackForestProvider(config);
+  }
+
   /**
    * Middleware do Multer para upload de múltiplos arquivos (imagem obrigatória e máscara opcional)
    */
@@ -88,8 +102,14 @@ export class UploadController {
         return;
       }
 
-      // Validar parâmetros com o service da Black Forest
-      if (!blackForestService.validateParameters(roomType as RoomType, furnitureStyle as FurnitureStyle)) {
+      // Validar parâmetros com o provider da Black Forest
+      try {
+        this.blackForestProvider.validateParams({
+          roomType: roomType as RoomType,
+          furnitureStyle: furnitureStyle as FurnitureStyle,
+          uploadId: '', // Será definido depois
+        });
+      } catch (error) {
         res.status(400).json({
           success: false,
           message: 'Parâmetros de roomType ou furnitureStyle inválidos'
@@ -129,6 +149,7 @@ export class UploadController {
         userId,
         roomType: roomType as RoomType,
         furnitureStyle: furnitureStyle as FurnitureStyle,
+        provider: 'black-forest', // Upload controller usa apenas Black Forest
         inputImageUrl,
       });
 
@@ -278,7 +299,7 @@ export class UploadController {
       });
 
       // Chamar Black Forest API com imagem e máscara em base64
-      const blackForestResponse = await blackForestService.generateStagedImage(
+      const blackForestResponse = await this.blackForestProvider.generateStagedImage(
         imageBase64,
         maskBase64,
         roomType,
@@ -328,7 +349,7 @@ export class UploadController {
 
     while (attempts < maxAttempts) {
       try {
-        const jobStatus = await blackForestService.checkJobStatus(jobId);
+        const jobStatus = await this.blackForestProvider.checkJobStatusInternal(jobId);
 
         if (jobStatus.status === 'Ready' && jobStatus.result?.sample) {
           // Download da imagem processada e upload para S3

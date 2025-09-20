@@ -1,0 +1,82 @@
+import { Request, Response } from 'express';
+import { BaseController } from './base.controller';
+import { uploadRepository } from '../repositories/upload.repository';
+import { logger } from '../lib/logger';
+import { InstantDecoWebhookResponse } from '../interfaces/instant-deco.interface';
+import { InstantDecoProvider } from '../services/providers/instant-deco.provider';
+import { ProviderConfig } from '../interfaces/virtual-staging-provider.interface';
+
+export class WebhookController extends BaseController {
+  private instantDecoProvider: InstantDecoProvider;
+
+  constructor() {
+    super();
+    // Configuração básica para o provider
+    const config: ProviderConfig = {
+      apiKey: process.env.INSTANT_DECO_API_KEY || '',
+      baseUrl: process.env.INSTANT_DECO_BASE_URL || 'https://api.instantdeco.com',
+      webhookUrl: process.env.INSTANT_DECO_WEBHOOK_URL || '',
+    };
+    this.instantDecoProvider = new InstantDecoProvider(config);
+  }
+
+  /**
+   * Handle InstantDeco webhook
+   */
+  async handleInstantDecoWebhook(req: Request, res: Response): Promise<void> {
+    try {
+      const webhookData: InstantDecoWebhookResponse = req.body;
+      
+      logger.info('InstantDeco webhook received', { 
+        requestId: webhookData.request_id,
+        status: webhookData.status 
+      });
+
+      // Processar resposta do webhook usando o provider InstantDeco
+      const result = await this.instantDecoProvider.processWebhookResponse!(webhookData);
+      
+      if (result.success && result.outputImageUrl) {
+        // Buscar upload pelo request_id
+        const upload = await uploadRepository.findByInstantDecoRequestId(result.requestId!);
+        
+        if (upload) {
+          // Atualizar com a imagem final
+          await uploadRepository.updateOutputImage(upload.id, result.outputImageUrl);
+          await uploadRepository.updateStatus(upload.id, 'completed');
+          
+          logger.info('InstantDeco processing completed', {
+            uploadId: upload.id,
+            requestId: result.requestId,
+            imageUrl: result.outputImageUrl
+          });
+        } else {
+          logger.warn('Upload not found for InstantDeco request', {
+            requestId: result.requestId
+          });
+        }
+      } else {
+        // Buscar upload pelo request_id para marcar como falha
+        const upload = await uploadRepository.findByInstantDecoRequestId(result.requestId!);
+        
+        if (upload) {
+          await uploadRepository.updateStatus(upload.id, 'failed', result.errorMessage);
+          
+          logger.error('InstantDeco processing failed', {
+            uploadId: upload.id,
+            requestId: result.requestId,
+            error: result.errorMessage
+          });
+        }
+      }
+
+      // Responder ao webhook
+      res.status(200).json({ received: true });
+
+    } catch (error) {
+      logger.error('InstantDeco webhook processing failed', { error: error as any });
+      this.error(res, 'Webhook processing failed', 400, error);
+    }
+  }
+}
+
+export const webhookController = new WebhookController();

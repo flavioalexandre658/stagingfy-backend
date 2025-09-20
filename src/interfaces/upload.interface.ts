@@ -20,17 +20,21 @@ export type FurnitureStyle =
   | 'coastal'
   | 'farmhouse';
 
+export type Provider = 'black-forest' | 'instant-deco';
+
 export interface Upload {
   id: string;
   userId: string;
   roomType: RoomType;
   furnitureStyle: FurnitureStyle;
+  provider: Provider;
   inputImageUrl: string;
   outputImageUrl?: string;
   maskUrl?: string;
   status: UploadStatus;
   errorMessage?: string;
   blackForestJobId?: string;
+  instantDecoRequestId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +42,7 @@ export interface Upload {
 export interface CreateUploadRequest {
   roomType: RoomType;
   furnitureStyle: FurnitureStyle;
+  provider?: Provider; // Default será 'black-forest' para compatibilidade
   plan?: 'free' | 'premium';
   saveMask?: boolean;
   hasMask?: boolean; // Indica se o usuário está enviando uma máscara personalizada

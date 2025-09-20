@@ -6,7 +6,8 @@ import {
   CreateUploadRequest, 
   UploadStatus, 
   RoomType, 
-  FurnitureStyle 
+  FurnitureStyle,
+  Provider 
 } from '../interfaces/upload.interface';
 
 export class UploadRepository {
@@ -17,6 +18,7 @@ export class UploadRepository {
     userId: string;
     roomType: RoomType;
     furnitureStyle: FurnitureStyle;
+    provider: Provider;
     inputImageUrl: string;
   }): Promise<Upload> {
     const [upload] = await db
@@ -25,6 +27,7 @@ export class UploadRepository {
         userId: data.userId,
         roomType: data.roomType,
         furnitureStyle: data.furnitureStyle,
+        provider: data.provider,
         inputImageUrl: data.inputImageUrl,
         status: 'pending'
       })
@@ -99,6 +102,39 @@ export class UploadRepository {
       .returning();
 
     return updatedUpload ? (updatedUpload as Upload) : null;
+  }
+
+  /**
+   * Atualiza o request ID do InstantDeco
+   */
+  async updateInstantDecoRequestId(
+    id: string, 
+    instantDecoRequestId: string
+  ): Promise<Upload | null> {
+    const [updatedUpload] = await db
+      .update(uploads)
+      .set({ 
+        instantDecoRequestId,
+        status: 'processing',
+        updatedAt: new Date()
+      })
+      .where(eq(uploads.id, id))
+      .returning();
+
+    return updatedUpload ? (updatedUpload as Upload) : null;
+  }
+
+  /**
+   * Busca um upload pelo request ID do InstantDeco
+   */
+  async findByInstantDecoRequestId(requestId: string): Promise<Upload | null> {
+    const [upload] = await db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.instantDecoRequestId, requestId))
+      .limit(1);
+
+    return upload ? (upload as Upload) : null;
   }
 
   /**

@@ -9,12 +9,15 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { uploadRepository } from '../repositories/upload.repository';
 import { chatGPTService } from '../services/chatgpt.service';
-import { blackForestService } from '../services/black-forest.service';
+import { VirtualStagingService } from '../services/virtual-staging.service';
+import { ProviderConfig } from '../interfaces/virtual-staging-provider.interface';
+import { providerConfigManager } from '../config/provider.config';
 import {
   CreateUploadRequest,
   RoomType,
   FurnitureStyle,
   Upload,
+  Provider,
 } from '../interfaces/upload.interface';
 
 // Configuração do S3
@@ -45,6 +48,25 @@ const upload = multer({
 });
 
 export class VirtualStagingController {
+  private virtualStagingService: VirtualStagingService;
+
+  constructor() {
+    // Validar configurações
+    const validation = providerConfigManager.validateConfigurations();
+    if (!validation.isValid) {
+      console.warn('Provider configuration warnings:', validation.errors);
+    }
+
+    // Obter configurações dos providers
+    const providerConfigs: Record<string, ProviderConfig> = {};
+    for (const [name, config] of providerConfigManager.getAllConfigs()) {
+      providerConfigs[name] = config;
+    }
+
+    // Inicializar o service unificado
+    this.virtualStagingService = new VirtualStagingService(providerConfigs);
+  }
+
   /**
    * Middleware do Multer para upload de imagem
    */
@@ -68,6 +90,7 @@ export class VirtualStagingController {
       const {
         roomType,
         furnitureStyle,
+        provider = 'black-forest',
         plan = 'free',
       } = req.body as CreateUploadRequest & { plan: string };
 
@@ -75,6 +98,16 @@ export class VirtualStagingController {
         res.status(400).json({
           success: false,
           message: 'roomType e furnitureStyle são obrigatórios',
+        });
+        return;
+      }
+
+      // Validar provider
+      const validProviders: Provider[] = ['black-forest', 'instant-deco'];
+      if (!validProviders.includes(provider as Provider)) {
+        res.status(400).json({
+          success: false,
+          message: 'provider inválido. Use "black-forest" ou "instant-deco"',
         });
         return;
       }
@@ -128,10 +161,26 @@ export class VirtualStagingController {
       }
 
       // Verificar se os serviços estão configurados
-      if (!chatGPTService || !process.env.BLACK_FOREST_API_KEY) {
+      if (!chatGPTService) {
         res.status(500).json({
           success: false,
-          message: 'Serviços de IA não configurados',
+          message: 'Serviço ChatGPT não configurado',
+        });
+        return;
+      }
+
+      if (provider === 'black-forest' && !process.env.BLACK_FOREST_API_KEY) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviço Black Forest não configurado',
+        });
+        return;
+      }
+
+      if (provider === 'instant-deco' && !process.env.INSTANT_DECO_API_KEY) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviço InstantDeco não configurado',
         });
         return;
       }
@@ -158,6 +207,7 @@ export class VirtualStagingController {
         userId,
         roomType: roomType as RoomType,
         furnitureStyle: furnitureStyle as FurnitureStyle,
+        provider: provider as Provider,
         inputImageUrl,
       });
 
@@ -167,7 +217,8 @@ export class VirtualStagingController {
         inputImageUrl,
         req.file.buffer,
         roomType as RoomType,
-        furnitureStyle as FurnitureStyle
+        furnitureStyle as FurnitureStyle,
+        provider as Provider
       );
 
       // Retornar resposta imediata
@@ -197,7 +248,8 @@ export class VirtualStagingController {
     inputImageUrl: string,
     imageBuffer: Buffer,
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle
+    furnitureStyle: FurnitureStyle,
+    provider: Provider
   ): Promise<void> {
     const startTime = Date.now();
     console.log(
@@ -220,176 +272,49 @@ export class VirtualStagingController {
       // Converter imagem para base64
       const imageBase64 = imageBuffer.toString('base64');
 
-      // Etapa 1: Gerar prompt otimizado com ChatGPT Vision
-      console.log(
-        `[${uploadId}] Etapa 1: Gerando prompt otimizado com ChatGPT Vision...`
-      );
-      const stagingPrompt = await chatGPTService.generateVirtualStagingPrompt(
-        roomType,
-        furnitureStyle
-      );
-
-      console.log('prompt', stagingPrompt);
-
-      // Etapa 2: Processar com flux-kontext-pro
-      console.log(`[${uploadId}] Etapa 2: Processando com flux-kontext-pro...`);
-      const fluxResponse = await blackForestService.generateVirtualStaging(
+      // Usar o service unificado para processar virtual staging
+      const webhookUrl = process.env.INSTANT_DECO_WEBHOOK_URL || undefined;
+      const result = await this.virtualStagingService.processVirtualStaging({
         imageBase64,
-        stagingPrompt
-      );
-
-      // Salvar job ID no banco de dados
-      if (fluxResponse.id) {
-        console.log(
-          `[${uploadId}] Salvando job ID ${fluxResponse.id} no banco de dados...`
-        );
-        await uploadRepository.updateBlackForestJobId(
-          uploadId,
-          fluxResponse.id
-        );
-      }
-
-      // Etapa 3: Aguardar conclusão (se necessário)
-      console.log(
-        `[${uploadId}] Etapa 3: Aguardando conclusão do processamento...`
-      );
-      let completedJob = fluxResponse;
-
-      // Se retornou um job ID, aguardar conclusão
-      if (fluxResponse.id && !fluxResponse.result) {
-        const maxAttempts = 30; // 1 minuto (2s * 30)
-        let attempts = 0;
-
-        console.log(
-          `[${uploadId}] Iniciando polling para job ${fluxResponse.id} (máximo ${maxAttempts} tentativas)`
-        );
-
-        let consecutiveNotFoundCount = 0;
-        const maxConsecutiveNotFound = 10; // Máximo de 10 tentativas consecutivas de "not found"
-
-        while (attempts < maxAttempts) {
-          try {
-            console.log(
-              `[${uploadId}] Verificando status do job (tentativa ${attempts + 1}/${maxAttempts})`
-            );
-            completedJob = await blackForestService.checkJobStatus(
-              fluxResponse.id
-            );
-
-            console.log(`[${uploadId}] Status atual: ${completedJob.status}`);
-
-            // Verificar se completou com sucesso
-            if (completedJob.status === 'Ready' && completedJob.result) {
-              console.log(`[${uploadId}] Job concluído com sucesso!`);
-              break;
-            }
-
-            // Verificar se falhou definitivamente
-            if (completedJob.status === 'Error') {
-              console.error(
-                `[${uploadId}] Job falhou com status: ${completedJob.status}`
-              );
-              throw new Error(
-                `Processamento falhou: ${completedJob.status} - ${completedJob.error || 'Erro no processamento'}`
-              );
-            }
-
-            // Tratamento especial para "Task not found"
-            if (completedJob.status === 'Task not found') {
-              consecutiveNotFoundCount++;
-              console.warn(
-                `[${uploadId}] Job não encontrado (${consecutiveNotFoundCount}/${maxConsecutiveNotFound}). Pode estar sendo processado...`
-              );
-
-              // Se muitas tentativas consecutivas de "not found", considerar como erro
-              if (consecutiveNotFoundCount >= maxConsecutiveNotFound) {
-                console.error(
-                  `[${uploadId}] Job não encontrado após ${maxConsecutiveNotFound} tentativas consecutivas`
-                );
-                throw new Error(
-                  `Processamento falhou: Job não encontrado na API após múltiplas tentativas`
-                );
-              }
-
-              // Aguardar mais tempo para jobs não encontrados
-              console.log(
-                `[${uploadId}] Aguardando 5 segundos antes da próxima verificação (job não encontrado)...`
-              );
-              await new Promise(resolve => setTimeout(resolve, 5000));
-            } else {
-              // Reset contador se o job foi encontrado (mesmo que não esteja pronto)
-              consecutiveNotFoundCount = 0;
-
-              // Aguardar antes da próxima tentativa
-              console.log(
-                `[${uploadId}] Aguardando 2 segundos antes da próxima verificação...`
-              );
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-
-            attempts++;
-          } catch (error) {
-            console.error(
-              `[${uploadId}] Erro ao verificar status do job ${fluxResponse.id} (tentativa ${attempts + 1}):`,
-              error
-            );
-            attempts++;
-
-            // Se for erro de rede ou outro erro não relacionado ao status
-            if (
-              error instanceof Error &&
-              !error.message.includes('Processamento falhou')
-            ) {
-              console.log(
-                `[${uploadId}] Erro de rede detectado, aguardando 3 segundos antes de tentar novamente...`
-              );
-              await new Promise(resolve => setTimeout(resolve, 3000));
-            } else {
-              // Se for erro de processamento, re-throw
-              throw error;
-            }
-          }
-        }
-
-        // Se esgotou as tentativas
-        if (attempts >= maxAttempts) {
-          console.error(
-            `[${uploadId}] Timeout: Esgotadas ${maxAttempts} tentativas de verificação`
-          );
-          throw new Error(
-            'Timeout: Processamento não foi concluído no tempo esperado'
-          );
-        }
-      }
-
-      const imageUrl = completedJob.result?.sample || completedJob.result?.url;
-      if (!imageUrl) {
-        console.error(
-          `[${uploadId}] Erro: Nenhuma imagem foi gerada no resultado`
-        );
-        throw new Error('Nenhuma imagem foi gerada');
-      }
-
-      console.log(`[${uploadId}] URL da imagem gerada: ${imageUrl}`);
-
-      // Etapa 4: Salvar imagem processada
-      console.log(`[${uploadId}] Etapa 4: Salvando imagem processada...`);
-      const outputImageUrl = await this.saveProcessedImage(uploadId, imageUrl);
-      console.log(`[${uploadId}] Imagem salva em: ${outputImageUrl}`);
-
-      // Atualizar registro com resultado
-      console.log(`[${uploadId}] Atualizando registro no banco de dados...`);
-      await uploadRepository.updateOutputImage(uploadId, outputImageUrl);
-      await uploadRepository.updateStatus(uploadId, 'completed');
-
-      const processingTime = Date.now() - startTime;
-      console.log(`[${uploadId}] Virtual staging concluído com sucesso!`, {
+        imageUrl: inputImageUrl,
+        roomType,
+        furnitureStyle,
         uploadId,
-        outputImageUrl,
-        processingTimeMs: processingTime,
-        processingTimeSeconds: Math.round(processingTime / 1000),
-        timestamp: new Date().toISOString(),
-      });
+        ...(webhookUrl && { webhookUrl }),
+      }, provider);
+
+      let finalImageUrl: string | null = null;
+
+      if (result.success) {
+        if (result.outputImageUrl) {
+          // Resultado imediato (ex: alguns providers síncronos)
+          finalImageUrl = result.outputImageUrl;
+        } else if (result.requestId) {
+          // Processamento assíncrono - aguardar resultado
+          if (provider === 'black-forest') {
+            finalImageUrl = await this.pollForResult(result.requestId, provider);
+          }
+          // Para instant-deco, será atualizado via webhook
+        }
+      } else {
+        throw new Error(result.errorMessage || 'Virtual staging failed');
+      }
+
+      // Atualizar registro com resultado final (apenas para Black Forest)
+      if (finalImageUrl) {
+        console.log(`[${uploadId}] Atualizando registro no banco de dados...`);
+        await uploadRepository.updateOutputImage(uploadId, finalImageUrl);
+        await uploadRepository.updateStatus(uploadId, 'completed');
+
+        const processingTime = Date.now() - startTime;
+        console.log(`[${uploadId}] Virtual staging concluído com sucesso!`, {
+          uploadId,
+          outputImageUrl: finalImageUrl,
+          processingTimeMs: processingTime,
+          processingTimeSeconds: Math.round(processingTime / 1000),
+          timestamp: new Date().toISOString(),
+        });
+      }
     } catch (error) {
       const processingTime = Date.now() - startTime;
       console.error(`[${uploadId}] Erro no processamento assíncrono:`, {
@@ -405,6 +330,36 @@ export class VirtualStagingController {
         error instanceof Error ? error.message : 'Erro desconhecido';
       await uploadRepository.updateStatus(uploadId, 'failed', errorMessage);
     }
+  }
+
+  /**
+   * Faz polling para obter resultado de processamento assíncrono
+   */
+  private async pollForResult(requestId: string, provider: Provider): Promise<string | null> {
+    const maxAttempts = 30; // 5 minutos com intervalos de 10s
+    const interval = 10000; // 10 segundos
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const result = await this.virtualStagingService.checkJobStatus(requestId, provider);
+        
+        if (result.success && result.outputImageUrl) {
+          return result.outputImageUrl;
+        } else if (!result.success && result.errorMessage) {
+          throw new Error(result.errorMessage);
+        }
+
+        // Aguardar antes da próxima tentativa
+        await new Promise(resolve => setTimeout(resolve, interval));
+      } catch (error) {
+        console.error(`Polling attempt ${attempt + 1} failed:`, error);
+        if (attempt === maxAttempts - 1) {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error('Timeout waiting for processing result');
   }
 
   /**
@@ -543,6 +498,8 @@ export class VirtualStagingController {
       });
     }
   }
+
+
 }
 
 export const virtualStagingController = new VirtualStagingController();
