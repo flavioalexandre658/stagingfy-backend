@@ -71,6 +71,8 @@ class ChatGPTService {
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
 Add 2–5 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
+add style-consistent curtains to existing windows according to the selected style, only if there’s adequate surrounding wall clearance; skip if space is limited. This is STRICTLY additive—do not alter window geometry, trims, or wall finishes.
+
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
@@ -86,22 +88,6 @@ ${styleTraits}${styleEmphasis}
 
 FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
 ${topPicks}
-
-CURTAINS (optional, additive-only):
-• Add style-consistent, surface-mounted curtains to existing windows only if there is sufficient surrounding wall clearance.
-• Mount a visible rod 10–20 cm (4–8") above the window frame and extend 15–25 cm (6–10") beyond each side; do not imply drilling or construction changes.
-• Panels hang to the floor, without covering or altering the window frame, glass, handles, trims, vents, outlets, or wall finishes.
-• Keep the original wall color, window geometry, and lighting EXACTLY the same.
-• Skip curtains entirely if space is insufficient or if they would occlude doors, stairways, or circulation paths.
-• Material by style:
-  - modern: sheer white/ivory or light greige, ripple fold or simple pinch pleat;
-  - luxury: lined velvet or silk-blend, elegant header, subtle sheen;
-  - Scandinavian: light linen sheers, airy and natural;
-  - industrial: textured blackout in charcoal/ink on a thin black rod;
-  - coastal: white/soft-blue linen sheers, breezy look;
-  - farmhouse: natural linen/cotton in warm neutrals, simple pleat;
-  - mid-century: solid fabric with slight sheen, tailored header;
-  - standard: neutral fabric, classic pinch pleat.
 
 Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
