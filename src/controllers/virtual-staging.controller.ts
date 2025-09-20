@@ -296,6 +296,10 @@ export class VirtualStagingController {
           // Processamento assíncrono - aguardar resultado
           if (provider === 'black-forest') {
             finalImageUrl = await this.pollForResult(result.requestId, provider);
+          } else if (provider === 'instant-deco') {
+            // Armazenar requestId do InstantDeco para que o webhook possa encontrar o upload
+            await uploadRepository.updateInstantDecoRequestId(uploadId, result.requestId);
+            console.log(`[${uploadId}] InstantDeco requestId armazenado: ${result.requestId}`);
           }
           // Para instant-deco, será atualizado via webhook
         }
