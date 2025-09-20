@@ -2,6 +2,26 @@
 import OpenAI from 'openai';
 import { RoomType, FurnitureStyle } from '../interfaces/upload.interface';
 
+type Range = [number, number];
+
+interface RoomStagingPlan {
+  // How many items to add (by group)
+  mainPiecesRange: Range; // e.g., sofa/bed/table/desk depending on room
+  wallDecorRange: Range; // frames, mirrors (on free wall only)
+  complementaryRange: Range; // plants, lamps, rugs, cushions, accessories
+
+  // Allowed item types for this room (semantic guardrails)
+  allowedMainItems: string[]; // room-specific primary furniture
+  allowedWallDecor: string[]; // safe wall decor
+  allowedComplementary: string[]; // safe complementary items
+
+  // Extra, room-specific safety notes (e.g., island clearances, stair lanes)
+  roomSafetyNotes: string[]; // appended into prompt
+
+  // Optional style emphasis (short, to steer material/finish without forcing structure)
+  styleEmphasis?: string[];
+}
+
 class ChatGPTService {
   private openai: OpenAI;
 
@@ -32,6 +52,29 @@ class ChatGPTService {
             i
           )
       );
+    const plan = this.getRoomStagingPlan(roomType, furnitureStyle); // << NEW
+
+    // Compose room-aware guidance lines
+    const mainPiecesLine =
+      `Add ${plan.mainPiecesRange[0]}–${plan.mainPiecesRange[1]} main ${roomLabel} piece(s): ` +
+      `${this.joinHuman(plan.allowedMainItems)}.`;
+
+    const wallDecorLine =
+      `Add ${plan.wallDecorRange[0]}–${plan.wallDecorRange[1]} wall decoration(s) on free wall surfaces only: ` +
+      `${this.joinHuman(plan.allowedWallDecor)}. Do not place over doors/windows.`;
+
+    const complementaryLine =
+      `Add ${plan.complementaryRange[0]}–${plan.complementaryRange[1]} complementary element(s): ` +
+      `${this.joinHuman(plan.allowedComplementary)}.`;
+
+    const roomSafety = plan.roomSafetyNotes.length
+      ? `\nROOM-SPECIFIC SAFETY:\n• ${plan.roomSafetyNotes.join('\n• ')}\n`
+      : '';
+
+    const styleEmphasis =
+      (plan.styleEmphasis?.length ?? 0) > 0
+        ? `\nStyle emphasis for ${styleLabel}: ${plan.styleEmphasis!.join('; ')}.\n`
+        : '';
 
     const topPicks = packageItems
       .slice(0, 6)
@@ -39,9 +82,8 @@ class ChatGPTService {
       .join('\n');
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Do not modify any existing pixel of the scene.
-• Add 2–5 main furniture pieces (e.g., sofa, armchairs, dining table, bed, or desk depending on the room).
-• Add 1–2 complementary elements (plants, lamps, rugs, curtains, cushions, small accessories).
-• Ensure the result looks fully furnished and balanced, not sparse.
+• ${mainPiecesLine}
+• ${complementaryLine}
 
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
@@ -51,10 +93,10 @@ PRESERVE PIXEL-FOR-PIXEL:
 STAIR & CIRCULATION SAFETY:
 • Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
 • Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
-• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.
+• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
 
 STYLE GUARDRAILS — ${styleLabel}:
-${styleTraits}
+${styleTraits}${styleEmphasis}
 
 FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
 ${topPicks}
@@ -67,6 +109,236 @@ Rendering notes:
 Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
+  }
+
+  // ---------- NEW: room-aware, style-aware plan ----------
+  private getRoomStagingPlan(
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ): RoomStagingPlan {
+    // Base library per room
+    const baseByRoom: Record<
+      RoomType,
+      Omit<RoomStagingPlan, 'styleEmphasis'>
+    > = {
+      living_room: {
+        mainPiecesRange: [2, 4],
+        wallDecorRange: [1, 2],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'sofa or sectional',
+          'one or two accent armchairs',
+          'coffee table',
+          'media console or low credenza',
+          'side tables',
+        ],
+        allowedWallDecor: ['framed artwork', 'framed photography', 'mirror'],
+        allowedComplementary: [
+          'area rug sized to anchor seating',
+          'floor lamp or table lamp',
+          'indoor plant',
+          'decorative cushions and throw',
+          'books, bowls, vases',
+        ],
+        roomSafetyNotes: [
+          'Keep a clear seating circulation path (at least one side of the seating open)',
+          'Do not block balcony/door thresholds with furniture',
+        ],
+      },
+
+      bedroom: {
+        mainPiecesRange: [2, 4],
+        wallDecorRange: [1, 2],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'bed (queen/king depending on space)',
+          'nightstands (pair or single)',
+          'dresser or wardrobe',
+          'bench or ottoman at the foot of the bed',
+        ],
+        allowedWallDecor: ['framed artwork above headboard', 'mirror'],
+        allowedComplementary: [
+          'bedside lamps',
+          'area rug extending beyond bed sides',
+          'accent chair (if space allows)',
+          'plant in neutral pot',
+        ],
+        roomSafetyNotes: [
+          'Keep door swings and closet access fully clear',
+          'Do not cover power outlets or switches with furniture fronts',
+        ],
+      },
+
+      kitchen: {
+        mainPiecesRange: [1, 3],
+        wallDecorRange: [0, 1],
+        complementaryRange: [1, 2],
+        allowedMainItems: [
+          'counter or island stools',
+          'compact bistro/dining set (small table + 2 chairs)',
+        ],
+        allowedWallDecor: ['small framed print on free wall surface'],
+        allowedComplementary: [
+          'runner rug along prep zone',
+          'herb planters on sill/counter',
+          'counter vignette (board + bowl + ceramic jar)',
+        ],
+        roomSafetyNotes: [
+          'Do not place items that obstruct cabinet doors, appliance doors or walking lanes',
+          'Keep cooktop and sink areas unobstructed',
+        ],
+      },
+
+      bathroom: {
+        mainPiecesRange: [0, 1],
+        wallDecorRange: [0, 1],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'small stool or slim console (only if space clearly allows)',
+        ],
+        allowedWallDecor: ['small framed print', 'mirror (if free wall)'],
+        allowedComplementary: [
+          'coordinated towels (bath/hand)',
+          'vanity accessories (soap dispenser, tray)',
+          'low-pile bath mat',
+          'small plant tolerant to humidity',
+        ],
+        roomSafetyNotes: [
+          'Keep fixtures (toilet, vanity, shower) fully visible and unobstructed',
+          'Do not place items that could block door swing or shower entry',
+        ],
+      },
+
+      dining_room: {
+        mainPiecesRange: [2, 4], // table + 2–6 chairs (count as 1–3 main groups)
+        wallDecorRange: [1, 2],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'dining table (oval/rectangular)',
+          'set of dining chairs (4–6)',
+          'sideboard or credenza',
+        ],
+        allowedWallDecor: [
+          'large framed artwork',
+          'mirror proportional to table',
+        ],
+        allowedComplementary: [
+          'area rug sized to chairs pulled back',
+          'centerpiece (vase with stems/branches)',
+          'subtle window treatment if context allows',
+        ],
+        roomSafetyNotes: [
+          'Keep chairs fully usable; do not push table too close to walls/doors',
+          'Maintain clear path around table perimeter',
+        ],
+      },
+
+      home_office: {
+        mainPiecesRange: [2, 3],
+        wallDecorRange: [0, 2],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'desk',
+          'ergonomic chair',
+          'low credenza or bookshelf',
+        ],
+        allowedWallDecor: [
+          'framed artwork',
+          'pinboard or simple wall organizer on free wall',
+        ],
+        allowedComplementary: [
+          'task lamp',
+          'area rug under chair/desk zone',
+          'plant',
+          'organizers (trays, bookends, storage boxes)',
+        ],
+        roomSafetyNotes: [
+          'Keep cable management tidy; do not block outlets',
+          'Do not place furniture obstructing door or window opening',
+        ],
+      },
+
+      kids_room: {
+        mainPiecesRange: [2, 4],
+        wallDecorRange: [1, 2],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'bed (twin/full)',
+          'nightstand',
+          'small desk + chair',
+          'bookshelf or cubby storage',
+        ],
+        allowedWallDecor: [
+          'playful framed prints (animals/letters)',
+          'mirror (safe height)',
+        ],
+        allowedComplementary: [
+          'soft area rug',
+          'toy storage baskets',
+          'reading nook cushion or beanbag',
+          'small plant out of reach',
+        ],
+        roomSafetyNotes: [
+          'Do not place furniture blocking closet/door',
+          'Keep walking paths free of tripping hazards',
+        ],
+      },
+
+      outdoor: {
+        mainPiecesRange: [2, 4],
+        wallDecorRange: [0, 1],
+        complementaryRange: [1, 3],
+        allowedMainItems: [
+          'outdoor sofa or lounge chairs',
+          'outdoor table (coffee/side)',
+        ],
+        allowedWallDecor: ['outdoor-safe wall decor (if applicable)'],
+        allowedComplementary: [
+          'outdoor rug (UV-resistant)',
+          'planters with greenery',
+          'lanterns or string lights',
+          'outdoor cushions',
+        ],
+        roomSafetyNotes: [
+          'Keep door thresholds and balcony edges unobstructed',
+          'Do not place items near unsafe edges or blocking emergency egress',
+        ],
+      },
+    };
+
+    // Style emphasis (light touch, avoids forcing structure)
+    const styleEmphasisByStyle: Record<FurnitureStyle, string[]> = {
+      standard: ['balanced proportions', 'neutral palette'],
+      modern: ['clean lines', 'matte finishes', 'low-profile silhouettes'],
+      scandinavian: ['light woods', 'airy fabrics', 'cozy layered textiles'],
+      industrial: ['black steel details', 'raw wood surfaces', 'robust shapes'],
+      midcentury: ['tapered legs', 'warm wood tones', 'geometric accents'],
+      luxury: [
+        'velvet/silk accents',
+        'brass or gold details',
+        'marble or glass highlights',
+      ],
+      coastal: [
+        'rattan/jute textures',
+        'white/sand/blue palette',
+        'weathered woods',
+      ],
+      farmhouse: ['rustic woods', 'earthy tones', 'handcrafted details'],
+    };
+
+    const plan = baseByRoom[roomType];
+
+    return {
+      ...plan,
+      styleEmphasis: styleEmphasisByStyle[furnitureStyle],
+    };
+  }
+
+  private joinHuman(items: string[]): string {
+    if (items.length === 0) return '';
+    if (items.length === 1) return items[0] || '';
+    const last = items[items.length - 1];
+    return `${items.slice(0, -1).join(', ')} and ${last}`;
   }
 
   // ------- labels -------
