@@ -37,7 +37,6 @@ class ChatGPTService {
    * Generates a refined prompt for flux-kontext-pro.
    * Dynamic furnishing (2–5 items), pixel-preserving, with a protected stair zone.
    */
-  // src/services/chatgpt.service.ts (apenas o método atualizado)
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
@@ -45,39 +44,27 @@ class ChatGPTService {
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
     const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
+    const packageItems = this.getPackageCombination(roomType, furnitureStyle)
+      // favorece peças de baixo volume primeiro
+      .filter(
+        i =>
+          !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
+            i
+          )
+      );
+    const plan = this.getRoomStagingPlan(roomType, furnitureStyle); // << NEW
 
-    // Pacotes ricos, mas filtrando “casegoods” volumosos por padrão
-    const packageItems = this.getPackageCombination(
-      roomType,
-      furnitureStyle
-    ).filter(
-      i =>
-        !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
-          i
-        )
-    );
-
-    // Plano por cômodo/estilo (ranges e listas de itens permitidos)
-    const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
-
-    // Linhas de orientação sensíveis ao cômodo
+    // Compose room-aware guidance lines
     const mainPiecesLine =
-      `Add ${plan.mainPiecesRange[0]}–${plan.mainPiecesRange[1]} main ${roomLabel} piece(s) chosen from: ` +
+      `Add ${plan.mainPiecesRange[0]}–${plan.mainPiecesRange[1]} main ${roomLabel} piece(s): ` +
       `${this.joinHuman(plan.allowedMainItems)}.`;
 
-    // *** REGRA CRÍTICA DE PAREDE: só adicionar arte se houver área livre suficiente ***
-    // Critérios explícitos de “área livre suficiente”:
-    // - trecho de parede contínuo visível, sem portas/janelas/armários,
-    // - margens livres (≥ 15 cm/6") ao redor,
-    // - não sobrepor rodapés, tomadas, interruptores ou corrimão/caixa de escada.
-    // - se não houver espaço suficiente, OMITIR a arte de parede e usar fallback de piso/mesa.
     const wallDecorLine =
-      `Wall decor is OPTIONAL and only if there is sufficient free wall area: a continuous blank segment with clear margins, no doors/windows, no switches/outlets, and not over the stair void. ` +
-      `If no such free wall area exists, SKIP wall decor and instead add a compact floor/side-table decorative piece (e.g., sculptural vase or plant). ` +
-      `Target ${plan.wallDecorRange[0]}–${plan.wallDecorRange[1]} piece(s) from: ${this.joinHuman(plan.allowedWallDecor)}.`;
+      `Add ${plan.wallDecorRange[0]}–${plan.wallDecorRange[1]} wall decoration(s) on free wall surfaces only: ` +
+      `${this.joinHuman(plan.allowedWallDecor)}. Do not place over doors/windows.`;
 
     const complementaryLine =
-      `Add ${plan.complementaryRange[0]}–${plan.complementaryRange[1]} complementary element(s) from: ` +
+      `Add ${plan.complementaryRange[0]}–${plan.complementaryRange[1]} complementary element(s): ` +
       `${this.joinHuman(plan.allowedComplementary)}.`;
 
     const roomSafety = plan.roomSafetyNotes.length
@@ -94,23 +81,19 @@ class ChatGPTService {
       .map(i => `• ${i}`)
       .join('\n');
 
-    // Prompt final — sintaxe curta/imperativa conforme guia Kontext
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Do not modify any existing pixel of the scene.
-
 • ${mainPiecesLine}
-• ${wallDecorLine}
 • ${complementaryLine}
 
 PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
-• Keep the exact camera angle, framing, perspective lines and the original lighting (direction, intensity, color temperature).
-• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes.
-• No new curtains/blinds or window treatments. No new architectural elements.
+• Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
+• No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
 
 STAIR & CIRCULATION SAFETY:
-• Treat the staircase and its landing as a STRICT NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
-• Keep clear passage around doors and along the stair run and landings; maintain at least 90 cm (36") of free circulation.
-• Place items only where they fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
+• Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
+• Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
+• Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
 
 STYLE GUARDRAILS — ${styleLabel}:
 ${styleTraits}${styleEmphasis}
@@ -118,12 +101,7 @@ ${styleTraits}${styleEmphasis}
 FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
 ${topPicks}
 
-Rendering notes:
-• Prefer compact pieces if space is tight; avoid bulky casegoods near circulation.
-• Photorealistic materials and shadows matching the input light; no artificial glow.
-• Wall decor only if the free wall area criteria are satisfied; otherwise omit.
-
-Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; keep every architectural element and finish exactly as in the input.`;
+Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
