@@ -26,23 +26,24 @@ class BlackForestService {
 
   private readonly loraConfig: LoraConfig = {
     roomType: {
-      living_room: 'living_room_lora',
       bedroom: 'bedroom_lora',
+      living_room: 'living_room_lora',
       kitchen: 'kitchen_lora',
       bathroom: 'bathroom_lora',
+      home_office: 'home_office_lora',
       dining_room: 'dining_room_lora',
-      office: 'office_lora',
-      balcony: 'balcony_lora',
+      kids_room: 'kids_room_lora',
+      outdoor: 'outdoor_lora',
     },
     furnitureStyle: {
+      standard: 'standard_furniture_lora',
       modern: 'modern_furniture_lora',
-      japanese_minimalist: 'japanese_minimalist_lora',
       scandinavian: 'scandinavian_lora',
       industrial: 'industrial_lora',
-      classic: 'classic_lora',
-      contemporary: 'contemporary_lora',
-      rustic: 'rustic_lora',
-      bohemian: 'bohemian_lora',
+      midcentury: 'midcentury_lora',
+      luxury: 'luxury_lora',
+      coastal: 'coastal_lora',
+      farmhouse: 'farmhouse_lora',
     },
   };
 
@@ -103,23 +104,24 @@ class BlackForestService {
   // ------------ prompt básico (você pode manter/ajustar depois) ------------
   private generatePrompt(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     const roomTypeMap: Record<RoomType, string> = {
-      living_room: 'living room',
       bedroom: 'bedroom',
+      living_room: 'living room',
       kitchen: 'kitchen',
       bathroom: 'bathroom',
+      home_office: 'home office',
       dining_room: 'dining room',
-      office: 'home office',
-      balcony: 'balcony',
+      kids_room: 'kids room',
+      outdoor: 'outdoor space',
     };
     const styleMap: Record<FurnitureStyle, string> = {
+      standard: 'standard',
       modern: 'modern',
-      japanese_minimalist: 'Japanese minimalist',
       scandinavian: 'Scandinavian',
       industrial: 'industrial',
-      classic: 'classic',
-      contemporary: 'contemporary',
-      rustic: 'rustic',
-      bohemian: 'bohemian',
+      midcentury: 'mid-century modern',
+      luxury: 'luxury',
+      coastal: 'coastal',
+      farmhouse: 'farmhouse',
     };
 
     return `Virtual staging of an empty ${roomTypeMap[roomType]} in ${styleMap[furnitureStyle]} style. Add only furniture and decor; do not change walls, floors, ceilings, doors, windows, lighting or architecture. Keep existing geometry and perspective intact. Photorealistic interior photography.`;

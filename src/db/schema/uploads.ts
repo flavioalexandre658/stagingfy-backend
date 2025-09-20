@@ -11,25 +11,26 @@ export const uploadStatusEnum = pgEnum('upload_status', [
 
 // Enum para tipos de ambiente
 export const roomTypeEnum = pgEnum('room_type', [
-  'living_room',
   'bedroom',
+  'living_room',
   'kitchen',
   'bathroom',
+  'home_office',
   'dining_room',
-  'office',
-  'balcony'
+  'kids_room',
+  'outdoor'
 ]);
 
 // Enum para estilos de móveis
 export const furnitureStyleEnum = pgEnum('furniture_style', [
+  'standard',
   'modern',
-  'japanese_minimalist',
   'scandinavian',
   'industrial',
-  'classic',
-  'contemporary',
-  'rustic',
-  'bohemian'
+  'midcentury',
+  'luxury',
+  'coastal',
+  'farmhouse'
 ]);
 
 export const uploads = pgTable('uploads', {

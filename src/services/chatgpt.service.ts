@@ -41,27 +41,28 @@ Never remove or replace existing elements; only add furniture and decor consiste
   // ------- helpers -------
   private getRoomTypeLabel(roomType: RoomType): string {
     const labels: Record<RoomType, string> = {
-      living_room: 'living room',
       bedroom: 'bedroom',
+      living_room: 'living room',
       kitchen: 'kitchen',
       bathroom: 'bathroom',
+      home_office: 'home office',
       dining_room: 'dining room',
-      office: 'home office',
-      balcony: 'balcony',
+      kids_room: 'kids room',
+      outdoor: 'outdoor space',
     };
     return labels[roomType];
   }
 
   private getFurnitureStyleLabel(furnitureStyle: FurnitureStyle): string {
     const labels: Record<FurnitureStyle, string> = {
+      standard: 'standard',
       modern: 'modern',
-      japanese_minimalist: 'Japanese minimalist',
       scandinavian: 'Scandinavian',
       industrial: 'industrial',
-      classic: 'classic',
-      contemporary: 'contemporary',
-      rustic: 'rustic',
-      bohemian: 'bohemian',
+      midcentury: 'mid-century modern',
+      luxury: 'luxury',
+      coastal: 'coastal',
+      farmhouse: 'farmhouse',
     };
     return labels[furnitureStyle];
   }
@@ -71,22 +72,22 @@ Never remove or replace existing elements; only add furniture and decor consiste
    */
   private getFurnitureStyleTraits(furnitureStyle: FurnitureStyle): string {
     const traits: Record<FurnitureStyle, string> = {
+      standard:
+        'classic and timeless pieces, neutral colors, balanced proportions, versatile furniture that works in any setting.',
       modern:
         'clean lines, neutral palette, matte finishes, slim metal or wood legs, low-profile silhouettes, subtle texture layering.',
-      japanese_minimalist:
-        'low wooden furniture, natural materials, tatami or flat rugs, paper lamps, light wood finishes, uncluttered and calm aesthetic.',
       scandinavian:
         'light woods, airy fabrics, organic shapes, whites and beiges, cozy layered textiles, minimal yet warm aesthetic.',
       industrial:
         'raw wood, black steel frames, exposed joints, robust shapes, dark leather or fabric, urban loft aesthetic.',
-      classic:
-        'tufted upholstery, dark or polished wood, symmetry, ornate frames, elegant textiles like velvet or damask.',
-      contemporary:
-        'geometric shapes, sleek finishes, glass or polished stone accents, neutral palettes with bold single accents.',
-      rustic:
-        'solid wood with visible grain, warm tones, linen and wool fabrics, handcrafted feel, natural textures like jute or rattan.',
-      bohemian:
-        'layered rugs, eclectic textiles, rattan or wicker, plants, mix of patterns and colors, casual artistic vibe.',
+      midcentury:
+        'tapered legs, warm wood tones, geometric patterns, bold accent colors, sleek and functional design from the 1950s-60s.',
+      luxury:
+        'high-end materials, rich fabrics like velvet and silk, gold or brass accents, sophisticated and elegant aesthetic.',
+      coastal:
+        'light and airy feel, natural textures like rattan and jute, blues and whites, weathered wood, nautical-inspired elements.',
+      farmhouse:
+        'rustic wood finishes, vintage and distressed elements, neutral earth tones, cozy and lived-in aesthetic, country charm.',
     };
     return traits[furnitureStyle];
   }

@@ -81,23 +81,24 @@ export class VirtualStagingController {
 
       // Validar tipos permitidos
       const validRoomTypes: RoomType[] = [
-        'living_room',
         'bedroom',
+        'living_room',
         'kitchen',
         'bathroom',
+        'home_office',
         'dining_room',
-        'office',
-        'balcony',
+        'kids_room',
+        'outdoor',
       ];
       const validFurnitureStyles: FurnitureStyle[] = [
+        'standard',
         'modern',
-        'japanese_minimalist',
         'scandinavian',
         'industrial',
-        'classic',
-        'contemporary',
-        'rustic',
-        'bohemian',
+        'midcentury',
+        'luxury',
+        'coastal',
+        'farmhouse',
       ];
 
       if (!validRoomTypes.includes(roomType as RoomType)) {

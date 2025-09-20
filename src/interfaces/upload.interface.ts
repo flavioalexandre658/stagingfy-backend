@@ -1,23 +1,24 @@
 export type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type RoomType = 
+  | 'bedroom'
   | 'living_room'
-  | 'bedroom' 
   | 'kitchen'
   | 'bathroom'
+  | 'home_office'
   | 'dining_room'
-  | 'office'
-  | 'balcony';
+  | 'kids_room'
+  | 'outdoor';
 
 export type FurnitureStyle = 
+  | 'standard'
   | 'modern'
-  | 'japanese_minimalist'
   | 'scandinavian'
   | 'industrial'
-  | 'classic'
-  | 'contemporary'
-  | 'rustic'
-  | 'bohemian';
+  | 'midcentury'
+  | 'luxury'
+  | 'coastal'
+  | 'farmhouse';
 
 export interface Upload {
   id: string;
