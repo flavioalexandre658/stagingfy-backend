@@ -29,6 +29,9 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   readonly supportsWebhooks = true;
   readonly config: ProviderConfig;
 
+  // Cache temporário para jobIds recém-criados (para lidar com race conditions)
+  private static jobIdCache = new Map<string, { uploadId: string, stage: string, timestamp: number }>();
+
   private readonly loraConfig: LoraConfig = {
     roomType: {
       bedroom: 'bedroom_lora',
@@ -55,6 +58,29 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   constructor(config: ProviderConfig) {
     super();
     this.config = config;
+  }
+
+  // Métodos para gerenciar cache de jobIds
+  private static addToCache(jobId: string, uploadId: string, stage: string): void {
+    this.jobIdCache.set(jobId, { uploadId, stage, timestamp: Date.now() });
+    
+    // Limpar cache após 30 segundos
+    setTimeout(() => {
+      this.jobIdCache.delete(jobId);
+    }, 30000);
+  }
+
+  static getFromCache(jobId: string): { uploadId: string, stage: string } | null {
+    const cached = this.jobIdCache.get(jobId);
+    if (cached) {
+      // Verificar se não expirou (máximo 30 segundos)
+      if (Date.now() - cached.timestamp < 30000) {
+        return { uploadId: cached.uploadId, stage: cached.stage };
+      } else {
+        this.jobIdCache.delete(jobId);
+      }
+    }
+    return null;
   }
 
   // ------------ helpers de tamanho ------------
@@ -625,7 +651,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
       
       if (response.id) {
-        // IMPORTANTE: Salvar jobId imediatamente no banco para evitar race condition com webhooks
+        // IMPORTANTE: Adicionar ao cache IMEDIATAMENTE para webhooks rápidos
+        BlackForestProvider.addToCache(response.id, uploadId, stageConfig.stage);
+        
+        // Salvar jobId no banco para persistência
         try {
           const { uploadRepository } = await import('../../repositories/upload.repository');
           const upload = await uploadRepository.findById(uploadId);
@@ -643,7 +672,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           }
         } catch (saveError) {
           this.logger.error(`Failed to save jobId immediately for upload ${uploadId}:`, saveError as Error);
-          // Continuar mesmo se falhar ao salvar, pois o processNextStage tentará novamente
+          // Continuar mesmo se falhar ao salvar, pois o cache e processNextStage lidarão com isso
         }
         
         return {

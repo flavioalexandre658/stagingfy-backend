@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { uploads } from '../db/schema/uploads';
 import { 
@@ -387,22 +387,20 @@ export class UploadRepository {
    * Busca upload por jobId de qualquer etapa
    */
   async findByStageJobId(jobId: string): Promise<Upload | null> {
-    const allUploads = await db
+    // Usar LIKE para buscar o jobId no JSON string de forma mais eficiente
+    const [upload] = await db
       .select()
       .from(uploads)
-      .where(eq(uploads.status, 'processing'));
+      .where(
+        and(
+          eq(uploads.status, 'processing'),
+          // Buscar o jobId dentro do JSON string
+          sql`${uploads.stageJobIds} LIKE ${`%"${jobId}"%`}`
+        )
+      )
+      .limit(1);
 
-    for (const upload of allUploads) {
-      if (upload.stageJobIds) {
-        const stageJobIds = JSON.parse(upload.stageJobIds);
-        const hasJobId = Object.values(stageJobIds).includes(jobId);
-        if (hasJobId) {
-          return this.convertToUpload(upload);
-        }
-      }
-    }
-
-    return null;
+    return upload ? this.convertToUpload(upload) : null;
   }
 
   /**

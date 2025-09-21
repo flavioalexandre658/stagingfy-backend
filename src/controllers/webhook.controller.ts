@@ -183,7 +183,20 @@ export class WebhookController extends BaseController {
     return null;
   }
 
-  private async findUploadWithRetry(jobId: string, maxRetries: number = 3, baseDelay: number = 500): Promise<any> {
+  private async findUploadWithRetry(jobId: string, maxRetries: number = 2, baseDelay: number = 300): Promise<any> {
+    // Primeiro, verificar cache para jobIds recém-criados
+    const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
+    const cached = BlackForestProvider.getFromCache(jobId);
+    
+    if (cached) {
+      logger.debug(`Found jobId ${jobId} in cache for upload ${cached.uploadId}`);
+      // Buscar upload pelo ID do cache
+      const upload = await uploadRepository.findById(cached.uploadId);
+      if (upload) {
+        return upload;
+      }
+    }
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
       let upload = await uploadRepository.findByBlackForestJobId(jobId);
