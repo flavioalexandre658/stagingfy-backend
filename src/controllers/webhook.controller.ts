@@ -134,31 +134,40 @@ export class WebhookController extends BaseController {
           if (upload.currentStage && upload.stagingPlan) {
             logger.info(`Stage ${upload.currentStage} completed for upload ${upload.id}`);
             
-            // Atualizar resultado da etapa atual
-            await uploadRepository.updateStageResult(upload.id, {
-              stage: upload.currentStage,
-              imageUrl,
-              success: true,
-              validationPassed: true,
-              retryCount: 0
-            } as any);
-
             // Verificar se há próxima etapa
             const currentStageIndex = upload.stagingPlan.stages.findIndex((s: any) => s.stage === upload.currentStage);
             const nextStageIndex = currentStageIndex + 1;
             
             if (nextStageIndex < upload.stagingPlan.stages.length) {
-              // Há próxima etapa - apenas processar, NÃO finalizar
+              // Há próxima etapa - processar primeiro para obter o jobId
               const nextStage = upload.stagingPlan.stages[nextStageIndex];
               if (nextStage) {
                 logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
-                await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
+                const nextStageJobId = await this.processNextStageAndGetJobId(upload, imageUrl, nextStage, nextStageIndex);
+                
+                // Agora atualizar resultado da etapa atual com o nextStageJobId
+                await uploadRepository.updateStageResult(upload.id, {
+                  stage: upload.currentStage,
+                  imageUrl,
+                  success: true,
+                  validationPassed: true,
+                  retryCount: 0
+                } as any, nextStageJobId || undefined);
               }
             } else {
-              // Última etapa concluída - salvar no S3 e finalizar
+              // Última etapa concluída - atualizar resultado sem nextStageJobId (isso marca como completed)
+              await uploadRepository.updateStageResult(upload.id, {
+                stage: upload.currentStage,
+                imageUrl,
+                success: true,
+                validationPassed: true,
+                retryCount: 0
+              } as any);
+              
+              // Salvar no S3 e finalizar
               logger.info(`All stages completed for upload ${upload.id}`);
               const finalImageUrl = await this.saveImageToS3(upload.id, imageUrl, upload.userId);
-              await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined, true);
+              await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined, false); // false para não duplicar o completed
             }
           } else {
             // Upload simples (sem staging plan) - salvar no S3 e finalizar
@@ -221,7 +230,7 @@ export class WebhookController extends BaseController {
     return upload;
   }
 
-  private async processNextStage(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<void> {
+  private async processNextStageAndGetJobId(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<string | null> {
     try {
       // Atualizar currentStage
       await uploadRepository.updateCurrentStage(upload.id, nextStage.stage);
@@ -260,6 +269,7 @@ export class WebhookController extends BaseController {
         await uploadRepository.updateStageJobIds(upload.id, updatedStageJobIds);
         
         logger.info(`Stage ${nextStage.stage} submitted for upload ${upload.id}`, { jobId: result.jobId });
+        return result.jobId;
       } else {
         throw new Error(`Falha ao enviar etapa ${nextStage.stage}`);
       }
@@ -267,7 +277,12 @@ export class WebhookController extends BaseController {
     } catch (error) {
       logger.error(`Error processing next stage for upload ${upload.id}:`, error as Error);
       await this.handleStageFailure(upload);
+      return null;
     }
+  }
+
+  private async processNextStage(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<void> {
+    await this.processNextStageAndGetJobId(upload, inputImageUrl, nextStage, stageIndex);
   }
 
   /**
