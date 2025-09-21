@@ -505,7 +505,6 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       
       let currentImage = params.imageBase64!;
       const stageResults: StagingStageResult[] = [];
-      const completedStages: StagingStage[] = [];
       
       // Log da imagem inicial
       console.log(`[${uploadId}] 🖼️  IMAGEM INICIAL:`);
@@ -533,7 +532,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           onProgress({
             uploadId: uploadId,
             currentStage: stageConfig.stage,
-            completedStages: completedStages,
+            completedStages: [],
             stageResults: stageResults,
             success: true,
             totalProgress: ((stageIndex + 1) / plan.stages.length) * 100
@@ -595,125 +594,49 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
                };
                
                stageResults.push(stageResult);
-               completedStages.push(stageConfig.stage);
               console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} concluída após retry.`);
-              console.log(`[${uploadId}] 📊 Progresso: ${completedStages.length}/${plan.stages.length} etapas concluídas (com retry)`);
             }
           }
         } else if (response.id) {
-          // Aguardar conclusão
-          console.log(`[${uploadId}] Aguardando conclusão do job ${response.id}...`);
-          const stageResult = await this.waitForCompletion(response.id);
+          // Com webhook, apenas registrar o job ID e continuar
+          console.log(`[${uploadId}] ✅ Job ${response.id} enviado para etapa ${stageConfig.stage}. Aguardando webhook...`);
           
-          if (stageResult.success && stageResult.outputImageUrl) {
-            console.log(`[${uploadId}] ✅ Etapa ${stageConfig.stage} concluída. URL: ${stageResult.outputImageUrl}`);
-            
-            // Converter imagem para base64 para próxima etapa
-            console.log(`[${uploadId}] 🔄 Convertendo imagem para base64 para próxima etapa...`);
-            const imageBase64 = await this.downloadAndConvertToBase64(stageResult.outputImageUrl);
-            
-            // Log da imagem resultante
-            console.log(`[${uploadId}] 🖼️  IMAGEM RESULTANTE ETAPA ${stageIndex + 1} (${stageConfig.stage.toUpperCase()}):`);
-            console.log(`[${uploadId}] - URL: ${stageResult.outputImageUrl}`);
-            console.log(`[${uploadId}] - Tamanho base64 convertido: ${imageBase64.length} caracteres`);
-            console.log(`[${uploadId}] - Hash da nova imagem: ${imageBase64.substring(imageBase64.length - 20)}`);
-            console.log(`[${uploadId}] - Diferença de tamanho: ${imageBase64.length - currentImage.length} caracteres`);
-            
-            // Salvar resultado da etapa
-             const stageResultData: StagingStageResult = {
-               stage: stageConfig.stage,
-               imageUrl: stageResult.outputImageUrl,
-               itemsAdded: 0, // Simplificado por enquanto
-               success: true,
-               validationPassed: true,
-               retryCount: 0
-             };
-             
-             stageResults.push(stageResultData);
-             completedStages.push(stageConfig.stage);
-            
-            // Atualizar imagem atual para próxima etapa
-            currentImage = imageBase64;
-            console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} finalizada. Próxima etapa usará nova imagem.`);
-            console.log(`[${uploadId}] 📊 Progresso: ${completedStages.length}/${plan.stages.length} etapas concluídas`);
-          } else {
-            console.log(`[${uploadId}] ❌ Etapa ${stageConfig.stage} falhou: ${stageResult.errorMessage}`);
-            
-            // Registrar a etapa que falhou
-             const failedStageResult: StagingStageResult = {
-                 stage: stageConfig.stage,
-                 itemsAdded: 0,
-                 success: false,
-                 validationPassed: false,
-                 retryCount: 0,
-                 errorMessage: stageResult.errorMessage || 'Erro desconhecido'
-               };
-             stageResults.push(failedStageResult);
-             
-             // Se há etapas anteriores concluídas, retornar a imagem da última etapa bem-sucedida
-             if (stageResults.length > 1) {
-               const lastSuccessfulStage = stageResults[stageResults.length - 2]; // Etapa anterior à que falhou
-               
-               if (lastSuccessfulStage && lastSuccessfulStage.imageUrl) {
-                 console.log(`[${uploadId}] 🔄 Retornando imagem da etapa anterior: ${lastSuccessfulStage.stage}`);
-                 console.log(`[${uploadId}] 📊 Etapas concluídas: ${completedStages.length}/${plan.stages.length}`);
-                 
-                 return {
-                   success: true,
-                   outputImageUrl: lastSuccessfulStage.imageUrl,
-                   metadata: {
-                     plan: plan,
-                     stageResults: stageResults,
-                     totalStages: plan.stages.length,
-                     completedStages: completedStages.length,
-                     failedStage: stageConfig.stage,
-                     returnedFromStage: lastSuccessfulStage.stage,
-                     partialSuccess: true
-                   }
-                 };
-               }
-             } else {
-              // Se é a primeira etapa que falhou, não há imagem anterior para retornar
-              console.log(`[${uploadId}] ❌ Primeira etapa falhou, não há imagem anterior para retornar`);
-              return {
-                success: false,
-                errorMessage: `Falha na etapa ${stageConfig.stage}: ${stageResult.errorMessage}`
-              };
-            }
+          // Registrar o job ID para esta etapa (será processado via webhook)
+          const stageResultData: StagingStageResult = {
+            stage: stageConfig.stage,
+            jobId: response.id,
+            itemsAdded: 0,
+            success: true, // Job foi enviado com sucesso
+            validationPassed: false, // Será validado quando o webhook chegar
+            retryCount: 0
+          };
+          
+          stageResults.push(stageResultData);
+          console.log(`[${uploadId}] 📊 Etapa ${stageConfig.stage} enviada. Job ID: ${response.id}`);
+          
+          // Para staging em etapas com webhook, retornamos apenas o primeiro job ID
+          // O webhook processará as etapas subsequentes
+          if (stageIndex === 0) {
+            return {
+              success: true,
+              requestId: response.id,
+              metadata: {
+                status: 'processing',
+                uploadId,
+                stagingPlan: plan,
+                currentStage: stageConfig.stage,
+                totalStages: plan.stages.length
+              }
+            };
           }
         }
       }
       
-      // Resultado final - usar a URL da última etapa
-      const lastStageResult = stageResults.length > 0 ? stageResults[stageResults.length - 1] : null;
-      const finalImageUrl = lastStageResult?.imageUrl || '';
-      
-      console.log(`\n[${uploadId}] 🎉 PROCESSAMENTO EM ETAPAS CONCLUÍDO!`);
-      console.log(`[${uploadId}] 📊 Resumo final:`);
-      console.log(`[${uploadId}] - Etapas processadas: ${completedStages.length}/${plan.stages.length}`);
-      console.log(`[${uploadId}] - Etapas concluídas: ${completedStages.join(' → ')}`);
-      console.log(`[${uploadId}] - URLs geradas: ${stageResults.map(r => r.imageUrl?.split('/').pop() || 'N/A').join(' → ')}`);
-      console.log(`[${uploadId}] 🖼️  IMAGEM FINAL:`);
-      console.log(`[${uploadId}] - URL final: ${finalImageUrl}`);
-      console.log(`[${uploadId}] - Última etapa: ${lastStageResult?.stage || 'N/A'}`);
-      
-      if (!finalImageUrl) {
-        console.log(`[${uploadId}] ❌ ERRO: Nenhuma etapa foi processada com sucesso`);
-        return {
-          success: false,
-          errorMessage: 'Nenhuma etapa foi processada com sucesso'
-        };
-      }
-      
+      // Com webhook, se chegamos aqui significa que nenhuma etapa foi enviada com sucesso
+      console.log(`[${uploadId}] ❌ ERRO: Nenhuma etapa foi enviada com sucesso`);
       return {
-        success: true,
-        outputImageUrl: finalImageUrl,
-        metadata: {
-          plan: plan,
-          stageResults: stageResults,
-          totalStages: plan.stages.length,
-          completedStages: completedStages.length
-        }
+        success: false,
+        errorMessage: 'Falha ao enviar requisições para todas as etapas'
       };
       
     } catch (error) {

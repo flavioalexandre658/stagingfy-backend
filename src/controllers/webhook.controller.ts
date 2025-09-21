@@ -98,6 +98,12 @@ export class WebhookController extends BaseController {
     try {
       const webhookData: BlackForestWebhookResponse = req.body;
 
+      // Debug: Log do payload completo para identificar o problema
+      logger.info('Black Forest webhook received - FULL PAYLOAD', {
+        fullPayload: JSON.stringify(req.body, null, 2),
+        headers: req.headers,
+      });
+
       logger.info('Black Forest webhook received', {
         jobId: webhookData.id,
         status: webhookData.status,
