@@ -181,8 +181,6 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       // Retry logic - 3 tentativas
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          console.log(`[Black Forest] Tentativa ${attempt}/3 para enviar requisição...`);
-          
           resp = await fetch(`${this.config.baseUrl}/v1/flux-kontext-pro`, {
             method: 'POST',
             headers: {
@@ -198,11 +196,13 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           
         } catch (error) {
           lastError = error as Error;
-          console.error(`[Black Forest] Tentativa ${attempt}/3 falhou:`, error);
+          
+          if (attempt === 3) {
+            this.logger.error('Black Forest API request failed after all retries:', error as Error);
+          }
           
           if (attempt < 3) {
             const delay = attempt * 2000; // 2s, 4s
-            console.log(`[Black Forest] Aguardando ${delay}ms antes da próxima tentativa...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
@@ -221,7 +221,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       const json = (await resp.json()) as BlackForestApiResponse;
       return json;
     } catch (error) {
-      console.error('Error calling FLUX.1 Kontext Pro:', error);
+      this.logger.error('Error calling FLUX.1 Kontext Pro:', error as Error);
       throw new Error(
         `Failed to generate virtual staging: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -524,11 +524,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     progressCallback?: (progress: StagingProgressResult) => void
   ): Promise<VirtualStagingResult> {
     try {
-      console.log(`[${uploadId}] 🚀 Iniciando processamento em etapas`);
+      this.logger.info(`Starting staged processing for upload ${uploadId}`, { roomType, furnitureStyle });
       
       // Gerar plano de staging
       const plan = await this.generateStagingPlan(roomType, furnitureStyle);
-      console.log(`[${uploadId}] 📋 Plano gerado:`, plan);
 
       // Executar apenas a primeira etapa
       const firstStage = plan.stages[0];
@@ -539,14 +538,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         };
       }
       
-      console.log(`[${uploadId}] 🚀 INICIANDO ETAPA 1/${plan.stages.length}: ${firstStage.stage.toUpperCase()}`);
-      console.log(`[${uploadId}] - Itens permitidos: ${firstStage.allowedCategories.join(', ')}`);
-      console.log(`[${uploadId}] - Range de itens: ${firstStage.minItems}-${firstStage.maxItems}`);
-
-      // Log da imagem de entrada
-      console.log(`[${uploadId}] 🖼️  IMAGEM DE ENTRADA ETAPA 1:`);
-      console.log(`[${uploadId}] - Tamanho base64: ${inputImageBase64.length} caracteres`);
-      console.log(`[${uploadId}] - Hash da imagem: ${inputImageBase64.slice(-20)}`);
+      this.logger.info(`Starting stage 1/${plan.stages.length}: ${firstStage.stage}`, { uploadId });
 
       // Notificar progresso
       if (progressCallback) {
@@ -561,8 +553,6 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
 
       // Executar primeira etapa
-      console.log(`[${uploadId}] Executando etapa 1/${plan.stages.length}: ${firstStage.stage}`);
-      
       const stageResult = await this.executeStage(
         uploadId,
         inputImageBase64,
@@ -572,7 +562,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       );
 
       if (stageResult.success && stageResult.jobId) {
-        console.log(`[${uploadId}] ✅ Job ${stageResult.jobId} enviado para etapa ${firstStage.stage}. Aguardando webhook...`);
+        this.logger.info(`Stage job created successfully`, { uploadId, jobId: stageResult.jobId, stage: firstStage.stage });
         
         return {
           success: true,
@@ -586,7 +576,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           }
         };
       } else {
-        console.log(`[${uploadId}] ❌ ERRO: Falha ao enviar primeira etapa`);
+        this.logger.error(`Failed to create stage job`, { uploadId, error: stageResult.errorMessage });
         return {
           success: false,
           errorMessage: stageResult.errorMessage || 'Falha ao enviar primeira etapa'
@@ -623,14 +613,11 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         0 // stageIndex não é usado no generateStageSpecificPrompt
       );
       
-      console.log(`[${uploadId}] 🎯 Prompt gerado para ${stageConfig.stage}: ${prompt.substring(0, 100)}...`);
-      
       // Executar staging para esta etapa
-      console.log(`[${uploadId}] 📤 Enviando requisição para Black Forest...`);
       const response = await this.generateVirtualStaging(imageBase64, prompt);
       
       if (response.error) {
-        console.log(`[${uploadId}] ❌ Erro na API: ${response.error}`);
+        this.logger.error(`Stage execution failed for upload ${uploadId}:`, { error: response.error, stage: stageConfig.stage });
         return {
           success: false,
           errorMessage: response.error
@@ -638,21 +625,21 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
       
       if (response.id) {
-        console.log(`[${uploadId}] ✅ Job criado com sucesso: ${response.id}`);
+        this.logger.info(`Stage job created for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
         return {
           success: true,
           jobId: response.id
         };
       }
       
-      console.log(`[${uploadId}] ⚠️ Resposta inesperada da API:`, response);
+      this.logger.warn(`Unexpected API response for upload ${uploadId}`, { stage: stageConfig.stage });
       return {
         success: false,
         errorMessage: 'Resposta inesperada da API'
       };
       
     } catch (error) {
-      console.log(`[${uploadId}] ❌ Erro ao executar etapa:`, error);
+      this.logger.error(`Error executing stage for upload ${uploadId}:`, error as Error);
       return {
         success: false,
         errorMessage: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -711,7 +698,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       
       // Se ainda está processando, aguardar
       if (result.success && result.metadata?.status && result.metadata.status !== 'completed') {
-        console.log(`[${jobId}] Status: ${result.metadata.status}, aguardando... (tentativa ${attempts + 1}/${maxAttempts})`);
+        // Only log every 5th attempt to reduce noise
+        if (attempts % 5 === 0) {
+          this.logger.debug(`Job ${jobId} still processing`, { status: result.metadata.status, attempt: attempts + 1, maxAttempts });
+        }
         await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos por tentativa
         attempts++;
         continue;
@@ -731,11 +721,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
     const maxRetries = 3;
     const timeoutMs = 30000; // 30 segundos para download de imagem
+    let lastError: Error | null = null;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`[${new Date().toISOString()}] 📥 Tentativa ${attempt}/${maxRetries} - Baixando imagem: ${imageUrl}`);
-        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
         
@@ -759,24 +748,25 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         // Detectar tipo de imagem baseado na URL ou headers
         const contentType = response.headers.get('content-type') || 'image/jpeg';
         
-        console.log(`[${new Date().toISOString()}] ✅ Imagem baixada com sucesso (${buffer.length} bytes)`);
+        this.logger.info('Image downloaded and converted to base64', { imageUrl, size: buffer.length });
         return `data:${contentType};base64,${base64}`;
         
       } catch (error: any) {
-        console.error(`[${new Date().toISOString()}] ❌ Tentativa ${attempt}/${maxRetries} falhou:`, error.message);
+        lastError = error;
         
         if (attempt === maxRetries) {
-          throw new Error(`Falha ao baixar imagem após ${maxRetries} tentativas: ${error.message}`);
+          this.logger.error(`Failed to download image after ${maxRetries} attempts:`, { imageUrl, error: lastError });
         }
         
-        // Aguardar antes da próxima tentativa (backoff exponencial)
-        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-        console.log(`[${new Date().toISOString()}] ⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        if (attempt < maxRetries) {
+          // Aguardar antes da próxima tentativa (backoff exponencial)
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
     }
     
-    throw new Error('Falha inesperada no download da imagem');
+    throw new Error(`Falha ao baixar imagem após ${maxRetries} tentativas: ${lastError?.message}`);
   }
 
   /**

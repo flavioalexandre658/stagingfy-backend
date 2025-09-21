@@ -96,12 +96,6 @@ export class WebhookController extends BaseController {
    */
   async handleBlackForestWebhook(req: Request, res: Response): Promise<void> {
     try {
-      const rawPayload = JSON.stringify(req.body);
-      console.log('[INFO] Black Forest webhook received - FULL PAYLOAD', {
-        fullPayload: rawPayload,
-        headers: req.headers
-      });
-
       // Mapear task_id para jobId
       const webhookData = {
         jobId: req.body.task_id || req.body.id,
@@ -110,14 +104,13 @@ export class WebhookController extends BaseController {
         timestamp: new Date().toISOString()
       };
 
-      console.log('[INFO] Black Forest webhook received', {
+      logger.info('Black Forest webhook received', {
         jobId: webhookData.jobId,
-        status: webhookData.status,
-        originalStatus: req.body.status
+        status: webhookData.status
       });
 
       if (!webhookData.jobId) {
-        console.log('[WARN] No job ID found in webhook payload');
+        logger.warn('No job ID found in webhook payload');
         res.status(400).json({ error: 'No job ID found' });
         return;
       }
@@ -131,24 +124,17 @@ export class WebhookController extends BaseController {
       }
       
       if (!upload) {
-        console.log('[WARN] Upload not found for Black Forest job', { jobId: webhookData.jobId });
+        logger.warn('Upload not found for Black Forest job', { jobId: webhookData.jobId });
         res.status(404).json({ error: 'Upload not found' });
         return;
       }
-
-      console.log('[INFO] Processing webhook for upload', { 
-        uploadId: upload.id, 
-        jobId: webhookData.jobId,
-        status: webhookData.status,
-        currentStage: upload.currentStage
-      });
 
       // Se o job foi concluído com sucesso
       if (webhookData.status === 'completed' && webhookData.result?.sample) {
         const imageUrl = this.extractImageUrl(webhookData.result.sample);
         
         if (imageUrl && upload.currentStage && upload.stagingPlan) {
-          console.log(`[${upload.id}] ✅ Etapa ${upload.currentStage} concluída. URL: ${imageUrl}`);
+          logger.info(`Stage ${upload.currentStage} completed for upload ${upload.id}`);
           
           // Atualizar resultado da etapa atual
           await uploadRepository.updateStageResult(upload.id, {
@@ -167,18 +153,18 @@ export class WebhookController extends BaseController {
             // Há próxima etapa - processar
             const nextStage = upload.stagingPlan.stages[nextStageIndex];
             if (nextStage) {
-              console.log(`[${upload.id}] 🚀 Iniciando próxima etapa: ${nextStage.stage}`);
+              logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
               await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
             }
           } else {
             // Última etapa concluída - finalizar
-            console.log(`[${upload.id}] 🎉 Todas as etapas concluídas!`);
+            logger.info(`All stages completed for upload ${upload.id}`);
             await uploadRepository.updateStatus(upload.id, 'completed');
             await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
           }
         }
       } else if (webhookData.status === 'failed') {
-        console.log(`[${upload.id}] ❌ Etapa ${upload.currentStage} falhou`);
+        logger.error(`Stage ${upload.currentStage} failed for upload ${upload.id}`);
         await uploadRepository.updateStatus(upload.id, 'failed');
       } else {
         // Status de processamento - apenas atualizar
@@ -187,7 +173,7 @@ export class WebhookController extends BaseController {
 
       res.status(200).json({ success: true });
     } catch (error) {
-      console.error('[ERROR] Webhook processing failed:', error);
+      logger.error('Webhook processing failed:', error as Error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -204,11 +190,8 @@ export class WebhookController extends BaseController {
 
   private async processNextStage(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<void> {
     try {
-      console.log(`[${upload.id}] 🚀 Processando próxima etapa: ${nextStage.stage}`);
-      
       // Atualizar currentStage
       await uploadRepository.updateCurrentStage(upload.id, nextStage.stage);
-      console.log(`[${upload.id}] ✅ Current stage atualizado para: ${nextStage.stage}`);
       
       // Importar e instanciar o BlackForestProvider
       const { providerConfigManager } = await import('../config/provider.config');
@@ -222,9 +205,7 @@ export class WebhookController extends BaseController {
       const provider = new BlackForestProvider(blackForestConfig);
       
       // Converter URL da imagem para base64
-      console.log(`[${upload.id}] 🔄 Convertendo imagem de URL para base64...`);
       const imageBase64 = await provider.downloadAndConvertToBase64(inputImageUrl);
-      console.log(`[${upload.id}] ✅ Imagem convertida para base64`);
       
       // Executar a próxima etapa
       const result = await (provider as any).executeStage(
@@ -245,13 +226,13 @@ export class WebhookController extends BaseController {
         // Atualizar o stageJobIds
         await uploadRepository.updateStageJobIds(upload.id, updatedStageJobIds);
         
-        console.log(`[${upload.id}] ✅ Etapa ${nextStage.stage} enviada. Job ID: ${result.jobId}`);
+        logger.info(`Stage ${nextStage.stage} submitted for upload ${upload.id}`, { jobId: result.jobId });
       } else {
         throw new Error(`Falha ao enviar etapa ${nextStage.stage}`);
       }
       
     } catch (error) {
-      console.error(`[${upload.id}] ❌ Erro ao processar próxima etapa:`, error);
+      logger.error(`Error processing next stage for upload ${upload.id}:`, error as Error);
       await uploadRepository.updateStatus(upload.id, 'failed');
     }
   }
