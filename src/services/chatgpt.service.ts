@@ -1,6 +1,12 @@
 // src/services/chatgpt.service.ts
 import OpenAI from 'openai';
-import { RoomType, FurnitureStyle, StagingStage, StagingPlan, StagingStageConfig } from '../interfaces/upload.interface';
+import {
+  RoomType,
+  FurnitureStyle,
+  StagingStage,
+  StagingPlan,
+  StagingStageConfig,
+} from '../interfaces/upload.interface';
 
 type Range = [number, number];
 
@@ -664,15 +670,17 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
   /**
    * Gera um plano completo de staging em 3 etapas para um cômodo específico
    */
-  generateStagingPlan(roomType: RoomType, furnitureStyle: FurnitureStyle): StagingPlan {
+  generateStagingPlan(
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ): StagingPlan {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
-    
+
     // Constantes globais que vão em TODAS as etapas
     const globalRules = [
-      "HARD LOCK — mantenha piso, paredes, rodapés/guarnições, portas, janelas, bancadas/móveis fixos, teto e todas as cores idênticos; sem relighting/white-balance/hue/saturation/exposure changes.",
-      "Sem wall decor (quadros, espelhos, prints) e sem cortinas/persianas em qualquer etapa."
+      'Add ONLY furniture and decor items. Keep the floor, walls, trims, doors, windows, cabinetry/countertops, ceiling, camera framing, and lighting identical.',
     ];
 
     const roomSpecificRules = plan.roomSafetyNotes;
@@ -688,29 +696,74 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         minItems: plan.mainPiecesRange[0],
         maxItems: plan.mainPiecesRange[1],
         allowedCategories: plan.allowedMainItems,
-        validationRules: ['count_main_items', 'no_wall_decor', 'no_window_treatments', 'circulation_clear'],
-        prompt: this.generateStagePrompt('foundation', roomLabel, styleLabel, allowedMainShort, '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
+        validationRules: [
+          'count_main_items',
+          'no_wall_decor',
+          'no_window_treatments',
+          'circulation_clear',
+        ],
+        prompt: this.generateStagePrompt(
+          'foundation',
+          roomLabel,
+          styleLabel,
+          allowedMainShort,
+          '',
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          globalRules,
+          roomSpecificRules
+        ),
       },
-      
+
       // Etapa 2: Complementos - Acessórios e itens funcionais
       {
         stage: 'complement',
         minItems: plan.complementaryRange[0],
         maxItems: plan.complementaryRange[1],
         allowedCategories: plan.allowedComplementary,
-        validationRules: ['count_comp_items', 'no_wall_decor', 'no_window_treatments', 'circulation_clear', 'plant_placement'],
-        prompt: this.generateStagePrompt('complement', roomLabel, styleLabel, '', allowedCompShort, plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
+        validationRules: [
+          'count_comp_items',
+          'no_wall_decor',
+          'no_window_treatments',
+          'circulation_clear',
+          'plant_placement',
+        ],
+        prompt: this.generateStagePrompt(
+          'complement',
+          roomLabel,
+          styleLabel,
+          '',
+          allowedCompShort,
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          globalRules,
+          roomSpecificRules
+        ),
       },
-      
+
       // Etapa 3: Finalização - Ajustes e polimento
       {
         stage: 'final',
         minItems: 0,
         maxItems: 0,
         allowedCategories: [],
-        validationRules: ['no_new_items', 'circulation_clear', 'positioning_refined'],
-        prompt: this.generateStagePrompt('final', roomLabel, styleLabel, '', '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
-      }
+        validationRules: [
+          'no_new_items',
+          'circulation_clear',
+          'positioning_refined',
+        ],
+        prompt: this.generateStagePrompt(
+          'final',
+          roomLabel,
+          styleLabel,
+          '',
+          '',
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          globalRules,
+          roomSpecificRules
+        ),
+      },
     ];
 
     return {
@@ -718,7 +771,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       furnitureStyle,
       stages,
       globalRules,
-      roomSpecificRules
+      roomSpecificRules,
     };
   }
 
@@ -741,31 +794,44 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     const totalMax = maxMain + maxComp;
 
     const globalRulesText = globalRules.join('\n');
-    const roomRulesText = roomSpecificRules.length > 0 ? `\nROOM-SPECIFIC SAFETY:\n• ${roomSpecificRules.join('\n• ')}` : '';
+    const roomRulesText =
+      roomSpecificRules.length > 0
+        ? `\nROOM-SPECIFIC SAFETY:\n• ${roomSpecificRules.join('\n• ')}`
+        : '';
 
     switch (stage) {
       case 'foundation':
         return `${globalRulesText}
 
-Adicione os móveis principais para este ${roomLabel} no estilo ${styleLabel}: ${allowedMainShort}.
-Adicione entre ${minMain} e ${maxMain} peças principais essenciais para o ambiente.
-Mantenha ≥90 cm de circulação; não cubra portas/escadas; sem wall decor e sem cortinas/persianas.
-Se houver qualquer dúvida de espaço, não adicione.${roomRulesText}`;
+Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Select only from: ${allowedMainShort}.
+Add between ${minMain} and ${maxMain} essential main pieces. Be specific: use exact color/material names (e.g., “matte black steel”, “light oak”), realistic proportions, and clear action verbs.
+Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
+No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
+If in doubt about fit or clearance, skip the item. ${roomRulesText}
+`;
 
       case 'complement':
         return `${globalRulesText}
-
-Adicione complementos e acessórios permitidos: ${allowedCompShort}.
-Adicione entre ${minComp} e ${maxComp} itens complementares para completar o ambiente.
-Planta não deve bloquear portas/janelas/escadas; tapete deve ancorar a área sem invadir degraus.
-HARD LOCK; sem wall decor/cortinas; pare se ficar denso.${roomRulesText}`;
+Add permitted complementary items and accessories selected from: ${allowedCompShort}.
+Add ${minComp}–${maxComp} complementary items to complete the scene. Be specific: use exact color/material names (e.g., “matte black metal”, “natural jute”, “light oak”), realistic scale, and clear action verbs.
+Maintain ≥ 90 cm (36") of clear circulation. Plants must not block doors, windows, or stairs. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
+HARD LOCK — keep all architecture and colors identical; no relighting or geometry changes. No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
+If in doubt about fit or clearance, skip the item. ${roomRulesText}
+`;
 
       case 'final':
-        return `${globalRulesText}
+        return `
+Do not add or remove items. Subtly refine the placement and scale of the already added pieces to improve realism and circulation.
+keep all architecture, camera angle/framing/perspective, lighting (direction, intensity, color temperature), and all existing colors identical; no recoloring, white-balance, exposure, relighting, retexturing, cloning, or geometry changes.
 
-Não adicione novos itens. Refine sutilmente posição e escala das peças já inseridas para melhorar realismo e circulação.
-HARD LOCK — arquitetura, câmera, iluminação e todas as cores idênticas.
-Garanta: portas/escadas livres; tapete na proporção correta; planta bem posicionada; bancos com folga.${roomRulesText}`;
+Quality checks:
+• Maintain ≥ 90 cm (36") of clear passage; doors and stair runs/landings fully unobstructed.
+• Rugs: correctly proportioned to anchor the zone; lie flat on the floor; never overlap stair treads or thresholds.
+• Plants: must not block doors, windows, or stairs; position to avoid occluding circulation.
+• Bar stools (if present): ensure proper legroom and foot clearance; keep counters and cabinet/appliance doors fully operable.
+
+If any adjustment creates crowding or overlap, revert the last change and stop. ${roomRulesText}
+`;
 
       default:
         throw new Error(`Unknown staging stage: ${stage}`);
@@ -783,7 +849,7 @@ Garanta: portas/escadas livres; tapete na proporção correta; planta bem posici
   ): string {
     const plan = this.generateStagingPlan(roomType, furnitureStyle);
     const stageConfig = plan.stages.find(s => s.stage === stage);
-    
+
     if (!stageConfig) {
       throw new Error(`Stage configuration not found for: ${stage}`);
     }
