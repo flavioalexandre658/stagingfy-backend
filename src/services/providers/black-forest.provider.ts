@@ -625,7 +625,27 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
       
       if (response.id) {
-        this.logger.info(`Stage job created for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
+        // IMPORTANTE: Salvar jobId imediatamente no banco para evitar race condition com webhooks
+        try {
+          const { uploadRepository } = await import('../../repositories/upload.repository');
+          const upload = await uploadRepository.findById(uploadId);
+          
+          if (upload) {
+            const updatedStageJobIds = {
+              ...(upload.stageJobIds || {}),
+              [stageConfig.stage]: response.id
+            };
+            
+            await uploadRepository.updateStageJobIds(uploadId, updatedStageJobIds);
+            this.logger.info(`Stage job created and saved for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
+          } else {
+            this.logger.warn(`Upload not found when saving jobId for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
+          }
+        } catch (saveError) {
+          this.logger.error(`Failed to save jobId immediately for upload ${uploadId}:`, saveError as Error);
+          // Continuar mesmo se falhar ao salvar, pois o processNextStage tentará novamente
+        }
+        
         return {
           success: true,
           jobId: response.id

@@ -54,7 +54,7 @@ export class WebhookController extends BaseController {
             result.outputImageUrls
           );
           await uploadRepository.updateStatus(upload.id, 'completed');
-          console.log('result', result);
+          logger.info('InstantDeco processing completed', { uploadId: upload.id, result });
         } else {
           logger.warn('Upload not found for InstantDeco request', {
             requestId: result.requestId,
@@ -115,16 +115,11 @@ export class WebhookController extends BaseController {
         return;
       }
 
-      // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
-      let upload = await uploadRepository.findByBlackForestJobId(webhookData.jobId);
+      // Buscar upload pelo jobId com retry para lidar com race condition
+      const upload = await this.findUploadWithRetry(webhookData.jobId);
       
       if (!upload) {
-        // Tentar buscar por stage job ID
-        upload = await uploadRepository.findByStageJobId(webhookData.jobId);
-      }
-      
-      if (!upload) {
-        logger.warn('Upload not found for Black Forest job', { jobId: webhookData.jobId });
+        logger.warn('Upload not found for Black Forest job after retries', { jobId: webhookData.jobId });
         res.status(404).json({ error: 'Upload not found' });
         return;
       }
@@ -185,6 +180,34 @@ export class WebhookController extends BaseController {
     if (sample && typeof sample === 'object' && sample.url) {
       return sample.url;
     }
+    return null;
+  }
+
+  private async findUploadWithRetry(jobId: string, maxRetries: number = 3, baseDelay: number = 500): Promise<any> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
+      let upload = await uploadRepository.findByBlackForestJobId(jobId);
+      
+      if (!upload) {
+        // Tentar buscar por stage job ID
+        upload = await uploadRepository.findByStageJobId(jobId);
+      }
+      
+      if (upload) {
+        if (attempt > 0) {
+          logger.info(`Upload found for job ${jobId} on attempt ${attempt + 1}`);
+        }
+        return upload;
+      }
+      
+      // Se não é a última tentativa, aguardar antes de tentar novamente
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        logger.debug(`Upload not found for job ${jobId}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
     return null;
   }
 
