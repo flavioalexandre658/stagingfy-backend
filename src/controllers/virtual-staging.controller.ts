@@ -588,10 +588,30 @@ export class VirtualStagingController {
         return;
       }
 
+      // Baixar imagem e converter para base64
+      let imageBase64: string;
+      try {
+        const getObjectCommand = new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: upload.inputImageUrl.split('/').pop()!,
+        });
+        
+        const response = await s3Client.send(getObjectCommand);
+        const imageBuffer = await response.Body!.transformToByteArray();
+        imageBase64 = `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString('base64')}`;
+      } catch (error) {
+        console.error(`[${uploadId}] Erro ao baixar imagem:`, error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to download image for staging in stages'
+        });
+        return;
+      }
+
       // Configurar parâmetros
       const params = {
         uploadId: upload.id,
-        imageUrl: upload.inputImageUrl,
+        imageBase64: imageBase64,
         roomType: upload.roomType,
         furnitureStyle: upload.furnitureStyle,
         webhookUrl: req.body?.webhookUrl

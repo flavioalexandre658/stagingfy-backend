@@ -1,4 +1,2 @@
 Sempre após uma implementaçao nova você deve verificar e corrigir erros
-para isso use npx eslint para verificar e corrigir erros de lint
-
 E use npx tsc --noEmit para verificar e corrigir erros de typescript

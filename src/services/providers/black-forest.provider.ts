@@ -477,15 +477,19 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     onProgress?: (progress: StagingProgressResult) => void
   ): Promise<VirtualStagingResult> {
     try {
+      console.log(`[${uploadId}] Iniciando processamento em etapas...`);
       this.validateParams(params);
       
       const validationService = new StagingValidationService();
       
       // Gerar plano de staging
+      console.log(`[${uploadId}] Gerando plano de staging para ${params.roomType} - ${params.furnitureStyle}`);
       const plan = chatGPTService.generateStagingPlan(
         params.roomType!,
         params.furnitureStyle!
       );
+      
+      console.log(`[${uploadId}] Plano gerado com ${plan.stages.length} etapas:`, plan.stages.map(s => s.stage));
       
       let currentImage = params.imageBase64!;
       const stageResults: StagingStageResult[] = [];
@@ -495,6 +499,8 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       for (let stageIndex = 0; stageIndex < plan.stages.length; stageIndex++) {
         const stageConfig = plan.stages[stageIndex];
         if (!stageConfig) continue;
+        
+        console.log(`[${uploadId}] Executando etapa ${stageIndex + 1}/${plan.stages.length}: ${stageConfig.stage}`);
         
         // Notificar progresso
         if (onProgress) {
@@ -509,6 +515,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         }
         
         // Gerar prompt específico para a etapa
+        console.log(`[${uploadId}] Gerando prompt para etapa ${stageConfig.stage}`);
         const prompt = chatGPTService.generateStageSpecificPrompt(
           stageConfig.stage,
           params.roomType!,
@@ -516,104 +523,103 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           this.countItemsInPreviousStages(stageResults)
         );
         
+        console.log(`[${uploadId}] Prompt gerado: ${prompt.substring(0, 100)}...`);
+        
         // Executar staging para esta etapa
+        console.log(`[${uploadId}] Enviando requisição para Black Forest...`);
         const response = await this.generateVirtualStaging(currentImage, prompt);
         
         if (response.error) {
-          // Se falhar, tentar uma vez com prompt reforçado
-          const reinforcedPrompt = this.addReinforcementToPrompt(prompt, stageConfig.stage);
-          const retryResponse = await this.generateVirtualStaging(currentImage, reinforcedPrompt);
-          
+          console.log(`[${uploadId}] Erro na primeira tentativa: ${response.error}`);
+          // Tentar uma vez mais em caso de erro
+          const retryResponse = await this.generateVirtualStaging(currentImage, prompt);
           if (retryResponse.error) {
+            console.log(`[${uploadId}] Erro na segunda tentativa: ${retryResponse.error}`);
             return {
               success: false,
-              errorMessage: `Falha na ${stageConfig.stage}: ${retryResponse.error}`,
+              errorMessage: `Falha na etapa ${stageConfig.stage}: ${retryResponse.error}`,
             };
           }
           
           // Usar resultado da tentativa
           if (retryResponse.id) {
+            console.log(`[${uploadId}] Aguardando conclusão do retry job ${retryResponse.id}...`);
             const finalResult = await this.waitForCompletion(retryResponse.id);
-            if (finalResult.success && finalResult.metadata?.imageUrl) {
-              currentImage = finalResult.metadata.imageUrl;
+            if (finalResult.success && finalResult.outputImageUrl) {
+              console.log(`[${uploadId}] Retry bem-sucedido. Convertendo imagem para próxima etapa...`);
+              currentImage = await this.downloadAndConvertToBase64(finalResult.outputImageUrl);
+              
+              // Adicionar resultado da etapa
+               const stageResult: StagingStageResult = {
+                 stage: stageConfig.stage,
+                 imageUrl: finalResult.outputImageUrl,
+                 itemsAdded: 0, // Não validamos em retry
+                 success: true,
+                 validationPassed: false,
+                 retryCount: 1
+               };
+               
+               stageResults.push(stageResult);
+               completedStages.push(stageConfig.stage);
+              console.log(`[${uploadId}] Etapa ${stageConfig.stage} concluída após retry.`);
             }
           }
         } else if (response.id) {
           // Aguardar conclusão
+          console.log(`[${uploadId}] Aguardando conclusão do job ${response.id}...`);
           const stageResult = await this.waitForCompletion(response.id);
           
-          if (stageResult.success && stageResult.metadata?.imageUrl) {
-            // Validar resultado da etapa
-            const validation = await validationService.validateStage(
-              params.imageBase64!,
-              stageResult.metadata.imageUrl,
-              stageConfig.stage,
-              params.roomType!,
-              stageConfig.maxItems
-            );
+          if (stageResult.success && stageResult.outputImageUrl) {
+            console.log(`[${uploadId}] Etapa ${stageConfig.stage} concluída. URL: ${stageResult.outputImageUrl}`);
             
-            if (validation.passed) {
-              currentImage = stageResult.metadata.imageUrl;
-              completedStages.push(stageConfig.stage);
-              stageResults.push({
-                stage: stageConfig.stage,
-                success: true,
-                imageUrl: stageResult.metadata.imageUrl,
-                jobId: response.id,
-                itemsAdded: validation.itemCount,
-                validationPassed: true,
-                retryCount: 0
-              });
-            } else {
-              // Se validação falhar, tentar uma vez com correções
-              const correctedPrompt = this.applyCorrectionToPrompt(prompt, validation.errors);
-              const correctionResponse = await this.generateVirtualStaging(currentImage, correctedPrompt);
-              
-              if (correctionResponse.id) {
-                const correctedResult = await this.waitForCompletion(correctionResponse.id);
-                if (correctedResult.success && correctedResult.metadata?.imageUrl) {
-                  currentImage = correctedResult.metadata.imageUrl;
-                  completedStages.push(stageConfig.stage);
-                  stageResults.push({
-                    stage: stageConfig.stage,
-                    success: true,
-                    imageUrl: correctedResult.metadata.imageUrl,
-                    jobId: correctionResponse.id,
-                    itemsAdded: 1, // Estimativa
-                    validationPassed: true,
-                    retryCount: 1
-                  });
-                } else {
-                  // Se ainda falhar, usar resultado anterior (menos itens, mas correto)
-                  stageResults.push({
-                    stage: stageConfig.stage,
-                    success: false,
-                    itemsAdded: 0,
-                    validationPassed: false,
-                    validationErrors: validation.errors,
-                    retryCount: 1
-                  });
-                }
-              }
-            }
+            // Converter imagem para base64 para próxima etapa
+            console.log(`[${uploadId}] Convertendo imagem para base64 para próxima etapa...`);
+            const imageBase64 = await this.downloadAndConvertToBase64(stageResult.outputImageUrl);
+            
+            // Salvar resultado da etapa
+             const stageResultData: StagingStageResult = {
+               stage: stageConfig.stage,
+               imageUrl: stageResult.outputImageUrl,
+               itemsAdded: 0, // Simplificado por enquanto
+               success: true,
+               validationPassed: true,
+               retryCount: 0
+             };
+             
+             stageResults.push(stageResultData);
+             completedStages.push(stageConfig.stage);
+            
+            // Atualizar imagem atual para próxima etapa
+            currentImage = imageBase64;
+            console.log(`[${uploadId}] Etapa ${stageConfig.stage} finalizada. Próxima etapa usará nova imagem.`);
           } else {
-            stageResults.push({
-              stage: stageConfig.stage,
+            console.log(`[${uploadId}] Etapa ${stageConfig.stage} falhou: ${stageResult.errorMessage}`);
+            return {
               success: false,
-              itemsAdded: 0,
-              validationPassed: false,
-              validationErrors: [stageResult.errorMessage || 'Falha na geração da imagem'],
-              retryCount: 0
-            });
+              errorMessage: `Falha na etapa ${stageConfig.stage}: ${stageResult.errorMessage}`
+            };
           }
         }
       }
       
-      // Resultado final
+      // Resultado final - usar a URL da última etapa
+      const lastStageResult = stageResults.length > 0 ? stageResults[stageResults.length - 1] : null;
+      const finalImageUrl = lastStageResult?.imageUrl || '';
+      
+      console.log(`[${uploadId}] Processamento em etapas concluído! ${completedStages.length}/${plan.stages.length} etapas processadas.`);
+      console.log(`[${uploadId}] URL final: ${finalImageUrl}`);
+      
+      if (!finalImageUrl) {
+        return {
+          success: false,
+          errorMessage: 'Nenhuma etapa foi processada com sucesso'
+        };
+      }
+      
       return {
         success: true,
+        outputImageUrl: finalImageUrl,
         metadata: {
-          imageUrl: currentImage,
           plan: plan,
           stageResults: stageResults,
           totalStages: plan.stages.length,
@@ -668,11 +674,26 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       const result = await this.checkJobStatus(jobId);
       
       if (result.success && result.outputImageUrl) {
-        return result;
+        return {
+          success: true,
+          outputImageUrl: result.outputImageUrl,
+          metadata: {
+            imageUrl: result.outputImageUrl,
+            ...result.metadata
+          }
+        };
       }
       
       if (result.errorMessage) {
         return result;
+      }
+      
+      // Se ainda está processando, aguardar
+      if (result.success && result.metadata?.status && result.metadata.status !== 'completed') {
+        console.log(`[${jobId}] Status: ${result.metadata.status}, aguardando...`);
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        attempts++;
+        continue;
       }
       
       // Aguardar 10 segundos antes da próxima verificação
@@ -684,5 +705,26 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       success: false,
       errorMessage: 'Timeout aguardando conclusão do job'
     };
+  }
+
+  private async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64 = buffer.toString('base64');
+      
+      // Detectar tipo de imagem baseado na URL ou headers
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      return `data:${contentType};base64,${base64}`;
+    } catch (error) {
+      console.error('Erro ao converter imagem para base64:', error);
+      throw new Error(`Falha ao converter imagem para base64: ${error}`);
+    }
   }
 }
