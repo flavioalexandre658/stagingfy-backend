@@ -680,7 +680,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
 
     // Constantes globais que vão em TODAS as etapas
     const globalRules = [
-      'Add ONLY furniture and decor items. Keep the floor, walls, trims, doors, windows, cabinetry/countertops, ceiling, camera framing, and lighting identical.',
+      'Add only freestanding furniture and decor while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.',
     ];
 
     const roomSpecificRules = plan.roomSafetyNotes;
@@ -807,7 +807,7 @@ Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Sele
 Add between ${minMain} and ${maxMain} essential main pieces. Be specific: use exact color/material names (e.g., “matte black steel”, “light oak”), realistic proportions, and clear action verbs.
 Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
 No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
-If in doubt about fit or clearance, skip the item. ${roomRulesText}
+If in doubt about fit or clearance, skip the item. 
 `;
 
       case 'complement':
@@ -816,7 +816,7 @@ Add permitted complementary items and accessories selected from: ${allowedCompSh
 Add ${minComp}–${maxComp} complementary items to complete the scene. Be specific: use exact color/material names (e.g., “matte black metal”, “natural jute”, “light oak”), realistic scale, and clear action verbs.
 Maintain ≥ 90 cm (36") of clear circulation. Plants must not block doors, windows, or stairs. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
 HARD LOCK — keep all architecture and colors identical; no relighting or geometry changes. No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
-If in doubt about fit or clearance, skip the item. ${roomRulesText}
+If in doubt about fit or clearance, skip the item. 
 `;
 
       case 'final':
@@ -830,7 +830,7 @@ Quality checks:
 • Plants: must not block doors, windows, or stairs; position to avoid occluding circulation.
 • Bar stools (if present): ensure proper legroom and foot clearance; keep counters and cabinet/appliance doors fully operable.
 
-If any adjustment creates crowding or overlap, revert the last change and stop. ${roomRulesText}
+If any adjustment creates crowding or overlap, revert the last change and stop. 
 `;
 
       default:
