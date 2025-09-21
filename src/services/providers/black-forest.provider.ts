@@ -62,23 +62,32 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
 
   // Métodos para gerenciar cache de jobIds
   private static addToCache(jobId: string, uploadId: string, stage: string): void {
-    this.jobIdCache.set(jobId, { uploadId, stage, timestamp: Date.now() });
+    console.log(`[CACHE] Adding jobId ${jobId} to cache for upload ${uploadId}, stage: ${stage}`);
+    BlackForestProvider.jobIdCache.set(jobId, { uploadId, stage, timestamp: Date.now() });
     
     // Limpar cache após 2 minutos para lidar com webhooks mais lentos
     setTimeout(() => {
-      this.jobIdCache.delete(jobId);
+      console.log(`[CACHE] Removing expired jobId ${jobId} from cache`);
+      BlackForestProvider.jobIdCache.delete(jobId);
     }, 120000);
   }
 
   static getFromCache(jobId: string): { uploadId: string, stage: string } | null {
-    const cached = this.jobIdCache.get(jobId);
+    console.log(`[CACHE] Looking for jobId ${jobId} in cache. Cache size: ${BlackForestProvider.jobIdCache.size}`);
+    const cached = BlackForestProvider.jobIdCache.get(jobId);
     if (cached) {
-      // Verificar se não expirou (máximo 30 segundos)
-      if (Date.now() - cached.timestamp < 30000) {
+      const age = Date.now() - cached.timestamp;
+      console.log(`[CACHE] Found jobId ${jobId} in cache, age: ${age}ms`);
+      // Verificar se não expirou (máximo 2 minutos)
+      if (age < 120000) {
+        console.log(`[CACHE] Cache hit for jobId ${jobId}, returning upload ${cached.uploadId}`);
         return { uploadId: cached.uploadId, stage: cached.stage };
       } else {
-        this.jobIdCache.delete(jobId);
+        console.log(`[CACHE] Cache expired for jobId ${jobId}, removing from cache`);
+        BlackForestProvider.jobIdCache.delete(jobId);
       }
+    } else {
+      console.log(`[CACHE] Cache miss for jobId ${jobId}`);
     }
     return null;
   }

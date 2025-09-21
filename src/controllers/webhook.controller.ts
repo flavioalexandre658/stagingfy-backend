@@ -119,8 +119,9 @@ export class WebhookController extends BaseController {
       const upload = await this.findUpload(webhookData.jobId);
       
       if (!upload) {
-        logger.warn('Upload not found for Black Forest job', { jobId: webhookData.jobId });
-        res.status(404).json({ error: 'Upload not found' });
+        // Se não encontrou nem no cache nem no banco, pode ser um webhook duplicado ou inválido
+        logger.debug('Upload not found for Black Forest job - possibly duplicate webhook', { jobId: webhookData.jobId });
+        res.status(200).json({ success: true, message: 'Webhook processed' });
         return;
       }
 
