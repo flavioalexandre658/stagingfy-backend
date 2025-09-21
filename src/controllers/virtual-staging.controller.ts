@@ -690,8 +690,8 @@ export class VirtualStagingController {
    * Faz polling para obter resultado de processamento assíncrono
    */
   private async pollForResult(requestId: string, provider: Provider): Promise<string | null> {
-    const maxAttempts = 30; // 5 minutos com intervalos de 10s
-    const interval = 10000; // 10 segundos
+    const maxAttempts = 15; // 75 segundos com intervalos de 5s
+    const interval = 5000; // 5 segundos
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {

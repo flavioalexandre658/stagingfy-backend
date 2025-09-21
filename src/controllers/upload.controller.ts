@@ -343,7 +343,7 @@ export class UploadController {
    * Aguarda a conclusão do processamento na Black Forest API
    */
   private async waitForCompletion(uploadId: string, jobId: string): Promise<void> {
-    const maxAttempts = 30; // 5 minutos (10s * 30)
+    const maxAttempts = 15; // 75 segundos (5s * 15)
     let attempts = 0;
 
     while (attempts < maxAttempts) {
@@ -369,8 +369,8 @@ export class UploadController {
           return;
         }
 
-        // Aguardar 10 segundos antes da próxima verificação
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        // Aguardar 5 segundos antes da próxima verificação
+        await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
 
       } catch (error) {

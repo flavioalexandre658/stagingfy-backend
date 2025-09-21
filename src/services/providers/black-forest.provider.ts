@@ -752,7 +752,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   private async waitForCompletion(jobId: string): Promise<VirtualStagingResult> {
-    const maxAttempts = 3; // 15 segundos máximo (3 tentativas de 5 segundos)
+    const maxAttempts = 15; // 75 segundos máximo (15 tentativas de 5 segundos)
     let attempts = 0;
     
     while (attempts < maxAttempts) {
