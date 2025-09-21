@@ -50,7 +50,7 @@ export class UploadController {
     // Configuração do provider Black Forest
     const config: ProviderConfig = {
       apiKey: process.env.BLACK_FOREST_API_KEY || '',
-      baseUrl: process.env.BLACK_FOREST_BASE_URL || 'https://api.blackforestlabs.ai',
+      baseUrl: process.env.BLACK_FOREST_BASE_URL || 'https://api.bfl.ai',
     };
     this.blackForestProvider = new BlackForestProvider(config);
   }

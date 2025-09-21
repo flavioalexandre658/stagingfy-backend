@@ -25,7 +25,7 @@ export class ProviderConfigManager {
     // Configuração do Black Forest
     this.configs.set('black-forest', {
       apiKey: process.env.BLACK_FOREST_API_KEY || '',
-      baseUrl: process.env.BLACK_FOREST_BASE_URL || 'https://api.bfl.ml',
+      baseUrl: process.env.BLACK_FOREST_BASE_URL || 'https://api.bfl.ai',
       timeout: parseInt(process.env.BLACK_FOREST_TIMEOUT || '120000'),
       retryAttempts: parseInt(process.env.BLACK_FOREST_RETRY_ATTEMPTS || '3'),
       webhookUrl: process.env.BLACK_FOREST_WEBHOOK_URL || '',
