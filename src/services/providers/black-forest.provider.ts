@@ -171,14 +171,47 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
       };
 
-      const resp = await fetch(`${this.config.baseUrl}/v1/flux-kontext-pro`, {
-        method: 'POST',
-        headers: {
-          'x-key': this.config.apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
+      // Configurar timeout e retry
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
+      
+      let lastError: Error | null = null;
+      let resp: Response | null = null;
+      
+      // Retry logic - 3 tentativas
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`[Black Forest] Tentativa ${attempt}/3 para enviar requisição...`);
+          
+          resp = await fetch(`${this.config.baseUrl}/v1/flux-kontext-pro`, {
+            method: 'POST',
+            headers: {
+              'x-key': this.config.apiKey,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+          
+          clearTimeout(timeoutId);
+          break; // Sucesso, sair do loop
+          
+        } catch (error) {
+          lastError = error as Error;
+          console.error(`[Black Forest] Tentativa ${attempt}/3 falhou:`, error);
+          
+          if (attempt < 3) {
+            const delay = attempt * 2000; // 2s, 4s
+            console.log(`[Black Forest] Aguardando ${delay}ms antes da próxima tentativa...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      if (!resp) {
+        clearTimeout(timeoutId);
+        throw lastError || new Error('Todas as tentativas de conexão falharam');
+      }
 
       if (!resp.ok) {
         const txt = await resp.text();
@@ -696,24 +729,54 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
-    try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Falha ao baixar imagem: ${response.statusText}`);
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30 segundos para download de imagem
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[${new Date().toISOString()}] 📥 Tentativa ${attempt}/${maxRetries} - Baixando imagem: ${imageUrl}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        
+        const response = await fetch(imageUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Stagingfy/1.0'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        
+        // Detectar tipo de imagem baseado na URL ou headers
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        
+        console.log(`[${new Date().toISOString()}] ✅ Imagem baixada com sucesso (${buffer.length} bytes)`);
+        return `data:${contentType};base64,${base64}`;
+        
+      } catch (error: any) {
+        console.error(`[${new Date().toISOString()}] ❌ Tentativa ${attempt}/${maxRetries} falhou:`, error.message);
+        
+        if (attempt === maxRetries) {
+          throw new Error(`Falha ao baixar imagem após ${maxRetries} tentativas: ${error.message}`);
+        }
+        
+        // Aguardar antes da próxima tentativa (backoff exponencial)
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`[${new Date().toISOString()}] ⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString('base64');
-      
-      // Detectar tipo de imagem baseado na URL ou headers
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      
-      return `data:${contentType};base64,${base64}`;
-    } catch (error) {
-      console.error('Erro ao converter imagem para base64:', error);
-      throw new Error(`Falha ao converter imagem para base64: ${error}`);
     }
+    
+    throw new Error('Falha inesperada no download da imagem');
   }
 
   /**
