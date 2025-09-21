@@ -505,10 +505,24 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       const stageResults: StagingStageResult[] = [];
       const completedStages: StagingStage[] = [];
       
+      // Log da imagem inicial
+      console.log(`[${uploadId}] 🖼️  IMAGEM INICIAL:`);
+      console.log(`[${uploadId}] - Tamanho base64: ${currentImage.length} caracteres`);
+      console.log(`[${uploadId}] - Formato: ${currentImage.substring(0, 30)}...`);
+      
       // Executar cada etapa
       for (let stageIndex = 0; stageIndex < plan.stages.length; stageIndex++) {
         const stageConfig = plan.stages[stageIndex];
         if (!stageConfig) continue;
+        
+        console.log(`\n[${uploadId}] 🚀 INICIANDO ETAPA ${stageIndex + 1}/${plan.stages.length}: ${stageConfig.stage.toUpperCase()}`);
+        console.log(`[${uploadId}] - Itens permitidos: ${stageConfig.allowedCategories.slice(0, 3).join(', ')}${stageConfig.allowedCategories.length > 3 ? '...' : ''}`);
+        console.log(`[${uploadId}] - Range de itens: ${stageConfig.minItems}-${stageConfig.maxItems}`);
+        
+        // Log da imagem de entrada para esta etapa
+        console.log(`[${uploadId}] 🖼️  IMAGEM DE ENTRADA ETAPA ${stageIndex + 1}:`);
+        console.log(`[${uploadId}] - Tamanho base64: ${currentImage.length} caracteres`);
+        console.log(`[${uploadId}] - Hash da imagem: ${currentImage.substring(currentImage.length - 20)}`);
         
         console.log(`[${uploadId}] Executando etapa ${stageIndex + 1}/${plan.stages.length}: ${stageConfig.stage}`);
         
@@ -540,11 +554,14 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         const response = await this.generateVirtualStaging(currentImage, prompt);
         
         if (response.error) {
-          console.log(`[${uploadId}] Erro na primeira tentativa: ${response.error}`);
+          console.log(`[${uploadId}] ❌ Erro na primeira tentativa: ${response.error}`);
+          console.log(`[${uploadId}] 🔄 Tentando novamente...`);
+          
           // Tentar uma vez mais em caso de erro
           const retryResponse = await this.generateVirtualStaging(currentImage, prompt);
           if (retryResponse.error) {
-            console.log(`[${uploadId}] Erro na segunda tentativa: ${retryResponse.error}`);
+            console.log(`[${uploadId}] ❌ Erro na segunda tentativa: ${retryResponse.error}`);
+            console.log(`[${uploadId}] 💥 FALHA DEFINITIVA na etapa ${stageConfig.stage}`);
             return {
               success: false,
               errorMessage: `Falha na etapa ${stageConfig.stage}: ${retryResponse.error}`,
@@ -553,11 +570,17 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           
           // Usar resultado da tentativa
           if (retryResponse.id) {
-            console.log(`[${uploadId}] Aguardando conclusão do retry job ${retryResponse.id}...`);
+            console.log(`[${uploadId}] ⏳ Aguardando conclusão do retry job ${retryResponse.id}...`);
             const finalResult = await this.waitForCompletion(retryResponse.id);
             if (finalResult.success && finalResult.outputImageUrl) {
-              console.log(`[${uploadId}] Retry bem-sucedido. Convertendo imagem para próxima etapa...`);
+              console.log(`[${uploadId}] ✅ Retry bem-sucedido! Convertendo imagem para próxima etapa...`);
               currentImage = await this.downloadAndConvertToBase64(finalResult.outputImageUrl);
+              
+              // Log da imagem resultante do retry
+              console.log(`[${uploadId}] 🖼️  IMAGEM RESULTANTE RETRY ETAPA ${stageIndex + 1} (${stageConfig.stage.toUpperCase()}):`);
+              console.log(`[${uploadId}] - URL: ${finalResult.outputImageUrl}`);
+              console.log(`[${uploadId}] - Tamanho base64 convertido: ${currentImage.length} caracteres`);
+              console.log(`[${uploadId}] - ⚠️  Processada com retry (validação simplificada)`);
               
               // Adicionar resultado da etapa
                const stageResult: StagingStageResult = {
@@ -571,7 +594,8 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
                
                stageResults.push(stageResult);
                completedStages.push(stageConfig.stage);
-              console.log(`[${uploadId}] Etapa ${stageConfig.stage} concluída após retry.`);
+              console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} concluída após retry.`);
+              console.log(`[${uploadId}] 📊 Progresso: ${completedStages.length}/${plan.stages.length} etapas concluídas (com retry)`);
             }
           }
         } else if (response.id) {
@@ -580,11 +604,18 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           const stageResult = await this.waitForCompletion(response.id);
           
           if (stageResult.success && stageResult.outputImageUrl) {
-            console.log(`[${uploadId}] Etapa ${stageConfig.stage} concluída. URL: ${stageResult.outputImageUrl}`);
+            console.log(`[${uploadId}] ✅ Etapa ${stageConfig.stage} concluída. URL: ${stageResult.outputImageUrl}`);
             
             // Converter imagem para base64 para próxima etapa
-            console.log(`[${uploadId}] Convertendo imagem para base64 para próxima etapa...`);
+            console.log(`[${uploadId}] 🔄 Convertendo imagem para base64 para próxima etapa...`);
             const imageBase64 = await this.downloadAndConvertToBase64(stageResult.outputImageUrl);
+            
+            // Log da imagem resultante
+            console.log(`[${uploadId}] 🖼️  IMAGEM RESULTANTE ETAPA ${stageIndex + 1} (${stageConfig.stage.toUpperCase()}):`);
+            console.log(`[${uploadId}] - URL: ${stageResult.outputImageUrl}`);
+            console.log(`[${uploadId}] - Tamanho base64 convertido: ${imageBase64.length} caracteres`);
+            console.log(`[${uploadId}] - Hash da nova imagem: ${imageBase64.substring(imageBase64.length - 20)}`);
+            console.log(`[${uploadId}] - Diferença de tamanho: ${imageBase64.length - currentImage.length} caracteres`);
             
             // Salvar resultado da etapa
              const stageResultData: StagingStageResult = {
@@ -601,7 +632,8 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             
             // Atualizar imagem atual para próxima etapa
             currentImage = imageBase64;
-            console.log(`[${uploadId}] Etapa ${stageConfig.stage} finalizada. Próxima etapa usará nova imagem.`);
+            console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} finalizada. Próxima etapa usará nova imagem.`);
+            console.log(`[${uploadId}] 📊 Progresso: ${completedStages.length}/${plan.stages.length} etapas concluídas`);
           } else {
             console.log(`[${uploadId}] Etapa ${stageConfig.stage} falhou: ${stageResult.errorMessage}`);
             return {
@@ -616,10 +648,17 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       const lastStageResult = stageResults.length > 0 ? stageResults[stageResults.length - 1] : null;
       const finalImageUrl = lastStageResult?.imageUrl || '';
       
-      console.log(`[${uploadId}] Processamento em etapas concluído! ${completedStages.length}/${plan.stages.length} etapas processadas.`);
-      console.log(`[${uploadId}] URL final: ${finalImageUrl}`);
+      console.log(`\n[${uploadId}] 🎉 PROCESSAMENTO EM ETAPAS CONCLUÍDO!`);
+      console.log(`[${uploadId}] 📊 Resumo final:`);
+      console.log(`[${uploadId}] - Etapas processadas: ${completedStages.length}/${plan.stages.length}`);
+      console.log(`[${uploadId}] - Etapas concluídas: ${completedStages.join(' → ')}`);
+      console.log(`[${uploadId}] - URLs geradas: ${stageResults.map(r => r.imageUrl?.split('/').pop() || 'N/A').join(' → ')}`);
+      console.log(`[${uploadId}] 🖼️  IMAGEM FINAL:`);
+      console.log(`[${uploadId}] - URL final: ${finalImageUrl}`);
+      console.log(`[${uploadId}] - Última etapa: ${lastStageResult?.stage || 'N/A'}`);
       
       if (!finalImageUrl) {
+        console.log(`[${uploadId}] ❌ ERRO: Nenhuma etapa foi processada com sucesso`);
         return {
           success: false,
           errorMessage: 'Nenhuma etapa foi processada com sucesso'
