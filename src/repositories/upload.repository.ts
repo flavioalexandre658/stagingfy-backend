@@ -417,7 +417,7 @@ export class UploadRepository {
       .where(eq(uploads.id, uploadId));
   }
 
-  async updateStageJobIds(uploadId: string, stageJobIds: string[]): Promise<void> {
+  async updateStageJobIds(uploadId: string, stageJobIds: Record<string, string>): Promise<void> {
     await db.update(uploads)
       .set({ 
         stageJobIds: JSON.stringify(stageJobIds),

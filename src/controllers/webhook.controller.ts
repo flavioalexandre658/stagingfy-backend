@@ -237,8 +237,10 @@ export class WebhookController extends BaseController {
       
       if (result.success && result.jobId) {
         // Atualizar o stageJobIds com o novo jobId
-        const updatedStageJobIds = [...(upload.stageJobIds || [])];
-        updatedStageJobIds[stageIndex] = result.jobId;
+        const updatedStageJobIds = {
+          ...(upload.stageJobIds || {}),
+          [nextStage.stage]: result.jobId
+        };
         
         // Atualizar o stageJobIds
         await uploadRepository.updateStageJobIds(upload.id, updatedStageJobIds);
