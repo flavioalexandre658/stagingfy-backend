@@ -3,6 +3,7 @@ import { BaseController } from './base.controller';
 import { uploadRepository } from '../repositories/upload.repository';
 import { logger } from '../lib/logger';
 import { InstantDecoWebhookResponse } from '../interfaces/instant-deco.interface';
+import { BlackForestWebhookResponse } from '../interfaces/upload.interface';
 import { InstantDecoProvider } from '../services/providers/instant-deco.provider';
 import { ProviderConfig } from '../interfaces/virtual-staging-provider.interface';
 
@@ -84,6 +85,71 @@ export class WebhookController extends BaseController {
       res.status(200).json({ received: true });
     } catch (error) {
       logger.error('InstantDeco webhook processing failed', {
+        error: error as any,
+      });
+      this.error(res, 'Webhook processing failed', 400, error);
+    }
+  }
+
+  /**
+   * Handle Black Forest webhook
+   */
+  async handleBlackForestWebhook(req: Request, res: Response): Promise<void> {
+    try {
+      const webhookData: BlackForestWebhookResponse = req.body;
+
+      logger.info('Black Forest webhook received', {
+        jobId: webhookData.id,
+        status: webhookData.status,
+      });
+
+      // Buscar upload pelo Black Forest job ID
+      const upload = await uploadRepository.findByBlackForestJobId(webhookData.id);
+
+      if (!upload) {
+        logger.warn('Upload not found for Black Forest job', {
+          jobId: webhookData.id,
+        });
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      if (webhookData.status === 'Ready' && webhookData.result?.sample) {
+        // Processamento concluído com sucesso
+        await uploadRepository.updateOutputImage(
+          upload.id,
+          webhookData.result.sample,
+          undefined
+        );
+        await uploadRepository.updateStatus(upload.id, 'completed');
+
+        logger.info('Black Forest processing completed successfully', {
+          uploadId: upload.id,
+          jobId: webhookData.id,
+          imageUrl: webhookData.result.sample,
+        });
+      } else if (webhookData.status === 'Error' || webhookData.status === 'Content Moderated') {
+        // Processamento falhou
+        const errorMessage = webhookData.error || `Processing failed with status: ${webhookData.status}`;
+        
+        await uploadRepository.updateStatus(
+          upload.id,
+          'failed',
+          errorMessage
+        );
+
+        logger.error('Black Forest processing failed', {
+          uploadId: upload.id,
+          jobId: webhookData.id,
+          status: webhookData.status,
+          error: errorMessage,
+        });
+      }
+
+      // Responder ao webhook
+      res.status(200).json({ received: true });
+    } catch (error) {
+      logger.error('Black Forest webhook processing failed', {
         error: error as any,
       });
       this.error(res, 'Webhook processing failed', 400, error);

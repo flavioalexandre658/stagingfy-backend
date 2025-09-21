@@ -14,4 +14,15 @@ router.post(
   webhookController.handleInstantDecoWebhook.bind(webhookController)
 );
 
+/**
+ * @route POST /api/v1/webhooks/black-forest
+ * @desc Handle Black Forest webhook responses
+ * @access Public (webhook)
+ * @body BlackForestWebhookResponse
+ */
+router.post(
+  '/black-forest',
+  webhookController.handleBlackForestWebhook.bind(webhookController)
+);
+
 export default router;

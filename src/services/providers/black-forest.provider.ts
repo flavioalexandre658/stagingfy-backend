@@ -1,6 +1,6 @@
 import { IVirtualStagingProvider, VirtualStagingParams, VirtualStagingResult, ProviderConfig, ProviderCapabilities } from '../../interfaces/virtual-staging-provider.interface';
 import { BaseService } from '../base.service';
-import { Provider, RoomType, FurnitureStyle, BlackForestApiResponse, LoraConfig, StagingStage, StagingPlan, StagingStageResult, StagingProgressResult } from '../../interfaces/upload.interface';
+import { Provider, RoomType, FurnitureStyle, BlackForestApiResponse, BlackForestWebhookResponse, LoraConfig, StagingStage, StagingPlan, StagingStageResult, StagingProgressResult } from '../../interfaces/upload.interface';
 import { chatGPTService } from '../chatgpt.service';
 import { StagingValidationService } from '../staging-validation.service';
 import sharp from 'sharp';
@@ -16,6 +16,7 @@ type KontextRequest = {
   output_format?: 'jpeg' | 'png' | 'webp';
   safety_tolerance?: number;
   guidance?: number; // se suportado pelo provedor
+  webhook_url?: string; // URL para receber notificação quando processamento completar
 };
 
 /**
@@ -25,7 +26,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   readonly name: Provider = 'black-forest';
   readonly version = '1.0.0';
   readonly isAsync = true;
-  readonly supportsWebhooks = false;
+  readonly supportsWebhooks = true;
   readonly config: ProviderConfig;
 
   private readonly loraConfig: LoraConfig = {
@@ -167,6 +168,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         safety_tolerance: 2,
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
         ...(opts?.seed !== undefined && { seed: opts.seed }),
+        ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
       };
 
       const resp = await fetch(`${this.config.baseUrl}/v1/flux-kontext-pro`, {
@@ -810,6 +812,41 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     } catch (error) {
       console.error('Erro ao converter imagem para base64:', error);
       throw new Error(`Falha ao converter imagem para base64: ${error}`);
+    }
+  }
+
+  /**
+   * Processa webhook response do Black Forest
+   */
+  async processWebhookResponse(payload: any): Promise<VirtualStagingResult> {
+    try {
+      const webhookData = payload as BlackForestWebhookResponse;
+      const { status, result, id, error } = webhookData;
+
+      if (status === 'Ready' && result?.sample) {
+        return {
+          success: true,
+          requestId: id,
+          outputImageUrl: result.sample,
+          metadata: {
+            status: 'completed',
+            provider: 'black-forest',
+            width: result.width,
+            height: result.height,
+          },
+        };
+      }
+
+      return {
+        success: false,
+        requestId: id,
+        errorMessage: error || `Processing failed with status: ${status}`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        errorMessage: `Error processing webhook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
     }
   }
 }

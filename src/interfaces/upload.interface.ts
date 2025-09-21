@@ -81,6 +81,19 @@ export interface BlackForestApiResponse {
   error?: string;
 }
 
+export interface BlackForestWebhookResponse {
+  id: string;
+  status: 'Ready' | 'Error' | 'Content Moderated';
+  result?: {
+    sample?: string; // URL da imagem gerada
+    url?: string; // Para compatibilidade
+    width?: number;
+    height?: number;
+  };
+  error?: string;
+  timestamp?: string;
+}
+
 export interface LoraConfig {
   roomType: {
     [key in RoomType]: string;

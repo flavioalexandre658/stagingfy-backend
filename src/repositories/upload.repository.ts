@@ -148,6 +148,19 @@ export class UploadRepository {
   }
 
   /**
+   * Busca um upload pelo job ID do Black Forest
+   */
+  async findByBlackForestJobId(jobId: string): Promise<Upload | null> {
+    const [upload] = await db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.blackForestJobId, jobId))
+      .limit(1);
+
+    return upload ? this.convertToUpload(upload) : null;
+  }
+
+  /**
    * Atualiza a URL da imagem de saída quando o processamento é concluído
    */
   async updateOutputImage(
