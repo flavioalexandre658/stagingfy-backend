@@ -414,22 +414,40 @@ export class VirtualStagingController {
         const result = await this.virtualStagingService.checkJobStatus(requestId, provider);
         
         if (result.success && result.outputImageUrl) {
-          return result.outputImageUrl;
+          console.log(`[${requestId}] Polling successful after ${attempt + 1} attempts`);
+          return result.outputImageUrl.trim();
         } else if (!result.success && result.errorMessage) {
-          throw new Error(result.errorMessage);
+          // Se for um erro definitivo (não temporário), não tentar novamente
+          if (result.errorMessage.includes('Job failed') || result.errorMessage.includes('Error')) {
+            throw new Error(`Processing failed: ${result.errorMessage}`);
+          }
+          console.log(`[${requestId}] Attempt ${attempt + 1}: ${result.errorMessage}`);
+        } else {
+          // Status ainda em processamento
+          console.log(`[${requestId}] Attempt ${attempt + 1}: Still processing...`);
         }
 
         // Aguardar antes da próxima tentativa
-        await new Promise(resolve => setTimeout(resolve, interval));
+        if (attempt < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, interval));
+        }
       } catch (error) {
-        console.error(`Polling attempt ${attempt + 1} failed:`, error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[${requestId}] Polling attempt ${attempt + 1} failed:`, errorMessage);
+        
+        // Se for um erro de rede ou temporário, tentar novamente
         if (attempt === maxAttempts - 1) {
-          throw error;
+          throw new Error(`Polling failed after ${maxAttempts} attempts: ${errorMessage}`);
+        }
+        
+        // Aguardar antes da próxima tentativa em caso de erro
+        if (attempt < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, interval));
         }
       }
     }
 
-    throw new Error('Timeout waiting for processing result');
+    throw new Error(`Timeout waiting for processing result after ${maxAttempts} attempts (${(maxAttempts * interval) / 1000}s)`);
   }
 
   /**

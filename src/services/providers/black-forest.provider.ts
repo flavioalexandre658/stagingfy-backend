@@ -246,11 +246,21 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       headers: { 'x-key': this.config.apiKey, 'Content-Type': 'application/json' },
     });
     if (!resp.ok) {
-      // 404: geralmente ainda processando
+      // 404: geralmente ainda processando, não é um erro
+      if (resp.status === 404) {
+        return {
+          id: jobId,
+          status: 'Pending',
+          progress: null,
+          details: null,
+          preview: null,
+        };
+      }
+      // Outros erros HTTP são realmente erros
       return {
         id: jobId,
-        status: 'Task not found',
-        error: await resp.text(),
+        status: 'Error',
+        error: `HTTP ${resp.status}: ${await resp.text()}`,
       };
     }
     return (await resp.json()) as BlackForestApiResponse;
@@ -336,7 +346,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       if (status === 'Ready' && response.result?.sample) {
         return {
           success: true,
-          outputImageUrl: response.result.sample,
+          outputImageUrl: response.result.sample.trim(),
           metadata: {
             status: 'completed',
             progress: response.progress,
