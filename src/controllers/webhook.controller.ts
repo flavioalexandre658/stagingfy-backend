@@ -96,82 +96,156 @@ export class WebhookController extends BaseController {
    */
   async handleBlackForestWebhook(req: Request, res: Response): Promise<void> {
     try {
-      const rawPayload = req.body;
-
-      // Debug: Log do payload completo para identificar o problema
-      logger.info('Black Forest webhook received - FULL PAYLOAD', {
-        fullPayload: JSON.stringify(rawPayload, null, 2),
-        headers: req.headers,
+      const rawPayload = JSON.stringify(req.body);
+      console.log('[INFO] Black Forest webhook received - FULL PAYLOAD', {
+        fullPayload: rawPayload,
+        headers: req.headers
       });
 
-      // Mapear task_id para id para compatibilidade com nossa interface
-      const jobId = rawPayload.task_id || rawPayload.id;
-      const status = rawPayload.status === 'SUCCESS' ? 'Ready' : rawPayload.status;
-      
-      const webhookData: BlackForestWebhookResponse = {
-        id: jobId,
-        status: status as 'Ready' | 'Error' | 'Content Moderated',
-        result: rawPayload.result,
-        error: rawPayload.error,
-        timestamp: rawPayload.timestamp || new Date().toISOString()
+      // Mapear task_id para jobId
+      const webhookData = {
+        jobId: req.body.task_id || req.body.id,
+        status: req.body.status === 'SUCCESS' ? 'completed' : req.body.status,
+        result: req.body.result,
+        timestamp: new Date().toISOString()
       };
 
-      logger.info('Black Forest webhook received', {
-        jobId: webhookData.id,
+      console.log('[INFO] Black Forest webhook received', {
+        jobId: webhookData.jobId,
         status: webhookData.status,
-        originalStatus: rawPayload.status,
+        originalStatus: req.body.status
       });
 
-      // Buscar upload pelo Black Forest job ID
-      const upload = await uploadRepository.findByBlackForestJobId(webhookData.id);
-
-      if (!upload) {
-        logger.warn('Upload not found for Black Forest job', {
-          jobId: webhookData.id,
-        });
-        res.status(200).json({ received: true });
+      if (!webhookData.jobId) {
+        console.log('[WARN] No job ID found in webhook payload');
+        res.status(400).json({ error: 'No job ID found' });
         return;
       }
 
-      if (webhookData.status === 'Ready' && webhookData.result?.sample) {
-        // Processamento concluído com sucesso
-        await uploadRepository.updateOutputImage(
-          upload.id,
-          webhookData.result.sample,
-          undefined
-        );
-        await uploadRepository.updateStatus(upload.id, 'completed');
-
-        logger.info('Black Forest processing completed successfully', {
-          uploadId: upload.id,
-          jobId: webhookData.id,
-          imageUrl: webhookData.result.sample,
-        });
-      } else if (webhookData.status === 'Error' || webhookData.status === 'Content Moderated') {
-        // Processamento falhou
-        const errorMessage = webhookData.error || `Processing failed with status: ${webhookData.status}`;
-        
-        await uploadRepository.updateStatus(
-          upload.id,
-          'failed',
-          errorMessage
-        );
-
-        logger.error('Black Forest processing failed', {
-          uploadId: upload.id,
-          jobId: webhookData.id,
-          status: webhookData.status,
-          error: errorMessage,
-        });
+      // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
+      let upload = await uploadRepository.findByBlackForestJobId(webhookData.jobId);
+      
+      if (!upload) {
+        // Tentar buscar por stage job ID
+        upload = await uploadRepository.findByStageJobId(webhookData.jobId);
+      }
+      
+      if (!upload) {
+        console.log('[WARN] Upload not found for Black Forest job', { jobId: webhookData.jobId });
+        res.status(404).json({ error: 'Upload not found' });
+        return;
       }
 
-      // Responder ao webhook
-      res.status(200).json({ received: true });
-    } catch (error) {
-      logger.error('Black Forest webhook processing failed', {
-        error: error as any,
+      console.log('[INFO] Processing webhook for upload', { 
+        uploadId: upload.id, 
+        jobId: webhookData.jobId,
+        status: webhookData.status,
+        currentStage: upload.currentStage
       });
-      this.error(res, 'Webhook processing failed', 400, error);
+
+      // Se o job foi concluído com sucesso
+      if (webhookData.status === 'completed' && webhookData.result?.sample) {
+        const imageUrl = this.extractImageUrl(webhookData.result.sample);
+        
+        if (imageUrl && upload.currentStage && upload.stagingPlan) {
+          console.log(`[${upload.id}] ✅ Etapa ${upload.currentStage} concluída. URL: ${imageUrl}`);
+          
+          // Atualizar resultado da etapa atual
+          await uploadRepository.updateStageResult(upload.id, {
+            stage: upload.currentStage,
+            imageUrl,
+            success: true,
+            validationPassed: true,
+            retryCount: 0
+          } as any);
+
+          // Verificar se há próxima etapa
+          const currentStageIndex = upload.stagingPlan.stages.findIndex((s: any) => s.stage === upload.currentStage);
+          const nextStageIndex = currentStageIndex + 1;
+          
+          if (nextStageIndex < upload.stagingPlan.stages.length) {
+            // Há próxima etapa - processar
+            const nextStage = upload.stagingPlan.stages[nextStageIndex];
+            if (nextStage) {
+              console.log(`[${upload.id}] 🚀 Iniciando próxima etapa: ${nextStage.stage}`);
+              await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
+            }
+          } else {
+            // Última etapa concluída - finalizar
+            console.log(`[${upload.id}] 🎉 Todas as etapas concluídas!`);
+            await uploadRepository.updateStatus(upload.id, 'completed');
+            await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
+          }
+        }
+      } else if (webhookData.status === 'failed') {
+        console.log(`[${upload.id}] ❌ Etapa ${upload.currentStage} falhou`);
+        await uploadRepository.updateStatus(upload.id, 'failed');
+      } else {
+        // Status de processamento - apenas atualizar
+        await uploadRepository.updateStatus(upload.id, webhookData.status);
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('[ERROR] Webhook processing failed:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  private extractImageUrl(sample: any): string | null {
+    if (typeof sample === 'string') {
+      return sample;
+    }
+    if (sample && typeof sample === 'object' && sample.url) {
+      return sample.url;
+    }
+    return null;
+  }
+
+  private async processNextStage(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<void> {
+    try {
+      console.log(`[${upload.id}] 🚀 Processando próxima etapa: ${nextStage.stage}`);
+      
+      // Atualizar currentStage
+      await uploadRepository.updateCurrentStage(upload.id, nextStage.stage);
+      console.log(`[${upload.id}] ✅ Current stage atualizado para: ${nextStage.stage}`);
+      
+      // Importar e instanciar o BlackForestProvider
+      const { providerConfigManager } = await import('../config/provider.config');
+      const blackForestConfig = providerConfigManager.getConfig('black-forest');
+      
+      if (!blackForestConfig) {
+        throw new Error('Black Forest provider não configurado');
+      }
+
+      const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
+      const provider = new BlackForestProvider(blackForestConfig);
+      
+      // Executar a próxima etapa
+      const result = await (provider as any).executeStage(
+        upload.id,
+        inputImageUrl,
+        nextStage,
+        upload.roomType,
+        upload.furnitureStyle
+      );
+      
+      if (result.success && result.jobId) {
+        // Atualizar o stageJobIds com o novo jobId
+        const updatedStageJobIds = [...(upload.stageJobIds || [])];
+        updatedStageJobIds[stageIndex] = result.jobId;
+        
+        // Atualizar o stageJobIds
+        await uploadRepository.updateStageJobIds(upload.id, updatedStageJobIds);
+        
+        console.log(`[${upload.id}] ✅ Etapa ${nextStage.stage} enviada. Job ID: ${result.jobId}`);
+      } else {
+        throw new Error(`Falha ao enviar etapa ${nextStage.stage}`);
+      }
+      
+    } catch (error) {
+      console.error(`[${upload.id}] ❌ Erro ao processar próxima etapa:`, error);
+      await uploadRepository.updateStatus(upload.id, 'failed');
     }
   }
 }

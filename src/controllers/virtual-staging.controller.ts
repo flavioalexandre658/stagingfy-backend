@@ -529,9 +529,23 @@ export class VirtualStagingController {
       console.log(`[${uploadId}] 🔄 Iniciando processamento em etapas com Black Forest`);
       const result = await provider_instance.processVirtualStagingInStages(
         uploadId,
-        params,
+        imageBase64,
+        roomType,
+        furnitureStyle,
         onProgress
       );
+
+      // Se a primeira etapa foi enviada com sucesso, inicializar o staging
+      if (result.success && result.requestId && result.metadata?.stagingPlan) {
+        console.log(`[${uploadId}] ✅ Primeira etapa enviada. Inicializando staging...`);
+        await uploadRepository.initializeStaging(
+          uploadId,
+          result.metadata.stagingPlan,
+          result.requestId
+        );
+        console.log(`[${uploadId}] 📊 Staging inicializado. Aguardando webhook...`);
+        return;
+      }
 
       // Verificar se há sucesso parcial com imagem válida
       const metadata = result.metadata as any;
@@ -943,7 +957,9 @@ export class VirtualStagingController {
       
       const result = await provider.processVirtualStagingInStages(
         uploadId,
-        params,
+        imageBase64,
+        upload.roomType,
+        upload.furnitureStyle,
         onProgress
       );
 

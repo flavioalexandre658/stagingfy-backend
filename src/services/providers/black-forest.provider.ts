@@ -485,159 +485,80 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
    */
   async processVirtualStagingInStages(
     uploadId: string,
-    params: VirtualStagingParams,
-    onProgress?: (progress: StagingProgressResult) => void
+    inputImageBase64: string,
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle,
+    progressCallback?: (progress: StagingProgressResult) => void
   ): Promise<VirtualStagingResult> {
     try {
-      console.log(`[${uploadId}] Iniciando processamento em etapas...`);
-      this.validateParams(params);
-      
-      const validationService = new StagingValidationService();
+      console.log(`[${uploadId}] 🚀 Iniciando processamento em etapas`);
       
       // Gerar plano de staging
-      console.log(`[${uploadId}] Gerando plano de staging para ${params.roomType} - ${params.furnitureStyle}`);
-      const plan = chatGPTService.generateStagingPlan(
-        params.roomType!,
-        params.furnitureStyle!
-      );
-      
-      console.log(`[${uploadId}] Plano gerado com ${plan.stages.length} etapas:`, plan.stages.map(s => s.stage));
-      
-      let currentImage = params.imageBase64!;
-      const stageResults: StagingStageResult[] = [];
-      
-      // Log da imagem inicial
-      console.log(`[${uploadId}] 🖼️  IMAGEM INICIAL:`);
-      console.log(`[${uploadId}] - Tamanho base64: ${currentImage.length} caracteres`);
-      console.log(`[${uploadId}] - Formato: ${currentImage.substring(0, 30)}...`);
-      
-      // Executar cada etapa
-      for (let stageIndex = 0; stageIndex < plan.stages.length; stageIndex++) {
-        const stageConfig = plan.stages[stageIndex];
-        if (!stageConfig) continue;
-        
-        console.log(`\n[${uploadId}] 🚀 INICIANDO ETAPA ${stageIndex + 1}/${plan.stages.length}: ${stageConfig.stage.toUpperCase()}`);
-        console.log(`[${uploadId}] - Itens permitidos: ${stageConfig.allowedCategories.slice(0, 3).join(', ')}${stageConfig.allowedCategories.length > 3 ? '...' : ''}`);
-        console.log(`[${uploadId}] - Range de itens: ${stageConfig.minItems}-${stageConfig.maxItems}`);
-        
-        // Log da imagem de entrada para esta etapa
-        console.log(`[${uploadId}] 🖼️  IMAGEM DE ENTRADA ETAPA ${stageIndex + 1}:`);
-        console.log(`[${uploadId}] - Tamanho base64: ${currentImage.length} caracteres`);
-        console.log(`[${uploadId}] - Hash da imagem: ${currentImage.substring(currentImage.length - 20)}`);
-        
-        console.log(`[${uploadId}] Executando etapa ${stageIndex + 1}/${plan.stages.length}: ${stageConfig.stage}`);
-        
-        // Notificar progresso
-        if (onProgress) {
-          onProgress({
-            uploadId: uploadId,
-            currentStage: stageConfig.stage,
-            completedStages: [],
-            stageResults: stageResults,
-            success: true,
-            totalProgress: ((stageIndex + 1) / plan.stages.length) * 100
-          });
-        }
-        
-        // Gerar prompt específico para a etapa
-        console.log(`[${uploadId}] Gerando prompt para etapa ${stageConfig.stage}`);
-        const prompt = chatGPTService.generateStageSpecificPrompt(
-          stageConfig.stage,
-          params.roomType!,
-          params.furnitureStyle!,
-          this.countItemsInPreviousStages(stageResults)
-        );
-        
-        console.log(`[${uploadId}] Prompt gerado: ${prompt.substring(0, 100)}...`);
-        
-        // Executar staging para esta etapa
-        console.log(`[${uploadId}] Enviando requisição para Black Forest...`);
-        const response = await this.generateVirtualStaging(currentImage, prompt);
-        
-        if (response.error) {
-          console.log(`[${uploadId}] ❌ Erro na primeira tentativa: ${response.error}`);
-          console.log(`[${uploadId}] 🔄 Tentando novamente...`);
-          
-          // Tentar uma vez mais em caso de erro
-          const retryResponse = await this.generateVirtualStaging(currentImage, prompt);
-          if (retryResponse.error) {
-            console.log(`[${uploadId}] ❌ Erro na segunda tentativa: ${retryResponse.error}`);
-            console.log(`[${uploadId}] 💥 FALHA DEFINITIVA na etapa ${stageConfig.stage}`);
-            return {
-              success: false,
-              errorMessage: `Falha na etapa ${stageConfig.stage}: ${retryResponse.error}`,
-            };
-          }
-          
-          // Usar resultado da tentativa
-          if (retryResponse.id) {
-            console.log(`[${uploadId}] ⏳ Aguardando conclusão do retry job ${retryResponse.id}...`);
-            const finalResult = await this.waitForCompletion(retryResponse.id);
-            if (finalResult.success && finalResult.outputImageUrl) {
-              console.log(`[${uploadId}] ✅ Retry bem-sucedido! Convertendo imagem para próxima etapa...`);
-              currentImage = await this.downloadAndConvertToBase64(finalResult.outputImageUrl);
-              
-              // Log da imagem resultante do retry
-              console.log(`[${uploadId}] 🖼️  IMAGEM RESULTANTE RETRY ETAPA ${stageIndex + 1} (${stageConfig.stage.toUpperCase()}):`);
-              console.log(`[${uploadId}] - URL: ${finalResult.outputImageUrl}`);
-              console.log(`[${uploadId}] - Tamanho base64 convertido: ${currentImage.length} caracteres`);
-              console.log(`[${uploadId}] - ⚠️  Processada com retry (validação simplificada)`);
-              
-              // Adicionar resultado da etapa
-               const stageResult: StagingStageResult = {
-                 stage: stageConfig.stage,
-                 imageUrl: finalResult.outputImageUrl,
-                 itemsAdded: 0, // Não validamos em retry
-                 success: true,
-                 validationPassed: false,
-                 retryCount: 1
-               };
-               
-               stageResults.push(stageResult);
-              console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} concluída após retry.`);
-            }
-          }
-        } else if (response.id) {
-          // Com webhook, apenas registrar o job ID e continuar
-          console.log(`[${uploadId}] ✅ Job ${response.id} enviado para etapa ${stageConfig.stage}. Aguardando webhook...`);
-          
-          // Registrar o job ID para esta etapa (será processado via webhook)
-          const stageResultData: StagingStageResult = {
-            stage: stageConfig.stage,
-            jobId: response.id,
-            itemsAdded: 0,
-            success: true, // Job foi enviado com sucesso
-            validationPassed: false, // Será validado quando o webhook chegar
-            retryCount: 0
-          };
-          
-          stageResults.push(stageResultData);
-          console.log(`[${uploadId}] 📊 Etapa ${stageConfig.stage} enviada. Job ID: ${response.id}`);
-          
-          // Para staging em etapas com webhook, retornamos apenas o primeiro job ID
-          // O webhook processará as etapas subsequentes
-          if (stageIndex === 0) {
-            return {
-              success: true,
-              requestId: response.id,
-              metadata: {
-                status: 'processing',
-                uploadId,
-                stagingPlan: plan,
-                currentStage: stageConfig.stage,
-                totalStages: plan.stages.length
-              }
-            };
-          }
-        }
+      const plan = await this.generateStagingPlan(roomType, furnitureStyle);
+      console.log(`[${uploadId}] 📋 Plano gerado:`, plan);
+
+      // Executar apenas a primeira etapa
+      const firstStage = plan.stages[0];
+      if (!firstStage) {
+        return {
+          success: false,
+          errorMessage: 'Plano de staging inválido - nenhuma etapa encontrada'
+        };
       }
       
-      // Com webhook, se chegamos aqui significa que nenhuma etapa foi enviada com sucesso
-      console.log(`[${uploadId}] ❌ ERRO: Nenhuma etapa foi enviada com sucesso`);
-      return {
-        success: false,
-        errorMessage: 'Falha ao enviar requisições para todas as etapas'
-      };
+      console.log(`[${uploadId}] 🚀 INICIANDO ETAPA 1/${plan.stages.length}: ${firstStage.stage.toUpperCase()}`);
+      console.log(`[${uploadId}] - Itens permitidos: ${firstStage.allowedCategories.join(', ')}`);
+      console.log(`[${uploadId}] - Range de itens: ${firstStage.minItems}-${firstStage.maxItems}`);
+
+      // Log da imagem de entrada
+      console.log(`[${uploadId}] 🖼️  IMAGEM DE ENTRADA ETAPA 1:`);
+      console.log(`[${uploadId}] - Tamanho base64: ${inputImageBase64.length} caracteres`);
+      console.log(`[${uploadId}] - Hash da imagem: ${inputImageBase64.slice(-20)}`);
+
+      // Notificar progresso
+      if (progressCallback) {
+        progressCallback({
+          uploadId,
+          currentStage: firstStage.stage,
+          completedStages: [],
+          stageResults: [],
+          success: true,
+          totalProgress: (1 / plan.stages.length) * 100
+        });
+      }
+
+      // Executar primeira etapa
+      console.log(`[${uploadId}] Executando etapa 1/${plan.stages.length}: ${firstStage.stage}`);
+      
+      const stageResult = await this.executeStage(
+        uploadId,
+        inputImageBase64,
+        firstStage,
+        roomType,
+        furnitureStyle
+      );
+
+      if (stageResult.success && stageResult.jobId) {
+        console.log(`[${uploadId}] ✅ Job ${stageResult.jobId} enviado para etapa ${firstStage.stage}. Aguardando webhook...`);
+        
+        return {
+          success: true,
+          requestId: stageResult.jobId,
+          metadata: {
+            status: 'processing',
+            uploadId,
+            stagingPlan: plan,
+            currentStage: firstStage.stage,
+            totalStages: plan.stages.length
+          }
+        };
+      } else {
+        console.log(`[${uploadId}] ❌ ERRO: Falha ao enviar primeira etapa`);
+        return {
+          success: false,
+          errorMessage: stageResult.errorMessage || 'Falha ao enviar primeira etapa'
+        };
+      }
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -645,6 +566,63 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       return {
         success: false,
         errorMessage: `Staging em etapas falhou: ${errorMessage}`,
+      };
+    }
+  }
+
+  private async generateStagingPlan(roomType: RoomType, furnitureStyle: FurnitureStyle): Promise<StagingPlan> {
+    return chatGPTService.generateStagingPlan(roomType, furnitureStyle);
+  }
+
+  async executeStage(
+    uploadId: string,
+    imageBase64: string,
+    stageConfig: any,
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ): Promise<{ success: boolean; jobId?: string; imageUrl?: string; errorMessage?: string }> {
+    try {
+      // Gerar prompt específico para a etapa
+      const prompt = chatGPTService.generateStageSpecificPrompt(
+        stageConfig.stage,
+        roomType,
+        furnitureStyle,
+        0 // stageIndex não é usado no generateStageSpecificPrompt
+      );
+      
+      console.log(`[${uploadId}] 🎯 Prompt gerado para ${stageConfig.stage}: ${prompt.substring(0, 100)}...`);
+      
+      // Executar staging para esta etapa
+      console.log(`[${uploadId}] 📤 Enviando requisição para Black Forest...`);
+      const response = await this.generateVirtualStaging(imageBase64, prompt);
+      
+      if (response.error) {
+        console.log(`[${uploadId}] ❌ Erro na API: ${response.error}`);
+        return {
+          success: false,
+          errorMessage: response.error
+        };
+      }
+      
+      if (response.id) {
+        console.log(`[${uploadId}] ✅ Job criado com sucesso: ${response.id}`);
+        return {
+          success: true,
+          jobId: response.id
+        };
+      }
+      
+      console.log(`[${uploadId}] ⚠️ Resposta inesperada da API:`, response);
+      return {
+        success: false,
+        errorMessage: 'Resposta inesperada da API'
+      };
+      
+    } catch (error) {
+      console.log(`[${uploadId}] ❌ Erro ao executar etapa:`, error);
+      return {
+        success: false,
+        errorMessage: error instanceof Error ? error.message : 'Erro desconhecido'
       };
     }
   }

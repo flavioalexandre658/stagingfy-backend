@@ -7,7 +7,10 @@ import {
   UploadStatus, 
   RoomType, 
   FurnitureStyle,
-  Provider 
+  Provider,
+  StagingStage,
+  StagingPlan,
+  StagingStageResult
 } from '../interfaces/upload.interface';
 
 export class UploadRepository {
@@ -17,7 +20,10 @@ export class UploadRepository {
   private convertToUpload(dbUpload: any): Upload {
     return {
       ...dbUpload,
-      outputImageUrls: dbUpload.outputImageUrls ? JSON.parse(dbUpload.outputImageUrls) : undefined
+      outputImageUrls: dbUpload.outputImageUrls ? JSON.parse(dbUpload.outputImageUrls) : undefined,
+      stagingPlan: dbUpload.stagingPlan ? JSON.parse(dbUpload.stagingPlan) : undefined,
+      stageResults: dbUpload.stageResults ? JSON.parse(dbUpload.stageResults) : undefined,
+      stageJobIds: dbUpload.stageJobIds ? JSON.parse(dbUpload.stageJobIds) : undefined
     };
   }
 
@@ -282,6 +288,142 @@ export class UploadRepository {
       .where(and(...conditions));
 
     return result?.count ? 1 : 0; // Drizzle count retorna o número de registros
+  }
+
+  /**
+   * Inicializa o staging em etapas
+   */
+  async initializeStaging(
+    uploadId: string,
+    stagingPlan: StagingPlan,
+    firstStageJobId: string
+  ): Promise<Upload | null> {
+    if (!stagingPlan.stages || stagingPlan.stages.length === 0) {
+      return null;
+    }
+    
+    const firstStage = stagingPlan.stages[0];
+    if (!firstStage) {
+      return null;
+    }
+    
+    const stageJobIds = { [firstStage.stage]: firstStageJobId };
+    
+    const [updatedUpload] = await db
+      .update(uploads)
+      .set({
+        currentStage: firstStage.stage,
+        stagingPlan: JSON.stringify(stagingPlan),
+        stageResults: JSON.stringify([]),
+        stageJobIds: JSON.stringify(stageJobIds),
+        updatedAt: new Date()
+      })
+      .where(eq(uploads.id, uploadId))
+      .returning();
+
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
+  }
+
+  /**
+   * Atualiza resultado de uma etapa e avança para a próxima
+   */
+  async updateStageResult(
+    uploadId: string,
+    stageResult: StagingStageResult,
+    nextStageJobId?: string
+  ): Promise<Upload | null> {
+    const upload = await this.findById(uploadId);
+    if (!upload || !upload.stagingPlan || !upload.stageResults || !upload.stageJobIds) {
+      return null;
+    }
+
+    // Atualizar resultados da etapa
+    const updatedStageResults = [...upload.stageResults, stageResult];
+    
+    // Encontrar próxima etapa
+    const currentStageIndex = upload.stagingPlan.stages.findIndex(
+      s => s.stage === upload.currentStage
+    );
+    const nextStage = upload.stagingPlan.stages[currentStageIndex + 1];
+    
+    let updateData: any = {
+      stageResults: JSON.stringify(updatedStageResults),
+      updatedAt: new Date()
+    };
+
+    if (nextStage && nextStageJobId) {
+      // Há próxima etapa
+      const updatedStageJobIds = {
+        ...upload.stageJobIds,
+        [nextStage.stage]: nextStageJobId
+      };
+      
+      updateData.currentStage = nextStage.stage;
+      updateData.stageJobIds = JSON.stringify(updatedStageJobIds);
+    } else {
+      // Última etapa concluída
+      updateData.currentStage = null;
+      updateData.status = stageResult.success ? 'completed' : 'failed';
+      
+      if (stageResult.success && stageResult.imageUrl) {
+        updateData.outputImageUrl = stageResult.imageUrl;
+      }
+      
+      if (!stageResult.success && stageResult.errorMessage) {
+        updateData.errorMessage = stageResult.errorMessage;
+      }
+    }
+
+    const [updatedUpload] = await db
+      .update(uploads)
+      .set(updateData)
+      .where(eq(uploads.id, uploadId))
+      .returning();
+
+    return updatedUpload ? this.convertToUpload(updatedUpload) : null;
+  }
+
+  /**
+   * Busca upload por jobId de qualquer etapa
+   */
+  async findByStageJobId(jobId: string): Promise<Upload | null> {
+    const allUploads = await db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.status, 'processing'));
+
+    for (const upload of allUploads) {
+      if (upload.stageJobIds) {
+        const stageJobIds = JSON.parse(upload.stageJobIds);
+        const hasJobId = Object.values(stageJobIds).includes(jobId);
+        if (hasJobId) {
+          return this.convertToUpload(upload);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Atualiza o estágio atual de um upload
+   */
+  async updateCurrentStage(uploadId: string, currentStage: string): Promise<void> {
+    await db.update(uploads)
+      .set({ 
+        currentStage: currentStage as 'foundation' | 'complement' | 'wall_decoration',
+        updatedAt: new Date() 
+      })
+      .where(eq(uploads.id, uploadId));
+  }
+
+  async updateStageJobIds(uploadId: string, stageJobIds: string[]): Promise<void> {
+    await db.update(uploads)
+      .set({ 
+        stageJobIds: JSON.stringify(stageJobIds),
+        updatedAt: new Date() 
+      })
+      .where(eq(uploads.id, uploadId));
   }
 }
 

@@ -36,6 +36,11 @@ export interface Upload {
   errorMessage?: string;
   blackForestJobId?: string;
   instantDecoRequestId?: string;
+  // Campos para controle de etapas sequenciais
+  currentStage?: StagingStage;
+  stagingPlan?: StagingPlan;
+  stageResults?: StagingStageResult[];
+  stageJobIds?: Record<StagingStage, string>; // Mapeamento etapa -> jobId
   createdAt: Date;
   updatedAt: Date;
 }

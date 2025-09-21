@@ -39,6 +39,13 @@ export const providerEnum = pgEnum('provider', [
   'instant-deco'
 ]);
 
+// Enum para etapas de staging
+export const stagingStageEnum = pgEnum('staging_stage', [
+  'foundation',
+  'complement', 
+  'wall_decoration'
+]);
+
 export const uploads = pgTable('uploads', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
@@ -55,6 +62,11 @@ export const uploads = pgTable('uploads', {
   errorMessage: text('error_message'),
   blackForestJobId: text('black_forest_job_id'), // ID do job na API da Black Forest
   instantDecoRequestId: text('instant_deco_request_id'), // ID da requisição na API da InstantDeco
+  // Campos para controle de etapas sequenciais
+  currentStage: stagingStageEnum('current_stage'), // Etapa atual em processamento
+  stagingPlan: text('staging_plan'), // JSON com o plano de staging completo
+  stageResults: text('stage_results'), // JSON com resultados de cada etapa
+  stageJobIds: text('stage_job_ids'), // JSON com mapeamento de etapa -> jobId
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
