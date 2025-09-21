@@ -148,31 +148,31 @@ export class WebhookController extends BaseController {
             const nextStageIndex = currentStageIndex + 1;
             
             if (nextStageIndex < upload.stagingPlan.stages.length) {
-              // Há próxima etapa - processar
+              // Há próxima etapa - apenas processar, NÃO finalizar
               const nextStage = upload.stagingPlan.stages[nextStageIndex];
               if (nextStage) {
                 logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
                 await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
               }
             } else {
-              // Última etapa concluída - finalizar
+              // Última etapa concluída - salvar no S3 e finalizar
               logger.info(`All stages completed for upload ${upload.id}`);
-              await uploadRepository.updateStatus(upload.id, 'completed');
-              await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
+              const finalImageUrl = await this.saveImageToS3(upload.id, imageUrl, upload.userId);
+              await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
             }
           } else {
-            // Upload simples (sem staging plan) - finalizar diretamente
+            // Upload simples (sem staging plan) - salvar no S3 e finalizar
             logger.info(`Simple upload completed for upload ${upload.id}`);
-            await uploadRepository.updateStatus(upload.id, 'completed');
-            await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
+            const finalImageUrl = await this.saveImageToS3(upload.id, imageUrl, upload.userId);
+            await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
           }
         } else {
           logger.warn(`No image URL found in webhook result for upload ${upload.id}`);
-          await uploadRepository.updateStatus(upload.id, 'failed', 'No image URL in result');
+          await this.handleStageFailure(upload);
         }
       } else if (webhookData.status === 'failed') {
         logger.error(`Job failed for upload ${upload.id}`);
-        await uploadRepository.updateStatus(upload.id, 'failed', 'Processing failed');
+        await this.handleStageFailure(upload);
       } else {
         // Status de processamento - apenas atualizar
         logger.debug(`Status update for upload ${upload.id}: ${webhookData.status}`);
@@ -266,7 +266,79 @@ export class WebhookController extends BaseController {
       
     } catch (error) {
       logger.error(`Error processing next stage for upload ${upload.id}:`, error as Error);
-      await uploadRepository.updateStatus(upload.id, 'failed');
+      await this.handleStageFailure(upload);
+    }
+  }
+
+  /**
+   * Salva a imagem final no AWS S3
+   */
+  private async saveImageToS3(uploadId: string, imageUrl: string, userId: string): Promise<string> {
+    try {
+      // Importar o serviço S3
+      const { s3Service } = await import('../lib/s3');
+      
+      // Download da imagem
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Erro ao baixar imagem: ${response.statusText}`);
+      }
+
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      
+      // Gerar chave única para o arquivo
+      const key = s3Service.generateFileKey(userId, 'output', 'jpg');
+      
+      // Upload para S3
+      const s3Url = await s3Service.uploadFile(key, imageBuffer, 'image/jpeg', {
+        uploadId,
+        userId,
+        uploadedAt: new Date().toISOString(),
+      });
+      
+      logger.info(`Image saved to S3 for upload ${uploadId}`, { s3Url });
+      return s3Url;
+      
+    } catch (error) {
+      logger.error(`Error saving image to S3 for upload ${uploadId}:`, error as Error);
+      // Em caso de erro, retornar a URL original
+      return imageUrl;
+    }
+  }
+
+  /**
+   * Trata falhas em stages - usa o resultado do stage anterior ou falha completamente
+   */
+  private async handleStageFailure(upload: any): Promise<void> {
+    try {
+      if (upload.stagingPlan && upload.stageResults && upload.stageResults.length > 0) {
+        // Buscar o último stage bem-sucedido
+        const lastSuccessfulStage = upload.stageResults
+          .filter((result: any) => result.success && result.imageUrl)
+          .sort((a: any, b: any) => b.stage.localeCompare(a.stage))[0];
+        
+        if (lastSuccessfulStage) {
+          logger.info(`Using result from last successful stage ${lastSuccessfulStage.stage} for upload ${upload.id}`);
+          
+          // Salvar a imagem do último stage bem-sucedido no S3
+          const finalImageUrl = await this.saveImageToS3(upload.id, lastSuccessfulStage.imageUrl, upload.userId);
+          
+          // Finalizar com o resultado do stage anterior
+          await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
+          
+          logger.info(`Upload ${upload.id} completed with result from stage ${lastSuccessfulStage.stage}`);
+          
+          return;
+        }
+      }
+      
+      // Se não há stages anteriores bem-sucedidos, marcar como falha
+      logger.error(`No successful stages found for upload ${upload.id}, marking as failed`);
+      await uploadRepository.updateStatus(upload.id, 'failed', 'Processing failed with no successful stages');
+      
+    } catch (error) {
+      logger.error(`Error handling stage failure for upload ${upload.id}:`, error as Error);
+      await uploadRepository.updateStatus(upload.id, 'failed', 'Error handling stage failure');
     }
   }
 }
