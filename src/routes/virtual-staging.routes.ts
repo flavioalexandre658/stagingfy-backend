@@ -44,4 +44,16 @@ router.get(
   virtualStagingController.getUserVirtualStagings.bind(virtualStagingController)
 );
 
+/**
+ * @route POST /api/v1/virtual-staging/:uploadId/stages
+ * @desc Processa virtual staging em etapas usando Black Forest provider
+ * @access Private
+ * @params uploadId: string
+ * @body { webhookUrl?: string, enableProgress?: boolean }
+ */
+router.post(
+  '/:uploadId/stages',
+  virtualStagingController.processVirtualStagingInStages.bind(virtualStagingController)
+);
+
 export default router;

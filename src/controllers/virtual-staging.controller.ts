@@ -534,43 +534,134 @@ export class VirtualStagingController {
    */
   async getUserVirtualStagings(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user?.id;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const { userId } = req.params;
+      const { limit = 20 } = req.query;
 
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Usuário não autenticado',
-        });
-        return;
-      }
+      const limitNum = parseInt(limit as string, 10);
 
-      // Buscar uploads do usuário
-      const uploads = await uploadRepository.findByUserId(userId, limit);
+      const uploads = await uploadRepository.findByUserId(userId!, limitNum);
 
-      res.status(200).json({
+      res.json({
         success: true,
-        data: uploads.map(upload => ({
-          uploadId: upload.id,
-          status: upload.status,
-          inputImageUrl: upload.inputImageUrl,
-          outputImageUrl: upload.outputImageUrl,
-          outputImageUrls: upload.outputImageUrls, // Múltiplas URLs de imagem
-          roomType: upload.roomType,
-          furnitureStyle: upload.furnitureStyle,
-          createdAt: upload.createdAt,
-          updatedAt: upload.updatedAt,
-        })),
+        data: uploads,
       });
     } catch (error) {
-      console.error('Erro ao buscar uploads do usuário:', error);
+      console.error('Error getting user virtual stagings:', error);
       res.status(500).json({
         success: false,
-        message: 'Erro interno do servidor',
+        error: 'Failed to get virtual stagings',
       });
     }
   }
 
+  /**
+   * Novo endpoint para staging em etapas
+   */
+  async processVirtualStagingInStages(req: Request, res: Response): Promise<void> {
+    try {
+      const { uploadId } = req.params;
+      
+      if (!uploadId) {
+        res.status(400).json({
+          success: false,
+          error: 'Upload ID is required'
+        });
+        return;
+      }
+      
+      // Buscar upload existente
+      const upload = await uploadRepository.findById(uploadId);
+      if (!upload) {
+        res.status(404).json({
+          success: false,
+          error: 'Upload not found'
+        });
+        return;
+      }
+
+      // Verificar se é Black Forest provider
+      if (upload.provider !== 'black-forest') {
+        res.status(400).json({
+          success: false,
+          error: 'Staging in stages is only available for Black Forest provider'
+        });
+        return;
+      }
+
+      // Configurar parâmetros
+      const params = {
+        uploadId: upload.id,
+        imageUrl: upload.inputImageUrl,
+        roomType: upload.roomType,
+        furnitureStyle: upload.furnitureStyle,
+        webhookUrl: req.body?.webhookUrl
+      };
+
+      // Configurar callback de progresso (opcional)
+      const onProgress = req.body?.enableProgress ? (progress: any) => {
+        // Aqui você pode implementar WebSocket ou Server-Sent Events
+        // para enviar atualizações de progresso em tempo real
+        console.log(`[${uploadId}] Progress:`, progress);
+      } : undefined;
+
+      // Processar staging em etapas usando o provider diretamente
+      const blackForestConfig = providerConfigManager.getConfig('black-forest');
+      
+      if (!blackForestConfig) {
+        res.status(500).json({
+          success: false,
+          error: 'Black Forest provider not configured'
+        });
+        return;
+      }
+
+      // Importar e instanciar o provider diretamente
+      const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
+      const provider = new BlackForestProvider(blackForestConfig);
+      
+      const result = await provider.processVirtualStagingInStages(
+        uploadId,
+        params,
+        onProgress
+      );
+
+      if (result.success) {
+        // Atualizar registro no banco
+        if (result.outputImageUrl) {
+          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl);
+        }
+        await uploadRepository.updateStatus(uploadId, 'completed');
+
+        res.json({
+          success: true,
+          data: {
+            uploadId,
+            finalImageUrl: result.outputImageUrl,
+            metadata: result.metadata
+          }
+        });
+      } else {
+        await uploadRepository.updateStatus(uploadId, 'failed', result.errorMessage || 'Staging in stages failed');
+
+        res.status(500).json({
+          success: false,
+          error: result.errorMessage || 'Staging in stages failed'
+        });
+      }
+    } catch (error) {
+      console.error('Error processing virtual staging in stages:', error);
+      
+      const { uploadId } = req.params;
+      if (uploadId) {
+        await uploadRepository.updateStatus(uploadId, 'failed', 'Internal server error during staging in stages');
+      }
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process virtual staging in stages'
+      });
+    }
+  }
 
 }
 

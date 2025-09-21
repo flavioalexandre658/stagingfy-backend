@@ -89,3 +89,57 @@ export interface LoraConfig {
     [key in FurnitureStyle]: string;
   };
 }
+
+// Novas interfaces para o sistema de staging em etapas
+export type StagingStage = 'anchor' | 'complete_main' | 'minimal_complements' | 'optional_expansion' | 'polish';
+
+export interface StagingStageConfig {
+  stage: StagingStage;
+  minItems: number;
+  maxItems: number;
+  allowedCategories: string[];
+  validationRules: string[];
+  prompt: string;
+}
+
+export interface StagingPlan {
+  roomType: RoomType;
+  furnitureStyle: FurnitureStyle;
+  stages: StagingStageConfig[];
+  globalRules: string[];
+  roomSpecificRules: string[];
+}
+
+export interface StagingStageResult {
+  stage: StagingStage;
+  success: boolean;
+  imageUrl?: string;
+  jobId?: string;
+  itemsAdded: number;
+  validationPassed: boolean;
+  validationErrors?: string[];
+  retryCount: number;
+  errorMessage?: string;
+}
+
+export interface StagingProgressResult {
+  uploadId: string;
+  currentStage: StagingStage;
+  completedStages: StagingStage[];
+  stageResults: StagingStageResult[];
+  finalImageUrl?: string;
+  success: boolean;
+  errorMessage?: string;
+  totalProgress: number; // 0-100
+}
+
+export interface StagingValidationResult {
+  passed: boolean;
+  itemCount: number;
+  hasWallDecor: boolean;
+  hasWindowTreatments: boolean;
+  doorsBlocked: boolean;
+  stairsBlocked: boolean;
+  colorDeviationDetected: boolean;
+  errors: string[];
+}
