@@ -479,7 +479,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   /**
-   * Novo método de virtual staging em 5 etapas
+   * Novo método de virtual staging em 3 etapas
    */
   async processVirtualStagingInStages(
     uploadId: string,
@@ -693,11 +693,9 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
 
   private addReinforcementToPrompt(prompt: string, stage: StagingStage): string {
     const reinforcements: Record<StagingStage, string> = {
-      'anchor': 'No wall decor or window treatments. Stairs and doors are no-placement zones.',
-      'complete_main': 'Prefer fewer items; stop early if space becomes tight.',
-      'minimal_complements': 'Only add if space is clearly available. No blocking of doors/windows.',
-      'optional_expansion': 'Stop at first sign of density. Better fewer items than overcrowded.',
-      'polish': 'No new items. Only subtle position/scale adjustments.'
+      'foundation': 'No wall decor or window treatments. Stairs and doors are no-placement zones. Add essential main furniture only.',
+      'complement': 'Only add if space is clearly available. No blocking of doors/windows. Add complementary items carefully.',
+      'final': 'No new items. Only subtle position/scale adjustments for better realism.'
     };
     
     return `${prompt}\n\nREINFORCEMENT: ${reinforcements[stage] || 'Follow all placement rules strictly.'}`;

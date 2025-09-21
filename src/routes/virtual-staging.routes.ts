@@ -9,11 +9,11 @@ router.use(authMiddleware);
 
 /**
  * @route POST /api/v1/virtual-staging
- * @desc Processa virtual staging em 5 etapas usando Black Forest provider
+ * @desc Processa virtual staging em 3 etapas usando Black Forest provider
  * @access Private
  * @body { roomType: string, furnitureStyle: string, plan?: string }
  * @file image (multipart/form-data)
- * @description Pipeline em 5 etapas: anchor → foundation → complement → accent → final
+ * @description Pipeline em 3 etapas: foundation → complement → final
  * @note Processamento assíncrono com logs detalhados de cada etapa
  */
 router.post(

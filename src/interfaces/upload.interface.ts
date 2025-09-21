@@ -91,7 +91,7 @@ export interface LoraConfig {
 }
 
 // Novas interfaces para o sistema de staging em etapas
-export type StagingStage = 'anchor' | 'complete_main' | 'minimal_complements' | 'optional_expansion' | 'polish';
+export type StagingStage = 'foundation' | 'complement' | 'final';
 
 export interface StagingStageConfig {
   stage: StagingStage;

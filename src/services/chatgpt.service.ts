@@ -662,7 +662,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
 
   /**
-   * Gera um plano completo de staging em 5 etapas para um cômodo específico
+   * Gera um plano completo de staging em 3 etapas para um cômodo específico
    */
   generateStagingPlan(roomType: RoomType, furnitureStyle: FurnitureStyle): StagingPlan {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
@@ -682,54 +682,34 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     const allowedCompShort = plan.allowedComplementary.slice(0, 4).join(', ');
 
     const stages: StagingStageConfig[] = [
-      // Etapa 1: Âncora do ambiente (1 peça principal)
+      // Etapa 1: Base/Fundação - Móveis principais
       {
-        stage: 'anchor',
-        minItems: 1,
-        maxItems: 1,
-        allowedCategories: plan.allowedMainItems,
-        validationRules: ['count_main_items', 'no_wall_decor', 'no_window_treatments', 'circulation_clear'],
-        prompt: this.generateStagePrompt('anchor', roomLabel, styleLabel, allowedMainShort, '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
-      },
-      
-      // Etapa 2: Completar "main" até o mínimo
-      {
-        stage: 'complete_main',
+        stage: 'foundation',
         minItems: plan.mainPiecesRange[0],
         maxItems: plan.mainPiecesRange[1],
         allowedCategories: plan.allowedMainItems,
         validationRules: ['count_main_items', 'no_wall_decor', 'no_window_treatments', 'circulation_clear'],
-        prompt: this.generateStagePrompt('complete_main', roomLabel, styleLabel, allowedMainShort, '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
+        prompt: this.generateStagePrompt('foundation', roomLabel, styleLabel, allowedMainShort, '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
       },
       
-      // Etapa 3: Complementos mínimos (funcionais)
+      // Etapa 2: Complementos - Acessórios e itens funcionais
       {
-        stage: 'minimal_complements',
+        stage: 'complement',
         minItems: plan.complementaryRange[0],
-        maxItems: plan.complementaryRange[0],
+        maxItems: plan.complementaryRange[1],
         allowedCategories: plan.allowedComplementary,
         validationRules: ['count_comp_items', 'no_wall_decor', 'no_window_treatments', 'circulation_clear', 'plant_placement'],
-        prompt: this.generateStagePrompt('minimal_complements', roomLabel, styleLabel, '', allowedCompShort, plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
+        prompt: this.generateStagePrompt('complement', roomLabel, styleLabel, '', allowedCompShort, plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
       },
       
-      // Etapa 4: Expansão opcional (até o máximo)
+      // Etapa 3: Finalização - Ajustes e polimento
       {
-        stage: 'optional_expansion',
-        minItems: 0,
-        maxItems: plan.mainPiecesRange[1] + plan.complementaryRange[1],
-        allowedCategories: [...plan.allowedMainItems, ...plan.allowedComplementary],
-        validationRules: ['total_items_limit', 'no_wall_decor', 'no_window_treatments', 'circulation_clear', 'kitchen_stools'],
-        prompt: this.generateStagePrompt('optional_expansion', roomLabel, styleLabel, allowedMainShort, allowedCompShort, plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
-      },
-      
-      // Etapa 5: Polimento (sem adicionar nada)
-      {
-        stage: 'polish',
+        stage: 'final',
         minItems: 0,
         maxItems: 0,
         allowedCategories: [],
         validationRules: ['no_new_items', 'circulation_clear', 'positioning_refined'],
-        prompt: this.generateStagePrompt('polish', roomLabel, styleLabel, '', '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
+        prompt: this.generateStagePrompt('final', roomLabel, styleLabel, '', '', plan.mainPiecesRange, plan.complementaryRange, globalRules, roomSpecificRules)
       }
     ];
 
@@ -764,35 +744,23 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     const roomRulesText = roomSpecificRules.length > 0 ? `\nROOM-SPECIFIC SAFETY:\n• ${roomSpecificRules.join('\n• ')}` : '';
 
     switch (stage) {
-      case 'anchor':
+      case 'foundation':
         return `${globalRulesText}
 
-Adicione exatamente 1 peça principal permitida para este ${roomLabel} no estilo ${styleLabel}: ${allowedMainShort}.
+Adicione os móveis principais para este ${roomLabel} no estilo ${styleLabel}: ${allowedMainShort}.
+Adicione entre ${minMain} e ${maxMain} peças principais essenciais para o ambiente.
 Mantenha ≥90 cm de circulação; não cubra portas/escadas; sem wall decor e sem cortinas/persianas.
 Se houver qualquer dúvida de espaço, não adicione.${roomRulesText}`;
 
-      case 'complete_main':
+      case 'complement':
         return `${globalRulesText}
 
-Adicione peças principais uma a uma até ${minMain} main no total (incluindo as existentes). Itens elegíveis: ${allowedMainShort}.
-HARD LOCK e circulação como antes; sem wall decor/cortinas; se houver dúvida, pare.${roomRulesText}`;
-
-      case 'minimal_complements':
-        return `${globalRulesText}
-
-Adicione até ${minComp} complementos permitidos: ${allowedCompShort}.
+Adicione complementos e acessórios permitidos: ${allowedCompShort}.
+Adicione entre ${minComp} e ${maxComp} itens complementares para completar o ambiente.
 Planta não deve bloquear portas/janelas/escadas; tapete deve ancorar a área sem invadir degraus.
 HARD LOCK; sem wall decor/cortinas; pare se ficar denso.${roomRulesText}`;
 
-      case 'optional_expansion':
-        return `${globalRulesText}
-
-Opcional: adicione itens um a um até ${totalMax} peças (máx. ${maxMain} main, ${maxComp} comp), somente se o espaço continuar claramente livre.
-Regra da cozinha: se houver ilha com overhang, pode adicionar 2–4 bancos com folga; caso contrário, não adicione.
-Zonas conectadas: mobiliar cada zona sem mover paredes/câmera.
-HARD LOCK; sem wall decor/cortinas; pare ao primeiro sinal de densidade.${roomRulesText}`;
-
-      case 'polish':
+      case 'final':
         return `${globalRulesText}
 
 Não adicione novos itens. Refine sutilmente posição e escala das peças já inseridas para melhorar realismo e circulação.

@@ -251,34 +251,27 @@ export class StagingValidationService {
     expectedItemCount: number
   ): Promise<void> {
     switch (stage) {
-      case 'anchor':
-        if (result.itemCount !== 1) {
-          result.errors.push(`Anchor stage should have exactly 1 item, found ${result.itemCount}`);
-        }
-        break;
-        
-      case 'complete_main':
+      case 'foundation':
         if (result.itemCount < expectedItemCount) {
-          result.errors.push(`Complete main stage should have at least ${expectedItemCount} items, found ${result.itemCount}`);
+          result.errors.push(`Foundation stage should have at least ${expectedItemCount} main items, found ${result.itemCount}`);
         }
         break;
         
-      case 'minimal_complements':
+      case 'complement':
         // Validação específica para complementos
+        if (result.itemCount < expectedItemCount) {
+          result.errors.push(`Complement stage should have at least ${expectedItemCount} complementary items, found ${result.itemCount}`);
+        }
         break;
         
-      case 'optional_expansion':
-        // Validação para expansão opcional
-        break;
-        
-      case 'polish':
-        // Na etapa de polimento, não deve haver novos itens
+      case 'final':
+        // Na etapa final, não deve haver novos itens
         // Esta validação seria feita comparando com a etapa anterior
         break;
     }
 
-    // Validações comuns para todas as etapas (exceto polish)
-    if (stage !== 'polish') {
+    // Validações comuns para todas as etapas (exceto final)
+    if (stage !== 'final') {
       if (result.hasWallDecor) {
         result.errors.push('Wall decor detected - not allowed in any stage');
       }
