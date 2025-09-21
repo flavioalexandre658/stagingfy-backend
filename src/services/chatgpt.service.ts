@@ -111,12 +111,11 @@ class ChatGPTService {
 
 • Begin with the minimum count: **${minMain + minComp} pieces total** (${minMain} main + ${minComp} complementary).
 • After placing the minimum, add items one by one **only if** clear free area still remains and circulation is preserved — at most up to **${totalMax} total**. Prefer fewer pieces if any doubt.
-• This is STRICTLY additive virtual staging.
-LOCKED ARCHITECTURE & COLORS — Keep floor, walls, doors, windows, countertops/cabinetry, ceiling and all trims IDENTICAL; do not change ANY existing color (no white-balance, hue/saturation, exposure or relighting adjustments).
+• This is STRICTLY additive virtual staging. Maintain all other aspects of the original image.
 
-* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. Do not modify counters or cabinetry.
-* If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing.
-* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. Do not alter finishes or architectural elements.
+* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. Do not modify counters or cabinetry. Maintain all other aspects of the original image.
+* If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing. Maintain all other aspects of the original image.
+* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. Do not alter finishes or architectural elements. Maintain all other aspects of the original image.
 
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
@@ -130,7 +129,9 @@ LOCKED ARCHITECTURE & COLORS — Keep floor, walls, doors, windows, countertops/
 ${styleLabel}:
 ${styleTraits}${styleEmphasis}
 
-choose only from the allowed categories for this ${roomLabel} (no wall decor).
+Maintain all other aspects of the original image.
+
+choose only from the allowed categories for this ${roomLabel} (no wall decor). Maintain all other aspects of the original image.
 
 • Place **main pieces first** (**${minMain}–${maxMain}**), verify clearances; 
 • then consider **complementary** (**${minComp}–${maxComp}**) only if space remains clearly free.
@@ -138,11 +139,13 @@ choose only from the allowed categories for this ${roomLabel} (no wall decor).
 
 Main pieces:
 ${mainBullets}
+Maintain all other aspects of the original image.
 
 Complementary accents:
 ${compBullets}
+Maintain all other aspects of the original image.
 
-Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
+Output: Maintain all other aspects of the original image. a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
