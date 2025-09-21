@@ -91,7 +91,7 @@ export class VirtualStagingController {
   /**
    * Middleware do Multer para upload de imagem com tratamento de erro
    */
-  public uploadMiddleware = (req: Request, res: Response, next: Function) => {
+  public uploadMiddleware = (req: Request, res: Response, next: Function): void => {
     upload.single('image')(req, res, (err: any) => {
       if (err) {
         console.error('Multer error:', err);
@@ -99,14 +99,15 @@ export class VirtualStagingController {
         console.log('Content-Type:', req.headers['content-type']);
         
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             message: 'Arquivo muito grande. Tamanho máximo: 10MB',
           });
+          return;
         }
         
         if (err.message === 'Field name missing') {
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             message: 'Campo "image" não encontrado. Certifique-se de enviar o arquivo com o nome "image" em multipart/form-data',
             debug: {
@@ -115,12 +116,14 @@ export class VirtualStagingController {
               bodyKeys: Object.keys(req.body || {}),
             }
           });
+          return;
         }
         
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: err.message || 'Erro no upload do arquivo',
         });
+        return;
       }
       next();
     });
