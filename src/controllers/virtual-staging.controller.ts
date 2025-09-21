@@ -572,9 +572,8 @@ export class VirtualStagingController {
 
         // Atualizar registro no banco
         if (result.outputImageUrl) {
-          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl);
+          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl, undefined, true);
         }
-        await uploadRepository.updateStatus(uploadId, 'completed');
       } else {
         console.log(`[${uploadId}] ❌ Falha no processamento em etapas:`, result.errorMessage);
         
@@ -668,9 +667,9 @@ export class VirtualStagingController {
         await uploadRepository.updateOutputImage(
           uploadId, 
           finalImageUrl || (finalImageUrls && finalImageUrls[0]) || '', 
-          finalImageUrls || undefined
+          finalImageUrls || undefined,
+          true
         );
-        await uploadRepository.updateStatus(uploadId, 'completed');
 
         const processingTime = Date.now() - startTime;
         console.log(`[${uploadId}] Virtual staging concluído com sucesso!`, {
@@ -966,9 +965,8 @@ export class VirtualStagingController {
       if (result.success) {
         // Atualizar registro no banco
         if (result.outputImageUrl) {
-          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl);
+          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl, undefined, true);
         }
-        await uploadRepository.updateStatus(uploadId, 'completed');
 
         res.json({
           success: true,

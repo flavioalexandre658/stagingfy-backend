@@ -355,7 +355,7 @@ export class UploadController {
           const outputImageUrl = await this.saveProcessedImage(uploadId, jobStatus.result.sample);
           
           // Atualizar registro com a URL final
-          await uploadRepository.updateOutputImage(uploadId, outputImageUrl);
+          await uploadRepository.updateOutputImage(uploadId, outputImageUrl, undefined, true);
           return;
 
         } else if (jobStatus.status === 'Error') {

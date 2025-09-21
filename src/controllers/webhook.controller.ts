@@ -51,9 +51,9 @@ export class WebhookController extends BaseController {
             result.outputImageUrl ||
               (result.outputImageUrls && result.outputImageUrls[0]) ||
               '',
-            result.outputImageUrls
+            result.outputImageUrls,
+            true
           );
-          await uploadRepository.updateStatus(upload.id, 'completed');
           logger.info('InstantDeco processing completed', { uploadId: upload.id, result });
         } else {
           logger.warn('Upload not found for InstantDeco request', {
@@ -158,13 +158,13 @@ export class WebhookController extends BaseController {
               // Última etapa concluída - salvar no S3 e finalizar
               logger.info(`All stages completed for upload ${upload.id}`);
               const finalImageUrl = await this.saveImageToS3(upload.id, imageUrl, upload.userId);
-              await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
+              await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined, true);
             }
           } else {
             // Upload simples (sem staging plan) - salvar no S3 e finalizar
             logger.info(`Simple upload completed for upload ${upload.id}`);
             const finalImageUrl = await this.saveImageToS3(upload.id, imageUrl, upload.userId);
-            await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
+            await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined, true);
           }
         } else {
           logger.warn(`No image URL found in webhook result for upload ${upload.id}`);
@@ -324,7 +324,7 @@ export class WebhookController extends BaseController {
           const finalImageUrl = await this.saveImageToS3(upload.id, lastSuccessfulStage.imageUrl, upload.userId);
           
           // Finalizar com o resultado do stage anterior
-          await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined);
+          await uploadRepository.updateOutputImage(upload.id, finalImageUrl, undefined, true);
           
           logger.info(`Upload ${upload.id} completed with result from stage ${lastSuccessfulStage.stage}`);
           

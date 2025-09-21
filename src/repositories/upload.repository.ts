@@ -172,13 +172,18 @@ export class UploadRepository {
   async updateOutputImage(
     id: string, 
     outputImageUrl: string,
-    outputImageUrls?: string[]
+    outputImageUrls?: string[],
+    markAsCompleted: boolean = true
   ): Promise<Upload | null> {
     const updateData: any = { 
       outputImageUrl,
-      status: 'completed',
       updatedAt: new Date()
     };
+
+    // Só marcar como completed se explicitamente solicitado
+    if (markAsCompleted) {
+      updateData.status = 'completed';
+    }
 
     // Se múltiplas URLs foram fornecidas, salvar como JSON string
     if (outputImageUrls && outputImageUrls.length > 0) {
