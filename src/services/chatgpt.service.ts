@@ -71,11 +71,6 @@ class ChatGPTService {
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
 Add 3–6 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
-CURTAINS (STRICTLY CONDITIONAL):
-• Add style-consistent curtains ONLY if there are clearly visible, existing windows in the photo.
-• Do NOT add curtains if no window is visible, partially obscured, or ambiguous — SKIP in that case.
-• Mount curtains only where there is obvious surrounding wall clearance and a plausible mounting location (existing rod/brackets or clear space directly above the frame).
-• This is STRICTLY additive — do not invent windows or rods, and do not alter window geometry, trims, wall finishes, or the outside view.
 
 * If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. This is **STRICTLY additive**—do not modify counters or cabinetry.
 * If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing.
