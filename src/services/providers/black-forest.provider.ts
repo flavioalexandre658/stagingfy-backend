@@ -167,7 +167,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         ...(opts?.seed !== undefined && { seed: opts.seed }),
       };
 
-      const resp = await fetch(`${this.config.baseUrl}/flux-kontext-pro`, {
+      const resp = await fetch(`${this.config.baseUrl}/v1/flux-kontext-pro`, {
         method: 'POST',
         headers: {
           'x-key': this.config.apiKey,
@@ -222,7 +222,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       safety_tolerance: 2,
     };
 
-    const resp = await fetch(`${this.config.baseUrl}/flux-pro-1.0-fill`, {
+    const resp = await fetch(`${this.config.baseUrl}/v1/flux-pro-1.0-fill`, {
       method: 'POST',
       headers: {
         'x-key': this.config.apiKey,
@@ -239,7 +239,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   async checkJobStatusInternal(jobId: string): Promise<BlackForestApiResponse> {
-    const resp = await fetch(`${this.config.baseUrl}/get_result?id=${jobId}`, {
+    const resp = await fetch(`${this.config.baseUrl}/v1/get_result?id=${jobId}`, {
       method: 'GET',
       headers: { 'x-key': this.config.apiKey, 'Content-Type': 'application/json' },
     });
