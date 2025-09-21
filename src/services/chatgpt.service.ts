@@ -108,44 +108,34 @@ class ChatGPTService {
         : '';
 
     const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Maintain all other aspects of the original image.
+Add approximately **${totalMin}–${totalMax} pieces total** based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
 
-• Begin with the minimum count: **${minMain + minComp} pieces total** (${minMain} main + ${minComp} complementary).
-• After placing the minimum, add items one by one **only if** clear free area still remains and circulation is preserved — at most up to **${totalMax} total**. Prefer fewer pieces if any doubt.
-• This is STRICTLY additive virtual staging. Maintain all other aspects of the original image.
+* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. This is **STRICTLY additive**—do not modify counters or cabinetry.
+* If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing.
+* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. This is **STRICTLY additive**—do not alter finishes or architectural elements.
 
-* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. Do not modify counters or cabinetry. Maintain all other aspects of the original image.
-* If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing. Maintain all other aspects of the original image.
-* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. Do not alter finishes or architectural elements. Maintain all other aspects of the original image.
-
+PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
 • No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
 • Do not add curtains or blinds unless an existing window is clearly visible; never create new windows or mounting hardware.
 
+STAIR & CIRCULATION SAFETY:
 • Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
 • Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
 • Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
 
-${styleLabel}:
+STYLE GUARDRAILS — ${styleLabel}:
 ${styleTraits}${styleEmphasis}
 
-Maintain all other aspects of the original image.
-
-choose only from the allowed categories for this ${roomLabel} (no wall decor). Maintain all other aspects of the original image.
-
-• Place **main pieces first** (**${minMain}–${maxMain}**), verify clearances; 
-• then consider **complementary** (**${minComp}–${maxComp}**) only if space remains clearly free.
-• If any conflict arises, **remove the last added item and stop**.
-
-Main pieces:
+FURNISHING GUIDANCE — choose only from the allowed categories for this ${roomLabel} (no wall decor):
+Main pieces (**add ${minMain}–${maxMain}**; prioritize fit and circulation):
 ${mainBullets}
-Maintain all other aspects of the original image.
 
-Complementary accents:
+Complementary accents (**add ${minComp}–${maxComp}**; keep subtle and functional):
 ${compBullets}
-Maintain all other aspects of the original image.
 
-Output: Maintain all other aspects of the original image. a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
+Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
     return prompt;
   }
