@@ -17,6 +17,7 @@ router.use(authMiddleware);
  */
 router.post(
   '/',
+  virtualStagingController.debugMiddleware,
   virtualStagingController.uploadMiddleware,
   virtualStagingController.processVirtualStaging.bind(virtualStagingController)
 );

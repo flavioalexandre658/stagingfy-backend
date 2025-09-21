@@ -1,21 +1,34 @@
-import { IVirtualStagingProvider, VirtualStagingParams, VirtualStagingResult, ProviderConfig, ProviderCapabilities } from '../../interfaces/virtual-staging-provider.interface';
+import {
+  IVirtualStagingProvider,
+  VirtualStagingParams,
+  VirtualStagingResult,
+  ProviderConfig,
+  ProviderCapabilities,
+} from '../../interfaces/virtual-staging-provider.interface';
 import { BaseService } from '../base.service';
-import { Provider, RoomType, FurnitureStyle } from '../../interfaces/upload.interface';
-import { 
-  InstantDecoRequest, 
-  InstantDecoInitialResponse, 
+import {
+  Provider,
+  RoomType,
+  FurnitureStyle,
+} from '../../interfaces/upload.interface';
+import {
+  InstantDecoRequest,
+  InstantDecoInitialResponse,
   InstantDecoWebhookResponse,
   InstantDecoError,
   InstantDecoDesign,
   InstantDecoRoomType,
   InstantDecoTransformationType,
-  InstantDecoBlockElement
+  InstantDecoBlockElement,
 } from '../../interfaces/instant-deco.interface';
 
 /**
  * Adapter para o InstantDeco que implementa a interface comum
  */
-export class InstantDecoProvider extends BaseService implements IVirtualStagingProvider {
+export class InstantDecoProvider
+  extends BaseService
+  implements IVirtualStagingProvider
+{
   readonly name: Provider = 'instant-deco';
   readonly version = '1.0.0';
   readonly isAsync = true;
@@ -67,15 +80,30 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
   /**
    * Retorna elementos padrão para bloquear baseado no tipo de transformação
    */
-  private getDefaultBlockElements(transformationType: InstantDecoTransformationType): InstantDecoBlockElement[] {
-    const basicElements: InstantDecoBlockElement[] = ['wall', 'floor', 'ceiling', 'windowpane', 'door'];
-    
+  private getDefaultBlockElements(
+    transformationType: InstantDecoTransformationType
+  ): InstantDecoBlockElement[] {
+    const basicElements: InstantDecoBlockElement[] = [
+      'wall',
+      'floor',
+      'ceiling',
+      'windowpane',
+      'door',
+    ];
+
     switch (transformationType) {
       case 'furnish':
       case 'outdoor':
         return basicElements;
       case 'redesign':
-        return [...basicElements, 'sink', 'countertop', 'toilet', 'tub', 'shower'];
+        return [
+          ...basicElements,
+          'sink',
+          'countertop',
+          'toilet',
+          'tub',
+          'shower',
+        ];
       default:
         return basicElements;
     }
@@ -84,7 +112,9 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
   /**
    * Determina o tipo de transformação baseado no tipo de quarto e estilo
    */
-  private getTransformationType(roomType: RoomType): InstantDecoTransformationType {
+  private getTransformationType(
+    roomType: RoomType
+  ): InstantDecoTransformationType {
     switch (roomType) {
       case 'outdoor':
         return 'outdoor';
@@ -114,15 +144,18 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
     try {
       const mappedRoomType = this.mapRoomType(roomType);
       const mappedDesign = this.mapFurnitureStyle(furnitureStyle);
-      const transformationType = options?.transformationType || this.getTransformationType(roomType);
-      const blockElements = options?.blockElements || this.getDefaultBlockElements(transformationType);
+      const transformationType =
+        options?.transformationType || this.getTransformationType(roomType);
+      const blockElements =
+        options?.blockElements ||
+        this.getDefaultBlockElements(transformationType);
 
       const requestBody: InstantDecoRequest = {
         design: mappedDesign,
         room_type: mappedRoomType,
         transformation_type: transformationType,
         block_element: blockElements.join(','),
-        high_details_resolution: options?.highDetailsResolution ?? true,
+        high_details_resolution: true,
         img_url: imageUrl,
         webhook_url: webhookUrl,
         num_images: Math.min(options?.numImages || 1, 4), // Max 4 images
@@ -133,24 +166,26 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
         url: this.baseUrl,
         payload: requestBody,
         hasApiKey: !!this.config.apiKey,
-        apiKeyLength: this.config.apiKey?.length || 0
+        apiKeyLength: this.config.apiKey?.length || 0,
       });
 
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
+          Authorization: `Bearer ${this.config.apiKey}`,
         },
         body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as InstantDecoError;
-        throw new Error(`InstantDeco API Error: ${errorData?.message || response.statusText}`);
+        const errorData = (await response.json()) as InstantDecoError;
+        throw new Error(
+          `InstantDeco API Error: ${errorData?.message || response.statusText}`
+        );
       }
 
-      const data = await response.json() as InstantDecoInitialResponse;
+      const data = (await response.json()) as InstantDecoInitialResponse;
       return data;
     } catch (error) {
       if (error instanceof Error) {
@@ -171,7 +206,7 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
       if (status === 'succeeded') {
         // Suporte para múltiplas imagens
         const outputUrls = Array.isArray(output) ? output : [output];
-        
+
         const result: VirtualStagingResult = {
           success: true,
           requestId: request_id,
@@ -180,7 +215,7 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
             status: 'completed',
             provider: 'instant-deco',
             numImages: outputUrls.length,
-          }
+          },
         };
 
         // Adicionar outputImageUrl apenas se houver URLs válidas
@@ -258,16 +293,45 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
     transformationTypes: InstantDecoTransformationType[];
   } {
     return {
-      roomTypes: ['bedroom', 'living_room', 'kitchen', 'bathroom', 'home_office', 'dining_room', 'kids_room', 'outdoor'],
-      furnitureStyles: ['standard', 'modern', 'scandinavian', 'industrial', 'midcentury', 'luxury', 'coastal', 'farmhouse'],
-      transformationTypes: ['furnish', 'renovate', 'redesign', 'outdoor', 'blue_sky', 'day_to_dusk', 'empty', 'enhance'],
+      roomTypes: [
+        'bedroom',
+        'living_room',
+        'kitchen',
+        'bathroom',
+        'home_office',
+        'dining_room',
+        'kids_room',
+        'outdoor',
+      ],
+      furnitureStyles: [
+        'standard',
+        'modern',
+        'scandinavian',
+        'industrial',
+        'midcentury',
+        'luxury',
+        'coastal',
+        'farmhouse',
+      ],
+      transformationTypes: [
+        'furnish',
+        'renovate',
+        'redesign',
+        'outdoor',
+        'blue_sky',
+        'day_to_dusk',
+        'empty',
+        'enhance',
+      ],
     };
   }
 
   /**
    * Processa virtual staging usando InstantDeco
    */
-  async processVirtualStaging(params: VirtualStagingParams): Promise<VirtualStagingResult> {
+  async processVirtualStaging(
+    params: VirtualStagingParams
+  ): Promise<VirtualStagingResult> {
     try {
       this.logOperation('Processing virtual staging with InstantDeco', {
         roomType: params.roomType,
@@ -286,7 +350,9 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
 
       // Se não há webhook, processar de forma síncrona (não recomendado para InstantDeco)
       if (!params.webhookUrl) {
-        throw new Error('InstantDeco requires webhook URL for async processing');
+        throw new Error(
+          'InstantDeco requires webhook URL for async processing'
+        );
       }
 
       // Gerar virtual staging com 3 imagens por padrão
@@ -309,12 +375,13 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
           provider: 'instant-deco',
           message: response.response.message,
           numImages: params.options?.numImages ?? 3,
-        }
+        },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('InstantDeco processing failed:', error as Error);
-      
+
       return {
         success: false,
         errorMessage: `InstantDeco processing failed: ${errorMessage}`,
@@ -338,10 +405,11 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
           status: 'processing',
           provider: 'instant-deco',
           note: 'InstantDeco uses webhooks for status updates. Check webhook endpoint for completion.',
-        }
+        },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('InstantDeco status check error:', error as Error);
       return {
         success: false,
@@ -357,7 +425,7 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
     try {
       // Verificar se as configurações necessárias estão presentes
       const requiredConfigs = ['apiKey', 'baseUrl'];
-      
+
       for (const config of requiredConfigs) {
         if (!this.config[config]) {
           this.logger.error(`InstantDeco missing required config: ${config}`);
@@ -367,8 +435,12 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
 
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('InstantDeco configuration validation error:', error as Error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        'InstantDeco configuration validation error:',
+        error as Error
+      );
       return false;
     }
   }
@@ -380,15 +452,15 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
     if (!params.imageBase64 && !params.imageUrl) {
       throw new Error('Either imageBase64 or imageUrl is required');
     }
-    
+
     if (!params.roomType) {
       throw new Error('roomType is required');
     }
-    
+
     if (!params.furnitureStyle) {
       throw new Error('furnitureStyle is required');
     }
-    
+
     if (!params.uploadId) {
       throw new Error('uploadId is required');
     }
@@ -401,8 +473,26 @@ export class InstantDecoProvider extends BaseService implements IVirtualStagingP
     return {
       maxImageSize: 10 * 1024 * 1024, // 10MB
       supportedFormats: ['jpg', 'jpeg', 'png'],
-      supportedRoomTypes: ['bedroom', 'living_room', 'kitchen', 'bathroom', 'home_office', 'dining_room', 'kids_room', 'outdoor'],
-      supportedFurnitureStyles: ['modern', 'scandinavian', 'industrial', 'midcentury', 'coastal', 'standard', 'luxury', 'farmhouse'],
+      supportedRoomTypes: [
+        'bedroom',
+        'living_room',
+        'kitchen',
+        'bathroom',
+        'home_office',
+        'dining_room',
+        'kids_room',
+        'outdoor',
+      ],
+      supportedFurnitureStyles: [
+        'modern',
+        'scandinavian',
+        'industrial',
+        'midcentury',
+        'coastal',
+        'standard',
+        'luxury',
+        'farmhouse',
+      ],
       maxImagesPerRequest: 4,
       supportsCustomPrompts: false,
       supportsHighResolution: true,

@@ -36,8 +36,15 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB
+    fieldSize: 1024 * 1024, // 1MB para campos de texto
+    fields: 10, // máximo 10 campos
+    files: 1, // máximo 1 arquivo
   },
   fileFilter: (req, file, cb) => {
+    console.log('File filter - fieldname:', file.fieldname);
+    console.log('File filter - mimetype:', file.mimetype);
+    console.log('File filter - originalname:', file.originalname);
+    
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -68,9 +75,56 @@ export class VirtualStagingController {
   }
 
   /**
-   * Middleware do Multer para upload de imagem
+   * Middleware de debug para verificar a requisição
    */
-  public uploadMiddleware = upload.single('image');
+  public debugMiddleware = (req: Request, res: Response, next: Function) => {
+    console.log('=== DEBUG MIDDLEWARE ===');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('Method:', req.method);
+    console.log('Body keys:', Object.keys(req.body || {}));
+    console.log('Has file property:', 'file' in req);
+    console.log('Has files property:', 'files' in req);
+    console.log('========================');
+    next();
+  };
+
+  /**
+   * Middleware do Multer para upload de imagem com tratamento de erro
+   */
+  public uploadMiddleware = (req: Request, res: Response, next: Function) => {
+    upload.single('image')(req, res, (err: any) => {
+      if (err) {
+        console.error('Multer error:', err);
+        console.log('Request headers:', req.headers);
+        console.log('Content-Type:', req.headers['content-type']);
+        
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            success: false,
+            message: 'Arquivo muito grande. Tamanho máximo: 10MB',
+          });
+        }
+        
+        if (err.message === 'Field name missing') {
+          return res.status(400).json({
+            success: false,
+            message: 'Campo "image" não encontrado. Certifique-se de enviar o arquivo com o nome "image" em multipart/form-data',
+            debug: {
+              contentType: req.headers['content-type'],
+              hasBody: !!req.body,
+              bodyKeys: Object.keys(req.body || {}),
+            }
+          });
+        }
+        
+        return res.status(400).json({
+          success: false,
+          message: err.message || 'Erro no upload do arquivo',
+        });
+      }
+      next();
+    });
+  };
 
   /**
    * Processa virtual staging usando ChatGPT + flux-kontext-pro
