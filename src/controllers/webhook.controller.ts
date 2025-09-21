@@ -221,10 +221,15 @@ export class WebhookController extends BaseController {
       const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
       const provider = new BlackForestProvider(blackForestConfig);
       
+      // Converter URL da imagem para base64
+      console.log(`[${upload.id}] 🔄 Convertendo imagem de URL para base64...`);
+      const imageBase64 = await provider.downloadAndConvertToBase64(inputImageUrl);
+      console.log(`[${upload.id}] ✅ Imagem convertida para base64`);
+      
       // Executar a próxima etapa
       const result = await (provider as any).executeStage(
         upload.id,
-        inputImageUrl,
+        imageBase64,
         nextStage,
         upload.roomType,
         upload.furnitureStyle

@@ -695,7 +695,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     };
   }
 
-  private async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
+  async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
     try {
       const response = await fetch(imageUrl);
       if (!response.ok) {
