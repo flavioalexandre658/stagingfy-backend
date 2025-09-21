@@ -64,10 +64,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   private static addToCache(jobId: string, uploadId: string, stage: string): void {
     this.jobIdCache.set(jobId, { uploadId, stage, timestamp: Date.now() });
     
-    // Limpar cache após 30 segundos
+    // Limpar cache após 2 minutos para lidar com webhooks mais lentos
     setTimeout(() => {
       this.jobIdCache.delete(jobId);
-    }, 30000);
+    }, 120000);
   }
 
   static getFromCache(jobId: string): { uploadId: string, stage: string } | null {

@@ -115,11 +115,11 @@ export class WebhookController extends BaseController {
         return;
       }
 
-      // Buscar upload pelo jobId com retry para lidar com race condition
-      const upload = await this.findUploadWithRetry(webhookData.jobId);
+      // Buscar upload pelo jobId (primeiro no cache, depois no banco)
+      const upload = await this.findUpload(webhookData.jobId);
       
       if (!upload) {
-        logger.warn('Upload not found for Black Forest job after retries', { jobId: webhookData.jobId });
+        logger.warn('Upload not found for Black Forest job', { jobId: webhookData.jobId });
         res.status(404).json({ error: 'Upload not found' });
         return;
       }
@@ -128,41 +128,53 @@ export class WebhookController extends BaseController {
       if (webhookData.status === 'completed' && webhookData.result?.sample) {
         const imageUrl = this.extractImageUrl(webhookData.result.sample);
         
-        if (imageUrl && upload.currentStage && upload.stagingPlan) {
-          logger.info(`Stage ${upload.currentStage} completed for upload ${upload.id}`);
-          
-          // Atualizar resultado da etapa atual
-          await uploadRepository.updateStageResult(upload.id, {
-            stage: upload.currentStage,
-            imageUrl,
-            success: true,
-            validationPassed: true,
-            retryCount: 0
-          } as any);
+        if (imageUrl) {
+          // Verificar se é um upload com staging plan (múltiplas etapas)
+          if (upload.currentStage && upload.stagingPlan) {
+            logger.info(`Stage ${upload.currentStage} completed for upload ${upload.id}`);
+            
+            // Atualizar resultado da etapa atual
+            await uploadRepository.updateStageResult(upload.id, {
+              stage: upload.currentStage,
+              imageUrl,
+              success: true,
+              validationPassed: true,
+              retryCount: 0
+            } as any);
 
-          // Verificar se há próxima etapa
-          const currentStageIndex = upload.stagingPlan.stages.findIndex((s: any) => s.stage === upload.currentStage);
-          const nextStageIndex = currentStageIndex + 1;
-          
-          if (nextStageIndex < upload.stagingPlan.stages.length) {
-            // Há próxima etapa - processar
-            const nextStage = upload.stagingPlan.stages[nextStageIndex];
-            if (nextStage) {
-              logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
-              await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
+            // Verificar se há próxima etapa
+            const currentStageIndex = upload.stagingPlan.stages.findIndex((s: any) => s.stage === upload.currentStage);
+            const nextStageIndex = currentStageIndex + 1;
+            
+            if (nextStageIndex < upload.stagingPlan.stages.length) {
+              // Há próxima etapa - processar
+              const nextStage = upload.stagingPlan.stages[nextStageIndex];
+              if (nextStage) {
+                logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
+                await this.processNextStage(upload, imageUrl, nextStage, nextStageIndex);
+              }
+            } else {
+              // Última etapa concluída - finalizar
+              logger.info(`All stages completed for upload ${upload.id}`);
+              await uploadRepository.updateStatus(upload.id, 'completed');
+              await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
             }
           } else {
-            // Última etapa concluída - finalizar
-            logger.info(`All stages completed for upload ${upload.id}`);
+            // Upload simples (sem staging plan) - finalizar diretamente
+            logger.info(`Simple upload completed for upload ${upload.id}`);
             await uploadRepository.updateStatus(upload.id, 'completed');
             await uploadRepository.updateOutputImage(upload.id, imageUrl, undefined);
           }
+        } else {
+          logger.warn(`No image URL found in webhook result for upload ${upload.id}`);
+          await uploadRepository.updateStatus(upload.id, 'failed', 'No image URL in result');
         }
       } else if (webhookData.status === 'failed') {
-        logger.error(`Stage ${upload.currentStage} failed for upload ${upload.id}`);
-        await uploadRepository.updateStatus(upload.id, 'failed');
+        logger.error(`Job failed for upload ${upload.id}`);
+        await uploadRepository.updateStatus(upload.id, 'failed', 'Processing failed');
       } else {
         // Status de processamento - apenas atualizar
+        logger.debug(`Status update for upload ${upload.id}: ${webhookData.status}`);
         await uploadRepository.updateStatus(upload.id, webhookData.status);
       }
 
@@ -183,7 +195,7 @@ export class WebhookController extends BaseController {
     return null;
   }
 
-  private async findUploadWithRetry(jobId: string, maxRetries: number = 2, baseDelay: number = 300): Promise<any> {
+  private async findUpload(jobId: string): Promise<any> {
     // Primeiro, verificar cache para jobIds recém-criados
     const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
     const cached = BlackForestProvider.getFromCache(jobId);
@@ -197,31 +209,15 @@ export class WebhookController extends BaseController {
       }
     }
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
-      let upload = await uploadRepository.findByBlackForestJobId(jobId);
-      
-      if (!upload) {
-        // Tentar buscar por stage job ID
-        upload = await uploadRepository.findByStageJobId(jobId);
-      }
-      
-      if (upload) {
-        if (attempt > 0) {
-          logger.info(`Upload found for job ${jobId} on attempt ${attempt + 1}`);
-        }
-        return upload;
-      }
-      
-      // Se não é a última tentativa, aguardar antes de tentar novamente
-      if (attempt < maxRetries) {
-        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
-        logger.debug(`Upload not found for job ${jobId}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
+    // Buscar upload pelo jobId (pode estar em blackForestJobId ou em stageJobIds)
+    let upload = await uploadRepository.findByBlackForestJobId(jobId);
+    
+    if (!upload) {
+      // Tentar buscar por stage job ID
+      upload = await uploadRepository.findByStageJobId(jobId);
     }
     
-    return null;
+    return upload;
   }
 
   private async processNextStage(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<void> {
