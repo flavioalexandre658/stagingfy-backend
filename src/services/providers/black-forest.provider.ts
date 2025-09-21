@@ -635,11 +635,49 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             console.log(`[${uploadId}] ✨ Etapa ${stageConfig.stage} finalizada. Próxima etapa usará nova imagem.`);
             console.log(`[${uploadId}] 📊 Progresso: ${completedStages.length}/${plan.stages.length} etapas concluídas`);
           } else {
-            console.log(`[${uploadId}] Etapa ${stageConfig.stage} falhou: ${stageResult.errorMessage}`);
-            return {
-              success: false,
-              errorMessage: `Falha na etapa ${stageConfig.stage}: ${stageResult.errorMessage}`
-            };
+            console.log(`[${uploadId}] ❌ Etapa ${stageConfig.stage} falhou: ${stageResult.errorMessage}`);
+            
+            // Registrar a etapa que falhou
+             const failedStageResult: StagingStageResult = {
+                 stage: stageConfig.stage,
+                 itemsAdded: 0,
+                 success: false,
+                 validationPassed: false,
+                 retryCount: 0,
+                 errorMessage: stageResult.errorMessage || 'Erro desconhecido'
+               };
+             stageResults.push(failedStageResult);
+             
+             // Se há etapas anteriores concluídas, retornar a imagem da última etapa bem-sucedida
+             if (stageResults.length > 1) {
+               const lastSuccessfulStage = stageResults[stageResults.length - 2]; // Etapa anterior à que falhou
+               
+               if (lastSuccessfulStage && lastSuccessfulStage.imageUrl) {
+                 console.log(`[${uploadId}] 🔄 Retornando imagem da etapa anterior: ${lastSuccessfulStage.stage}`);
+                 console.log(`[${uploadId}] 📊 Etapas concluídas: ${completedStages.length}/${plan.stages.length}`);
+                 
+                 return {
+                   success: true,
+                   outputImageUrl: lastSuccessfulStage.imageUrl,
+                   metadata: {
+                     plan: plan,
+                     stageResults: stageResults,
+                     totalStages: plan.stages.length,
+                     completedStages: completedStages.length,
+                     failedStage: stageConfig.stage,
+                     returnedFromStage: lastSuccessfulStage.stage,
+                     partialSuccess: true
+                   }
+                 };
+               }
+             } else {
+              // Se é a primeira etapa que falhou, não há imagem anterior para retornar
+              console.log(`[${uploadId}] ❌ Primeira etapa falhou, não há imagem anterior para retornar`);
+              return {
+                success: false,
+                errorMessage: `Falha na etapa ${stageConfig.stage}: ${stageResult.errorMessage}`
+              };
+            }
           }
         }
       }
@@ -714,7 +752,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   private async waitForCompletion(jobId: string): Promise<VirtualStagingResult> {
-    const maxAttempts = 30; // 5 minutos máximo
+    const maxAttempts = 3; // 15 segundos máximo (3 tentativas de 5 segundos)
     let attempts = 0;
     
     while (attempts < maxAttempts) {
@@ -737,14 +775,14 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       
       // Se ainda está processando, aguardar
       if (result.success && result.metadata?.status && result.metadata.status !== 'completed') {
-        console.log(`[${jobId}] Status: ${result.metadata.status}, aguardando...`);
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        console.log(`[${jobId}] Status: ${result.metadata.status}, aguardando... (tentativa ${attempts + 1}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos por tentativa
         attempts++;
         continue;
       }
       
-      // Aguardar 10 segundos antes da próxima verificação
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      // Aguardar 5 segundos antes da próxima verificação
+      await new Promise(resolve => setTimeout(resolve, 5000));
       attempts++;
     }
     

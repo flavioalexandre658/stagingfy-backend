@@ -533,13 +533,28 @@ export class VirtualStagingController {
         onProgress
       );
 
-      if (result.success) {
-        console.log(`[${uploadId}] ✅ Processamento em etapas concluído com sucesso!`, {
-          uploadId,
-          outputImageUrl: result.outputImageUrl,
-          metadata: result.metadata,
-          timestamp: new Date().toISOString(),
-        });
+      // Verificar se há sucesso parcial com imagem válida
+      const metadata = result.metadata as any;
+      const hasPartialSuccess = metadata?.partialSuccess && result.outputImageUrl;
+
+      if (result.success || hasPartialSuccess) {
+        if (hasPartialSuccess) {
+          console.log(`[${uploadId}] ⚠️ Processamento com sucesso parcial!`, {
+            uploadId,
+            outputImageUrl: result.outputImageUrl,
+            failedStage: metadata.failedStage,
+            returnedFromStage: metadata.returnedFromStage,
+            metadata: result.metadata,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          console.log(`[${uploadId}] ✅ Processamento em etapas concluído com sucesso!`, {
+            uploadId,
+            outputImageUrl: result.outputImageUrl,
+            metadata: result.metadata,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         // Atualizar registro no banco
         if (result.outputImageUrl) {
@@ -548,7 +563,17 @@ export class VirtualStagingController {
         await uploadRepository.updateStatus(uploadId, 'completed');
       } else {
         console.log(`[${uploadId}] ❌ Falha no processamento em etapas:`, result.errorMessage);
-        await uploadRepository.updateStatus(uploadId, 'failed', result.errorMessage || 'Staging in stages failed');
+        
+        // Verificar se há informações sobre sucesso parcial nos metadados
+        const metadata = result.metadata as any;
+        let errorMessage = result.errorMessage || 'Staging in stages failed';
+        
+        if (metadata?.partialSuccess && metadata?.failedStage && metadata?.returnedFromStage) {
+          errorMessage = `Falha na etapa ${metadata.failedStage}: ${result.errorMessage}. Retornando imagem da etapa ${metadata.returnedFromStage}.`;
+          console.log(`[${uploadId}] 🔄 Sucesso parcial: Falhou na etapa ${metadata.failedStage}, mas retornou imagem da etapa ${metadata.returnedFromStage}`);
+        }
+        
+        await uploadRepository.updateStatus(uploadId, 'failed', errorMessage);
       }
     } catch (error) {
       console.error(`[${uploadId}] 💥 Erro no processamento em etapas assíncrono:`, error);
