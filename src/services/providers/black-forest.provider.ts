@@ -277,12 +277,11 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         uploadId: params.uploadId,
       });
 
-      // Usar os métodos internos do provider
-      const response = await this.generateStagedImage(
+      // Usar o método correto do flux-kontext-pro
+      const prompt = this.generatePrompt(params.roomType, params.furnitureStyle);
+      const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
-        '', // mask não é usado no fluxo atual
-        params.roomType,
-        params.furnitureStyle
+        prompt
       );
 
       if (response.error) {

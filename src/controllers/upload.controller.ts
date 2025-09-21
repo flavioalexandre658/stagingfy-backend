@@ -298,12 +298,11 @@ export class UploadController {
         imageFormat: imageBuffer.subarray(0, 4).toString('hex') // Magic number para identificar formato
       });
 
-      // Chamar Black Forest API com imagem e máscara em base64
-      const blackForestResponse = await this.blackForestProvider.generateStagedImage(
+      // Chamar Black Forest API com imagem usando flux-kontext-pro
+      const prompt = `Transform this ${roomType} with ${furnitureStyle} furniture style. Add modern furniture only; do not change structure.`;
+      const blackForestResponse = await this.blackForestProvider.generateVirtualStaging(
         imageBase64,
-        maskBase64,
-        roomType,
-        furnitureStyle
+        prompt
       );
 
       // Salvar job ID da Black Forest
