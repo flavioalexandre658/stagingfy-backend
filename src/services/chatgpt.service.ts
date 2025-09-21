@@ -112,6 +112,7 @@ class ChatGPTService {
 • Begin with the minimum count: **${minMain + minComp} pieces total** (${minMain} main + ${minComp} complementary).
 • After placing the minimum, add items one by one **only if** clear free area still remains and circulation is preserved — at most up to **${totalMax} total**. Prefer fewer pieces if any doubt.
 • This is STRICTLY additive virtual staging.
+LOCKED ARCHITECTURE & COLORS — Keep floor, walls, doors, windows, countertops/cabinetry, ceiling and all trims IDENTICAL; do not change ANY existing color (no white-balance, hue/saturation, exposure or relighting adjustments).
 
 * If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. Do not modify counters or cabinetry.
 * If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing.
