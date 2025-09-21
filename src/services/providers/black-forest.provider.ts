@@ -695,7 +695,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     const reinforcements: Record<StagingStage, string> = {
       'foundation': 'No wall decor or window treatments. Stairs and doors are no-placement zones. Add essential main furniture only.',
       'complement': 'Only add if space is clearly available. No blocking of doors/windows. Add complementary items carefully.',
-      'final': 'No new items. Only subtle position/scale adjustments for better realism.'
+      'wall_decoration': 'Add wall decor items only. Focus on framed artwork, mirrors, and wall shelves. Ensure proper height and balanced distribution.'
     };
     
     return `${prompt}\n\nREINFORCEMENT: ${reinforcements[stage] || 'Follow all placement rules strictly.'}`;

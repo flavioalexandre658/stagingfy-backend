@@ -159,7 +159,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       living_room: {
         mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'sofa or sectional',
           'one or two accent armchairs',
@@ -184,7 +184,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       bedroom: {
         mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'bed (queen/king depending on space)',
           'nightstands (pair or single)',
@@ -227,7 +227,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       bathroom: {
         mainPiecesRange: [0, 1],
         wallDecorRange: [0, 1],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'small stool or slim console (only if space clearly allows)',
         ],
@@ -247,7 +247,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       dining_room: {
         mainPiecesRange: [3, 6], // table + 2–6 chairs (count as 1–3 main groups)
         wallDecorRange: [1, 2],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'dining table (oval/rectangular)',
           'set of dining chairs (4–6)',
@@ -271,7 +271,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       home_office: {
         mainPiecesRange: [2, 3],
         wallDecorRange: [0, 2],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'desk',
           'ergonomic chair',
@@ -296,7 +296,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       kids_room: {
         mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'bed (twin/full)',
           'nightstand',
@@ -322,7 +322,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       outdoor: {
         mainPiecesRange: [3, 6],
         wallDecorRange: [0, 1],
-        complementaryRange: [1, 3],
+        complementaryRange: [2, 4],
         allowedMainItems: [
           'outdoor sofa or lounge chairs',
           'outdoor table (coffee/side)',
@@ -741,19 +741,26 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         ),
       },
 
-      // Etapa 3: Finalização - Ajustes e polimento
+      // Etapa 3: Decoração de parede - Quadros, espelhos e elementos decorativos
       {
-        stage: 'final',
-        minItems: 0,
-        maxItems: 0,
-        allowedCategories: [],
+        stage: 'wall_decoration',
+        minItems: plan.wallDecorRange[0],
+        maxItems: plan.wallDecorRange[1],
+        allowedCategories: [
+          'wall_art',
+          'mirrors',
+          'wall_shelves',
+          'wall_lighting',
+          'wall_decor',
+        ],
         validationRules: [
-          'no_new_items',
+          'wall_decoration_allowed',
           'circulation_clear',
-          'positioning_refined',
+          'proper_height_placement',
+          'balanced_distribution',
         ],
         prompt: this.generateStagePrompt(
-          'final',
+          'wall_decoration',
           roomLabel,
           styleLabel,
           '',
@@ -791,13 +798,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
   ): string {
     const [minMain, maxMain] = mainRange;
     const [minComp, maxComp] = compRange;
-    const totalMax = maxMain + maxComp;
-
     const globalRulesText = globalRules.join('\n');
-    const roomRulesText =
-      roomSpecificRules.length > 0
-        ? `\nROOM-SPECIFIC SAFETY:\n• ${roomSpecificRules.join('\n• ')}`
-        : '';
 
     switch (stage) {
       case 'foundation':
@@ -812,25 +813,33 @@ If in doubt about fit or clearance, skip the item.
 
       case 'complement':
         return `${globalRulesText}
-Add permitted complementary items and accessories selected from: ${allowedCompShort}.
+  Add permitted complementary items and accessories selected from: ${allowedCompShort}.
 Add ${minComp}–${maxComp} complementary items to complete the scene. Be specific: use exact color/material names (e.g., “matte black metal”, “natural jute”, “light oak”), realistic scale, and clear action verbs.
-Maintain ≥ 90 cm (36") of clear circulation. Plants must not block doors, windows, or stairs. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
-HARD LOCK — keep all architecture and colors identical; no relighting or geometry changes. No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
+
+Placement rule — plants & vases:
+• Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
+• Keep them fully out of circulation lanes and clearances for doors, windows, and stairs; never center them in the room or in front of openings.
+
+Maintain ≥ 90 cm (36") of clear circulation. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
+
 If in doubt about fit or clearance, skip the item. 
+
 `;
 
-      case 'final':
-        return `
-Do not add or remove items. Subtly refine the placement and scale of the already added pieces to improve realism and circulation.
-keep all architecture, camera angle/framing/perspective, lighting (direction, intensity, color temperature), and all existing colors identical; no recoloring, white-balance, exposure, relighting, retexturing, cloning, or geometry changes.
+      case 'wall_decoration':
+        return `${globalRulesText}
+Add wall decor for this ${roomLabel} in ${styleLabel} style — choose only: framed artwork, mirrors, slim wall shelves, plug-in sconces.
 
-Quality checks:
-• Maintain ≥ 90 cm (36") of clear passage; doors and stair runs/landings fully unobstructed.
-• Rugs: correctly proportioned to anchor the zone; lie flat on the floor; never overlap stair treads or thresholds.
-• Plants: must not block doors, windows, or stairs; position to avoid occluding circulation.
-• Bar stools (if present): ensure proper legroom and foot clearance; keep counters and cabinet/appliance doors fully operable.
+Placement:
+• Use FREE wall area only — never on walls with doors, windows, backsplashes, or built-ins.
+• Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
+• Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
+• Balance across the room — do not cluster everything on one wall.
 
-If any adjustment creates crowding or overlap, revert the last change and stop. 
+Safety & constraints:
+• Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
+• If unsure about space or placement, SKIP.
+
 `;
 
       default:

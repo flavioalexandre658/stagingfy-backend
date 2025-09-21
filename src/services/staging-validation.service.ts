@@ -264,14 +264,17 @@ export class StagingValidationService {
         }
         break;
         
-      case 'final':
-        // Na etapa final, não deve haver novos itens
-        // Esta validação seria feita comparando com a etapa anterior
+      case 'wall_decoration':
+        // Na etapa de decoração de parede, validar itens de parede
+        if (result.itemCount < expectedItemCount) {
+          result.errors.push(`Wall decoration stage should have at least ${expectedItemCount} wall items, found ${result.itemCount}`);
+        }
+        // Permitir wall decor nesta etapa
         break;
     }
 
-    // Validações comuns para todas as etapas (exceto final)
-    if (stage !== 'final') {
+    // Validações comuns para todas as etapas (exceto wall_decoration)
+    if (stage !== 'wall_decoration') {
       if (result.hasWallDecor) {
         result.errors.push('Wall decor detected - not allowed in any stage');
       }
