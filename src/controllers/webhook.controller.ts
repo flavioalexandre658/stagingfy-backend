@@ -96,17 +96,30 @@ export class WebhookController extends BaseController {
    */
   async handleBlackForestWebhook(req: Request, res: Response): Promise<void> {
     try {
-      const webhookData: BlackForestWebhookResponse = req.body;
+      const rawPayload = req.body;
 
       // Debug: Log do payload completo para identificar o problema
       logger.info('Black Forest webhook received - FULL PAYLOAD', {
-        fullPayload: JSON.stringify(req.body, null, 2),
+        fullPayload: JSON.stringify(rawPayload, null, 2),
         headers: req.headers,
       });
+
+      // Mapear task_id para id para compatibilidade com nossa interface
+      const jobId = rawPayload.task_id || rawPayload.id;
+      const status = rawPayload.status === 'SUCCESS' ? 'Ready' : rawPayload.status;
+      
+      const webhookData: BlackForestWebhookResponse = {
+        id: jobId,
+        status: status as 'Ready' | 'Error' | 'Content Moderated',
+        result: rawPayload.result,
+        error: rawPayload.error,
+        timestamp: rawPayload.timestamp || new Date().toISOString()
+      };
 
       logger.info('Black Forest webhook received', {
         jobId: webhookData.id,
         status: webhookData.status,
+        originalStatus: rawPayload.status,
       });
 
       // Buscar upload pelo Black Forest job ID
