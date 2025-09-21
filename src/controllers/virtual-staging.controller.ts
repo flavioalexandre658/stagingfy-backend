@@ -130,7 +130,175 @@ export class VirtualStagingController {
   };
 
   /**
-   * Processa virtual staging usando ChatGPT + flux-kontext-pro
+   * Processa virtual staging usando método padrão (processamento antigo)
+   */
+  async processVirtualStagingDefault(req: Request, res: Response): Promise<void> {
+    try {
+      // Validar se a imagem foi enviada
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: 'Nenhuma imagem foi enviada',
+        });
+        return;
+      }
+
+      // Validar dados do corpo da requisição
+      const {
+        roomType,
+        furnitureStyle,
+        provider = 'black-forest',
+        plan = 'free',
+      } = req.body as CreateUploadRequest & { plan: string };
+
+      if (!roomType || !furnitureStyle) {
+        res.status(400).json({
+          success: false,
+          message: 'roomType e furnitureStyle são obrigatórios',
+        });
+        return;
+      }
+
+      // Validar provider
+      const validProviders: Provider[] = ['black-forest', 'instant-deco'];
+      if (!validProviders.includes(provider as Provider)) {
+        res.status(400).json({
+          success: false,
+          message: 'provider inválido. Use "black-forest" ou "instant-deco"',
+        });
+        return;
+      }
+
+      // Validar tipos permitidos
+      const validRoomTypes: RoomType[] = [
+        'bedroom',
+        'living_room',
+        'kitchen',
+        'bathroom',
+        'home_office',
+        'dining_room',
+        'kids_room',
+        'outdoor',
+      ];
+      const validFurnitureStyles: FurnitureStyle[] = [
+        'standard',
+        'modern',
+        'scandinavian',
+        'industrial',
+        'midcentury',
+        'luxury',
+        'coastal',
+        'farmhouse',
+      ];
+
+      if (!validRoomTypes.includes(roomType as RoomType)) {
+        res.status(400).json({
+          success: false,
+          message: 'roomType inválido',
+        });
+        return;
+      }
+
+      if (!validFurnitureStyles.includes(furnitureStyle as FurnitureStyle)) {
+        res.status(400).json({
+          success: false,
+          message: 'furnitureStyle inválido',
+        });
+        return;
+      }
+
+      // Obter ID do usuário
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado',
+        });
+        return;
+      }
+
+      // Verificar se os serviços estão configurados
+      if (!chatGPTService) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviço ChatGPT não configurado',
+        });
+        return;
+      }
+
+      if (provider === 'black-forest' && !process.env.BLACK_FOREST_API_KEY) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviço Black Forest não configurado',
+        });
+        return;
+      }
+
+      if (provider === 'instant-deco' && !process.env.INSTANT_DECO_API_KEY) {
+        res.status(500).json({
+          success: false,
+          message: 'Serviço InstantDeco não configurado',
+        });
+        return;
+      }
+
+      // Gerar nome único para o arquivo
+      const fileExtension = path.extname(req.file.originalname);
+      const fileName = `virtual-staging/input/${userId}/${uuidv4()}${fileExtension}`;
+
+      // Upload para S3
+      const uploadCommand = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: fileName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+
+      await s3Client.send(uploadCommand);
+
+      // Gerar URL da imagem no S3
+      const inputImageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
+
+      // Criar registro no banco de dados
+      const uploadRecord = await uploadRepository.create({
+        userId,
+        roomType: roomType as RoomType,
+        furnitureStyle: furnitureStyle as FurnitureStyle,
+        provider: provider as Provider,
+        inputImageUrl,
+      });
+
+      // Iniciar processamento assíncrono usando método antigo
+      this.processVirtualStagingAsync(
+        uploadRecord.id,
+        inputImageUrl,
+        req.file.buffer,
+        roomType as RoomType,
+        furnitureStyle as FurnitureStyle,
+        provider as Provider
+      );
+
+      // Retornar resposta imediata
+      res.status(200).json({
+        success: true,
+        data: {
+          uploadId: uploadRecord.id,
+          status: uploadRecord.status,
+          inputImageUrl: uploadRecord.inputImageUrl,
+          createdAt: uploadRecord.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error('Erro no processamento de virtual staging (método padrão):', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+      });
+    }
+  }
+
+  /**
+   * Processa virtual staging em 5 etapas usando Black Forest provider
    */
   async processVirtualStaging(req: Request, res: Response): Promise<void> {
     try {
@@ -268,8 +436,8 @@ export class VirtualStagingController {
         inputImageUrl,
       });
 
-      // Iniciar processamento assíncrono
-      this.processVirtualStagingAsync(
+      // Iniciar processamento assíncrono em etapas
+      this.processVirtualStagingInStagesAsync(
         uploadRecord.id,
         inputImageUrl,
         req.file.buffer,
@@ -298,7 +466,98 @@ export class VirtualStagingController {
   }
 
   /**
-   * Processamento assíncrono de virtual staging
+   * Processa virtual staging em etapas de forma assíncrona
+   */
+  private async processVirtualStagingInStagesAsync(
+    uploadId: string,
+    inputImageUrl: string,
+    imageBuffer: Buffer,
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle,
+    provider: Provider
+  ): Promise<void> {
+    console.log(`[${uploadId}] 🚀 Iniciando processamento em etapas assíncrono de virtual staging`, {
+      uploadId,
+      inputImageUrl,
+      roomType,
+      furnitureStyle,
+      imageSize: imageBuffer.length,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      // Atualizar status para 'processing'
+      console.log(`[${uploadId}] Atualizando status para 'processing'`);
+      await uploadRepository.updateStatus(uploadId, 'processing');
+
+      // Verificar se é Black Forest provider
+      if (provider !== 'black-forest') {
+        console.log(`[${uploadId}] ❌ Provider ${provider} não suporta processamento em etapas`);
+        await uploadRepository.updateStatus(uploadId, 'failed', 'Staging in stages is only available for Black Forest provider');
+        return;
+      }
+
+      // Converter imagem para base64
+      const imageBase64 = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+
+      // Configurar parâmetros
+      const params = {
+        uploadId: uploadId,
+        imageBase64: imageBase64,
+        roomType: roomType,
+        furnitureStyle: furnitureStyle,
+      };
+
+      // Configurar callback de progresso
+      const onProgress = (progress: any) => {
+        console.log(`[${uploadId}] 📊 Progress:`, progress);
+      };
+
+      // Processar staging em etapas usando o provider diretamente
+      const blackForestConfig = providerConfigManager.getConfig('black-forest');
+      
+      if (!blackForestConfig) {
+        console.log(`[${uploadId}] ❌ Black Forest provider não configurado`);
+        await uploadRepository.updateStatus(uploadId, 'failed', 'Black Forest provider not configured');
+        return;
+      }
+
+      // Importar e instanciar o provider diretamente
+      const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
+      const provider_instance = new BlackForestProvider(blackForestConfig);
+      
+      console.log(`[${uploadId}] 🔄 Iniciando processamento em etapas com Black Forest`);
+      const result = await provider_instance.processVirtualStagingInStages(
+        uploadId,
+        params,
+        onProgress
+      );
+
+      if (result.success) {
+        console.log(`[${uploadId}] ✅ Processamento em etapas concluído com sucesso!`, {
+          uploadId,
+          outputImageUrl: result.outputImageUrl,
+          metadata: result.metadata,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Atualizar registro no banco
+        if (result.outputImageUrl) {
+          await uploadRepository.updateOutputImage(uploadId, result.outputImageUrl);
+        }
+        await uploadRepository.updateStatus(uploadId, 'completed');
+      } else {
+        console.log(`[${uploadId}] ❌ Falha no processamento em etapas:`, result.errorMessage);
+        await uploadRepository.updateStatus(uploadId, 'failed', result.errorMessage || 'Staging in stages failed');
+      }
+    } catch (error) {
+      console.error(`[${uploadId}] 💥 Erro no processamento em etapas assíncrono:`, error);
+      await uploadRepository.updateStatus(uploadId, 'failed', 'Internal server error during staging in stages');
+    }
+  }
+
+  /**
+   * Processamento assíncrono de virtual staging (método legado)
    */
   private async processVirtualStagingAsync(
     uploadId: string,

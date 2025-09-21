@@ -9,11 +9,12 @@ router.use(authMiddleware);
 
 /**
  * @route POST /api/v1/virtual-staging
- * @desc Processa virtual staging usando ChatGPT + flux-kontext-pro
+ * @desc Processa virtual staging em 5 etapas usando Black Forest provider
  * @access Private
  * @body { roomType: string, furnitureStyle: string, plan?: string }
  * @file image (multipart/form-data)
- * @description Pipeline: ChatGPT analisa imagem → gera prompt refinado → flux-kontext-pro processa → retorna staging
+ * @description Pipeline em 5 etapas: anchor → foundation → complement → accent → final
+ * @note Processamento assíncrono com logs detalhados de cada etapa
  */
 router.post(
   '/',
@@ -42,6 +43,22 @@ router.get(
 router.get(
   '/user',
   virtualStagingController.getUserVirtualStagings.bind(virtualStagingController)
+);
+
+/**
+ * @route POST /api/v1/virtual-staging/default
+ * @desc Processa virtual staging usando método padrão (processamento antigo)
+ * @access Private
+ * @body { roomType: string, furnitureStyle: string, plan?: string }
+ * @file image (multipart/form-data)
+ * @description Pipeline tradicional: ChatGPT analisa imagem → gera prompt refinado → provider processa → retorna staging
+ * @note Processamento simples sem etapas, compatível com todos os providers
+ */
+router.post(
+  '/default',
+  virtualStagingController.debugMiddleware,
+  virtualStagingController.uploadMiddleware,
+  virtualStagingController.processVirtualStagingDefault.bind(virtualStagingController)
 );
 
 /**
