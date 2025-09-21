@@ -29,14 +29,20 @@ class ChatGPTService {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
 
-  /**
-   * Generates a refined prompt for flux-kontext-pro.
-   * Dynamic furniture count (2–5), strict scene preservation, and rich style guidance.
-   */
-  /**
-   * Generates a refined prompt for flux-kontext-pro.
-   * Dynamic furnishing (2–5 items), pixel-preserving, with a protected stair zone.
-   */
+  // Helpers novas (dentro da classe)
+  private normalizeText(s: string): string {
+    return (s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s\-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  private matchesAny(text: string, needles: string[]): boolean {
+    const h = this.normalizeText(text);
+    return needles.some(n => h.includes(this.normalizeText(n)));
+  }
+
+  // Substitua o generateVirtualStagingPrompt inteiro por este
   async generateVirtualStagingPrompt(
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
@@ -44,15 +50,52 @@ class ChatGPTService {
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
     const styleTraits = this.getFurnitureStyleTraits(furnitureStyle);
-    const packageItems = this.getPackageCombination(roomType, furnitureStyle)
-      // favorece peças de baixo volume primeiro
-      .filter(
-        i =>
-          !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
-            i
-          )
-      );
-    const plan = this.getRoomStagingPlan(roomType, furnitureStyle); // << NEW
+    const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
+
+    // ----- ranges dinâmicos (ignorando wall decor) -----
+    const [minMain, maxMain] = plan.mainPiecesRange;
+    const [minComp, maxComp] = plan.complementaryRange;
+    const totalMin = minMain + minComp;
+    const totalMax = maxMain + maxComp;
+
+    // ----- base de itens sugeridos pelo pacote (já evita peças muito grandes) -----
+    const baseItems = this.getPackageCombination(
+      roomType,
+      furnitureStyle
+    ).filter(
+      i =>
+        !/sideboard|credenza|large wardrobe|tall cabinet|wall unit|console table/i.test(
+          i
+        )
+    );
+
+    // ----- excluir wall decor de vez -----
+    const isWallDecor = (t: string) =>
+      /\b(frames?|framed|mirror|wall\s*art|print|pinboard|gallery)\b/i.test(t);
+    const noWall = baseItems.filter(i => !isWallDecor(i));
+
+    // ----- filtrar por categorias permitidas (apenas main + complementary) -----
+    const allowedMain = plan.allowedMainItems ?? [];
+    const allowedComp = plan.allowedComplementary ?? [];
+    const mainCandidates = noWall.filter(i => this.matchesAny(i, allowedMain));
+    const compCandidates = noWall
+      .filter(i => this.matchesAny(i, allowedComp))
+      .filter(i => !this.matchesAny(i, allowedMain)); // evita duplicar
+
+    // Fallbacks defensivos caso alguma lista venha vazia
+    const safeMain = mainCandidates.length
+      ? mainCandidates
+      : noWall.slice(0, 6);
+    const safeComp = compCandidates.length
+      ? compCandidates
+      : noWall.slice(6, 12);
+
+    // limitar número de sugestões listadas no prompt (não o que o modelo irá de fato colocar)
+    const mainPicks = safeMain.slice(0, Math.max(3, Math.min(6, maxMain + 2)));
+    const compPicks = safeComp.slice(0, Math.max(2, Math.min(6, maxComp + 2)));
+
+    const mainBullets = mainPicks.map(i => `• ${i}`).join('\n');
+    const compBullets = compPicks.map(i => `• ${i}`).join('\n');
 
     // Compose room-aware guidance lines
     const roomSafety = plan.roomSafetyNotes.length
@@ -64,34 +107,39 @@ class ChatGPTService {
         ? `\nStyle emphasis for ${styleLabel}: ${plan.styleEmphasis!.join('; ')}.\n`
         : '';
 
-    const topPicks = packageItems
-      .slice(0, 6)
-      .map(i => `• ${i}`)
-      .join('\n');
+    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. Maintain all other aspects of the original image.
 
-    const prompt = `Only add a few ${styleLabel} furniture and decor items to this ${roomLabel}. maintain all other aspects of the original image.
-Add 3–6 pieces based on the visible free floor area; pick fewer items if space is limited. This is STRICTLY additive virtual staging.
+• Begin with the minimum count: **${minMain + minComp} pieces total** (${minMain} main + ${minComp} complementary).
+• After placing the minimum, add items one by one **only if** clear free area still remains and circulation is preserved — at most up to **${totalMax} total**. Prefer fewer pieces if any doubt.
+• This is STRICTLY additive virtual staging.
 
-* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. This is **STRICTLY additive**—do not modify counters or cabinetry.
+* If a kitchen island or counter with an overhang is visible, add **2–4 style-matched bar stools** with proper legroom and foot clearance; **skip** if space is tight. Do not modify counters or cabinetry.
 * If the photo shows **multiple connected rooms/zones**, **furnish each zone appropriately** within its existing boundaries while preserving circulation; **do not** shift walls, openings, or camera framing.
-* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. This is **STRICTLY additive**—do not alter finishes or architectural elements.
+* **Add one indoor plant** in a complementary planter to soften the composition; place only where it won’t block doors, windows, or stairs. Do not alter finishes or architectural elements.
 
-PRESERVE PIXEL-FOR-PIXEL:
 • Keep walls, paint color, trims, baseboards, floor, ceiling, pendant fixtures, STAIRS (newel, handrail, balusters, treads, risers), doors, windows, vents, outlets and switches IDENTICAL.
 • Maintain the exact camera angle, framing, perspective lines and original lighting (direction, intensity, color temperature).
 • No repainting, retexturing, relighting, cropping, expanding, cloning or geometry changes. No new curtains/blinds or window treatments.
 • Do not add curtains or blinds unless an existing window is clearly visible; never create new windows or mounting hardware.
 
-STAIR & CIRCULATION SAFETY:
 • Treat the staircase and its landing as a PROTECTED NO-PLACEMENT ZONE — do not cover, occlude or replace any stair part.
 • Keep clear passage around doors, along the stair run and landings; maintain at least 90 cm (36") of free circulation.
 • Only place items where they physically fit in the visible floor area. If an item would overlap the stair, door swing, or a passage path, SKIP it.${roomSafety}
 
-STYLE GUARDRAILS — ${styleLabel}:
+${styleLabel}:
 ${styleTraits}${styleEmphasis}
 
-FURNISHING GUIDANCE (flexible; apply only if they fit without breaking rules):
-${topPicks}
+choose only from the allowed categories for this ${roomLabel} (no wall decor).
+
+• Place **main pieces first** (**${minMain}–${maxMain}**), verify clearances; 
+• then consider **complementary** (**${minComp}–${maxComp}**) only if space remains clearly free.
+• If any conflict arises, **remove the last added item and stop**.
+
+Main pieces:
+${mainBullets}
+
+Complementary accents:
+${compBullets}
 
 Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} style. Add furniture and decor ONLY; leave every architectural element and finish exactly as in the input.`;
 
@@ -109,7 +157,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       Omit<RoomStagingPlan, 'styleEmphasis'>
     > = {
       living_room: {
-        mainPiecesRange: [2, 4],
+        mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
@@ -134,7 +182,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       bedroom: {
-        mainPiecesRange: [2, 4],
+        mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
@@ -197,7 +245,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       dining_room: {
-        mainPiecesRange: [2, 4], // table + 2–6 chairs (count as 1–3 main groups)
+        mainPiecesRange: [3, 6], // table + 2–6 chairs (count as 1–3 main groups)
         wallDecorRange: [1, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
@@ -246,7 +294,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       kids_room: {
-        mainPiecesRange: [2, 4],
+        mainPiecesRange: [3, 6],
         wallDecorRange: [1, 2],
         complementaryRange: [1, 3],
         allowedMainItems: [
@@ -272,7 +320,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       outdoor: {
-        mainPiecesRange: [2, 4],
+        mainPiecesRange: [3, 6],
         wallDecorRange: [0, 1],
         complementaryRange: [1, 3],
         allowedMainItems: [
