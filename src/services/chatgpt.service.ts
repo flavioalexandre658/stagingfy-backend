@@ -290,45 +290,39 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         mainPiecesRange: [1, 2],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
+
         allowedMainItems: [
-          // Mesas de jantar
-          'dining table (round pedestal, oval pedestal, or rectangular slab)',
-          'extendable dining table (wood, glass, or ceramic top)',
-          'live-edge wood dining table',
-          'glass-top dining table with sculptural base',
+          // Mesas
+          'extendable dining table (light oak or walnut top, slim legs)',
+          'rectangular dining table with matte ceramic top',
+          'round pedestal dining table (white oak or marble top)',
 
           // Assentos
-          'set of dining chairs (4–8; upholstered, wood, cane, or mixed material)',
-          'bench for one side (upholstered or wood)',
-          'banquette seating (built-in look against a wall)',
-          'counter stools for island or dining bar (wood, metal, or upholstered)',
+          'set of dining chairs (4–8; upholstered fabric or cane back in neutral tones)',
+          'bench with cushion for one side (oak or walnut base)',
+          'counter stools for nearby dining bar (wood frame, fabric seat)',
 
-          // Armazenamento e apoio
-          'slim bar cabinet',
-          'serving console or sideboard',
-          'buffet with drawers and cabinets',
-          'wine rack cabinet or tall wine storage unit',
-
-          // Complementares que podem ser main
-          'narrow console table behind dining chairs (for serving)',
-          'credenza with modern finish (lacquer, veneer, or glass)',
-          'round breakfast table (for compact dining zones)',
+          // Armazenagem e apoio
+          'slim sideboard in matching wood tone',
+          'wine cabinet or slim bar console (glass doors, wood frame)',
         ],
+
         allowedWallDecor: [
-          'large framed artwork or triptych',
-          'oversized mirror (round/rectangular) proportional to table',
-          'picture ledge for framed prints',
-          'slim floating shelves (display, shallow)',
-          'plug-in sconces flanking art/mirror (pair)',
+          'large framed abstract artwork in muted tones',
+          'round oak-framed mirror proportional to table width',
+          'minimal floating shelf (oak, max 20cm deep)',
+          'pair of slim wall sconces in matte black or brushed brass',
         ],
+
         allowedComplementary: [
-          'area rug sized to chairs pulled back',
-          'centerpiece (vase with branches/greenery)',
-          'table runner and chargers',
-          'buffet lamps (pair, plug-in) on console',
-          'corner plant in tall planter',
-          'wine rack or bar cart (freestanding)',
+          'area rug sized to cover table + chairs pulled back (neutral wool or jute)',
+          'ceramic vase centerpiece with seasonal greenery',
+          'linen table runner in muted color',
+          'pair of buffet lamps with fabric shades',
+          'corner plant in tall ceramic planter',
+          'compact bar cart in matching wood/metal finish',
         ],
+
         roomSafetyNotes: [
           'Keep chairs fully usable; do not push table too close to walls/doors',
           'Maintain clear path around table perimeter',
