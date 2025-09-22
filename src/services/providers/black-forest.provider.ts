@@ -7,7 +7,10 @@ import sharp from 'sharp';
 
 type KontextRequest = {
   prompt: string;
-  input_image: string; // base64: "data:image/jpeg;base64,..."
+  input_image: string; // base64: "data:image/jpeg;base64,..." - obrigatória
+  input_image_2?: string; // base64: imagem de referência opcional
+  input_image_3?: string; // base64: imagem de referência opcional
+  input_image_4?: string; // base64: imagem de referência opcional
   width?: number; // manter tamanho original (múltiplo de 32)
   height?: number;
   aspect_ratio?: string; // "W:H" como fallback
@@ -17,6 +20,7 @@ type KontextRequest = {
   safety_tolerance?: number;
   guidance?: number; // se suportado pelo provedor
   webhook_url?: string; // URL para receber notificação quando processamento completar
+  webhook_secret?: string; // segredo para validação do webhook
 };
 
 /**
@@ -179,7 +183,14 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   async generateVirtualStaging(
     imageBase64: string,
     prompt?: string,
-    opts?: { seed?: number }
+    opts?: { 
+      seed?: number;
+      referenceImages?: {
+        image2?: string;
+        image3?: string;
+        image4?: string;
+      }
+    }
   ): Promise<BlackForestApiResponse> {
     try {
       // 1) Descobre o tamanho original
@@ -204,6 +215,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
         ...(opts?.seed !== undefined && { seed: opts.seed }),
         ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
+        // Adicionar imagens de referência opcionais
+        ...(opts?.referenceImages?.image2 && { input_image_2: opts.referenceImages.image2 }),
+        ...(opts?.referenceImages?.image3 && { input_image_3: opts.referenceImages.image3 }),
+        ...(opts?.referenceImages?.image4 && { input_image_4: opts.referenceImages.image4 }),
       };
 
       // Configurar timeout e retry
@@ -361,9 +376,21 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
 
       // Usar o método correto do flux-kontext-pro
       const prompt = this.generatePrompt(params.roomType, params.furnitureStyle);
+      
+      // Preparar imagens de referência se fornecidas
+      const referenceImages = {
+        ...(params.referenceImage2 && { image2: params.referenceImage2 }),
+        ...(params.referenceImage3 && { image3: params.referenceImage3 }),
+        ...(params.referenceImage4 && { image4: params.referenceImage4 }),
+      };
+      
       const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
-        prompt
+        prompt,
+        {
+          ...(params.options?.seed !== undefined && { seed: params.options.seed }),
+          ...(Object.keys(referenceImages).length > 0 && { referenceImages })
+        }
       );
 
       if (response.error) {

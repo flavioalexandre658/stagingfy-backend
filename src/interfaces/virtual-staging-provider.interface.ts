@@ -34,6 +34,10 @@ export interface VirtualStagingParams {
   furnitureStyle: FurnitureStyle;
   uploadId: string;
   webhookUrl?: string;
+  // Imagens de referência opcionais (até 3 adicionais)
+  referenceImage2?: string; // base64
+  referenceImage3?: string; // base64
+  referenceImage4?: string; // base64
   options?: {
     seed?: number;
     numImages?: number;

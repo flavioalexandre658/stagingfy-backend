@@ -24,6 +24,22 @@ router.post(
 );
 
 /**
+ * @route POST /api/v1/virtual-staging/with-references
+ * @desc Processa virtual staging com até 4 imagens (1 principal + 3 de referência)
+ * @access Private
+ * @body { roomType: string, furnitureStyle: string, plan?: string, seed?: number, customPrompt?: string }
+ * @files image (obrigatória), referenceImage2, referenceImage3, referenceImage4 (opcionais)
+ * @description Aceita imagem principal obrigatória e até 3 imagens de referência opcionais
+ * @note Processamento assíncrono com suporte a imagens de referência para Black Forest provider
+ */
+router.post(
+  '/with-references',
+  virtualStagingController.debugMiddleware,
+  virtualStagingController.uploadMultipleMiddleware,
+  virtualStagingController.processVirtualStagingWithReferences.bind(virtualStagingController)
+);
+
+/**
  * @route GET /api/v1/virtual-staging/:uploadId/status
  * @desc Busca o status de um processamento de virtual staging
  * @access Private
