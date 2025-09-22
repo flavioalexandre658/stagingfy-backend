@@ -594,7 +594,7 @@ export class BlackForestProvider
   }
 
   /**
-   * Novo método de virtual staging em 3 etapas
+   * Novo método de virtual staging em 4 etapas
    */
   async processVirtualStagingInStages(
     params: VirtualStagingParams

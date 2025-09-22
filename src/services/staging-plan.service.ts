@@ -829,7 +829,7 @@ class StagingPlanService {
   }
 
   /**
-   * Gera um plano completo de staging em 3 etapas para um cômodo específico
+   * Gera um plano completo de staging em 4 etapas para um cômodo específico
    */
   generateStagingPlan(
     roomType: RoomType,
@@ -850,7 +850,7 @@ class StagingPlanService {
           break;
         case 'complement':
           stageSpecificText =
-            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
+            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures, surfaces.';
           break;
         case 'wall_decoration':
           stageSpecificText =
@@ -926,7 +926,6 @@ Do not alter or replace any fixed architectural or material elements: keep the f
         validationRules: [
           'count_comp_items',
           'no_wall_decor',
-          'no_window_treatments',
           'circulation_clear',
           'plant_placement',
         ],
@@ -947,7 +946,43 @@ Do not alter or replace any fixed architectural or material elements: keep the f
         ),
       },
 
-      // Etapa 3: Decoração de parede - Quadros, espelhos e elementos decorativos
+      // Etapa 3: Decoração de janelas - Cortinas, persianas e tratamentos de janela
+      {
+        stage: 'windows_decoration',
+        minItems: plan.windowsDecorRange[0],
+        maxItems: plan.windowsDecorRange[1],
+        allowedCategories: [
+          'curtains',
+          'blinds',
+          'shades',
+          'window_treatments',
+          'window_decor',
+        ],
+        validationRules: [
+          'windows_decoration_allowed',
+          'no_wall_decor',
+          'circulation_clear',
+          'proper_window_coverage',
+          'style_consistency',
+        ],
+        prompt: this.generateStagePrompt(
+          'windows_decoration',
+          roomLabel,
+          styleLabel,
+          '',
+          '',
+          '',
+          allowedWindowsShort,
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          plan.wallDecorRange,
+          plan.windowsDecorRange,
+          getStageSpecificGlobalRules('windows_decoration'),
+          ''
+        ),
+      },
+
+      // Etapa 4: Decoração de parede - Quadros, espelhos e elementos decorativos
       {
         stage: 'wall_decoration',
         minItems: plan.wallDecorRange[0],
@@ -978,41 +1013,6 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.wallDecorRange,
           plan.windowsDecorRange,
           getStageSpecificGlobalRules('wall_decoration'),
-          ''
-        ),
-      },
-
-      // Etapa 4: Decoração de janelas - Cortinas, persianas e tratamentos de janela
-      {
-        stage: 'windows_decoration',
-        minItems: plan.windowsDecorRange[0],
-        maxItems: plan.windowsDecorRange[1],
-        allowedCategories: [
-          'curtains',
-          'blinds',
-          'shades',
-          'window_treatments',
-          'window_decor',
-        ],
-        validationRules: [
-          'windows_decoration_allowed',
-          'circulation_clear',
-          'proper_window_coverage',
-          'style_consistency',
-        ],
-        prompt: this.generateStagePrompt(
-          'windows_decoration',
-          roomLabel,
-          styleLabel,
-          '',
-          '',
-          '',
-          allowedWindowsShort,
-          plan.mainPiecesRange,
-          plan.complementaryRange,
-          plan.wallDecorRange,
-          plan.windowsDecorRange,
-          getStageSpecificGlobalRules('windows_decoration'),
           ''
         ),
       },
@@ -1068,10 +1068,6 @@ If the chosen furniture piece is too large and would require altering the struct
   Add permitted complementary items and accessories selected from: ${allowedCompShort}.
 Add ${minComp}–${maxComp} complementary items to complete the scene.
 
-Placement rule — plants & vases:
-• Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
-• Keep them fully out of circulation lanes and clearances for doors, windows, and stairs; never center them in the room or in front of openings.
-
 Maintain ≥ 90 cm (36") of clear circulation. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
 
 If in doubt about fit or clearance, skip the item. 
@@ -1081,8 +1077,8 @@ If in doubt about fit or clearance, skip the item.
       case 'wall_decoration':
         return `${globalRulesText}
 
-Add (If no unobstructed wall area is available) permitted wall decoration items and accessories selected from: ${allowedWallShort}.
-Add (If no unobstructed wall area is available) ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
+Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
+Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
  If unsure about space, clearance, or window presence, SKIP.
 

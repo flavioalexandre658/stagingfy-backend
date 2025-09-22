@@ -211,7 +211,7 @@ export class VirtualStagingController {
   };
 
   /**
-   * Processa virtual staging em 3 etapas usando Black Forest provider
+   * Processa virtual staging em 4 etapas usando Black Forest provider
    */
   async processVirtualStaging(req: Request, res: Response): Promise<void> {
     try {
