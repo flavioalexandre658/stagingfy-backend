@@ -967,10 +967,12 @@ Placement:
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
+• Curtains or drapery may be added only if an existing window, sliding glass door, or built-in track/rod is clearly visible. Use neutral, lightweight fabric; keep floor-to-ceiling proportions.
 
 Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
-• If unsure about space or placement, SKIP.
+• Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
+• If unsure about space, clearance, or window presence, SKIP.
 
 `;
 
