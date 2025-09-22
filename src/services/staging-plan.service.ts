@@ -38,42 +38,90 @@ class StagingPlanService {
       Omit<RoomStagingPlan, 'styleEmphasis'>
     > = {
       living_room: {
-        mainPiecesRange: [2, 4],
-        wallDecorRange: [0, 1],
-        complementaryRange: [2, 4],
+        // ↑ Ajustei ranges para compor melhor cenários pequenos a grandes
+        // (mantém margem para o seu sampler escolher 5 e ainda ficar coerente)
+        mainPiecesRange: [3, 5],
+        wallDecorRange: [1, 2],
+        complementaryRange: [3, 6],
+
         allowedMainItems: [
+          // Seating (âncora)
           'modular sectional or curved sofa (low-profile)',
           'compact 2–3 seat sofa',
+          'loveseat (1.5–2 seat, low-profile)',
+          'daybed (low-profile, freestanding)',
+          'chaise lounge (freestanding)',
           'accent barrel or bouclé swivel chair (1–2)',
+          'pair of lounge chairs',
           'lounge chair with ottoman',
+
+          // Mesas e apoio
           'nesting coffee tables (travertine/stone/smoked glass)',
           'plinth or pedestal coffee table',
-          'low-profile media console (fluted wood or matte lacquer)',
-          'storage ottoman or upholstered bench',
-          'slim bookcase/etagere',
+          'waterfall coffee table (stone or wood)',
           'pedestal/cylinder side tables (single or nesting)',
+          'C-shaped side table (sofa arm)',
+
+          // Armazenagem/linha baixa
+          'low-profile media console (fluted wood or matte lacquer)',
+          'slim credenza (low, flush-front)',
+          'slim bookcase/etagere',
+          'corner bookcase (slim)',
+          'console table behind sofa (≤ 35 cm deep)',
+          'open shelving room divider (low, freestanding)',
+
+          // Extra funcional
+          'storage ottoman or upholstered bench',
+          'bar cart (freestanding, with casters)',
+          'record console / slim media cabinet',
         ],
+
         allowedWallDecor: [
           'large framed artwork (abstract/botanical)',
           'oversized round or pill mirror',
           'paired framed prints (diptych)',
+          'triptych framed set',
+          'balanced gallery wall set (3–5 small frames)',
           'picture ledge with framed art (surface-mounted)',
           'slim floating shelves (surface-mounted, shallow)',
+          'sculptural wall relief (lightweight, surface-mounted)',
+          'textile/tapestry wall hanging (lightweight)',
           'plug-in wall sconces (pair, no hardwiring)',
+          'plug-in picture light over artwork',
         ],
+
         allowedComplementary: [
+          // Tapetes e camadas
           'large area rug anchoring front legs of seating',
+          'layering rug (smaller rug layered over base rug)',
+
+          // Iluminação
           'arc floor lamp or slim linear floor lamp',
+          'reading/task floor lamp (slim)',
           'table lamps (pair) on side tables/console',
+
+          // Têxteis e conforto
           'textured pillows and throw blanket (bouclé/linen)',
-          'indoor plant (olive tree/fiddle-leaf) in matte planter',
-          'ceramic/stone vases, bowls, trays',
-          'woven basket for throws or magazines',
           'pouf or small ottoman',
+
+          // Plantas e objetos
+          'indoor plant (olive tree/fiddle-leaf) in matte planter',
+          'small tabletop plant in ceramic pot',
+          'ceramic/stone vases, bowls, trays',
+          'decorative object/sculpture on coffee table',
+          'coffee table books stack',
+          'woven basket for throws or magazines',
+          'tray on ottoman or coffee table (drinks/books)',
+          'blanket ladder (freestanding, leaning)',
+          'LED candle holders/lanterns (freestanding)',
+          'speaker on stand / vinyl holder (freestanding)',
         ],
+
         roomSafetyNotes: [
           'Keep a clear seating circulation path (at least one side of the seating open)',
           'Do not block balcony/door thresholds with furniture',
+          'Maintain ≥ 90 cm (36") of clear passage around primary seating and door swings',
+          'Keep lighting cords managed; do not span cords across walk paths',
         ],
       },
 
