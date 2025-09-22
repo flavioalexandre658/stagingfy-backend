@@ -1086,15 +1086,25 @@ Do not alter or replace any fixed architectural or material elements: keep the f
 
     const globalRulesText = globalRules.join('\n');
 
+    let ref = '';
+    if (roomLabel == 'living_room') {
+      ref = `
+Copy sofa reference and styles from the second image
+Copy tables reference and styles from the third image
+Copy armchairs reference and styles from the fourth image`;
+    } else if (roomLabel == 'bedroom') {
+      ref = `
+Copy beds reference and styles from the second image
+Copy dressers reference and styles from the third image
+Copy armchairs reference and styles from the fourth image`;
+    }
     switch (stage) {
       case 'foundation':
         return `${globalRulesText}
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only from: ${allowedMainShort}.
-Copy sofa reference and styles from the second image
-Copy tables reference and styles from the third image
-Copy armchairs reference and styles from the fourth image
+${ref}
 Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
 
 Circulation & placement rules (strict):
