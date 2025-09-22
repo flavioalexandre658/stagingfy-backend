@@ -77,6 +77,7 @@ class StagingPlanService {
         ],
 
         allowedWallDecor: [
+          // Art & mirrors
           'large framed artwork (abstract/botanical)',
           'oversized round or pill mirror',
           'paired framed prints (diptych)',
@@ -86,8 +87,17 @@ class StagingPlanService {
           'slim floating shelves (surface-mounted, shallow)',
           'sculptural wall relief (lightweight, surface-mounted)',
           'textile/tapestry wall hanging (lightweight)',
+
+          // Lighting (não hardwired)
           'plug-in wall sconces (pair, no hardwiring)',
           'plug-in picture light over artwork',
+
+          // Window treatments — SOMENTE onde houver janela existente
+          'sheer or linen curtains on rod or ceiling track (existing windows only)',
+          'double-layer curtains (sheer + blackout) on existing windows',
+          'roman shade on existing window (inside or outside mount)',
+          'roller shade on existing window (inside or outside mount)',
+          'curtain rod or track hardware mounted above existing window (no new openings)',
         ],
 
         allowedComplementary: [
@@ -1007,7 +1017,18 @@ If in doubt about fit or clearance, skip the item.
 Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
 Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
-Placement:
+Wall availability check (mandatory):
+• First, detect unobstructed wall segments (no doors/windows/closets). A valid segment must be ≥ 80 cm wide and ≥ 60 cm tall with clear surrounding space.
+• If no valid free segment exists on a wall, SKIP artwork, mirrors, picture ledges, and floating shelves on that wall.
+• Never overlap frames/shelves with windows, door casings, radiators, or switches.
+
+Windows & treatments (existing windows only):
+• If windows are present, you may add window treatments ONLY on those real windows: sheer/linen curtains on rod or ceiling track, double-layer curtains (sheer + blackout), roman shades, or roller shades.
+• Mount curtain rods/tracks above the real window (≈10–15 cm above frame; extend 10–20 cm beyond each side). Do NOT invent new openings or hardware where no window exists.
+• Curtain length should skim the floor; shades must fit the window (inside or outside mount) without covering adjacent trims or outlets.
+• Keep window hardware clear of door swings and circulation; do not block handles or latches.
+
+Placement for artwork/mirrors (only where a valid free segment exists):
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
@@ -1015,7 +1036,7 @@ Placement:
 Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
 • Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
-• If unsure about space, clearance, or window presence, SKIP.
+• If unsure about free wall availability or window presence, SKIP.
 
 `;
 
