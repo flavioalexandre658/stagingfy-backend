@@ -39,7 +39,7 @@ class StagingPlanService {
     > = {
       living_room: {
         // Quantidades ajustadas (essenciais, sem sobrecarregar)
-        mainPiecesRange: [2, 3],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [0, 2], // pode ser 0 quando há muitas janelas
         complementaryRange: [3, 5],
         windowsDecorRange: [1, 4], // tratar janelas quando existirem
@@ -848,9 +848,13 @@ class StagingPlanService {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
-    
+
     // Gerar estilo global uma única vez para todas as etapas
-    const globalStyleGuidance = this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'foundation');
+    const globalStyleGuidance = this.buildDynamicStyleGuidance(
+      furnitureStyle,
+      roomType,
+      'foundation'
+    );
 
     // Função para gerar regras específicas por stage
     const getStageSpecificGlobalRules = (stage: StagingStage): string[] => {
@@ -859,7 +863,7 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture items (copying styles from the second image), on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
+            'Add only freestanding furniture items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
           break;
         case 'complement':
           stageSpecificText =
@@ -1088,6 +1092,9 @@ Do not alter or replace any fixed architectural or material elements: keep the f
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only from: ${allowedMainShort}.
+Copy sofa reference and styles from the second image
+Copy tables reference and styles from the third image
+Copy armchairs reference and styles from the fourth image
 Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
 
 Circulation & placement rules (strict):
