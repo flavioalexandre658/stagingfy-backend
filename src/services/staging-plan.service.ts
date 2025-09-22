@@ -95,26 +95,56 @@ class StagingPlanService {
           'large area rug anchoring front legs of seating',
           'layering rug (smaller rug layered over base rug)',
 
-          // Iluminação
+          // Iluminação (freestanding / portátil)
           'arc floor lamp or slim linear floor lamp',
           'reading/task floor lamp (slim)',
           'table lamps (pair) on side tables/console',
+          'portable cordless table lamp (rechargeable)',
+          'LED floor lanterns (freestanding)',
 
           // Têxteis e conforto
           'textured pillows and throw blanket (bouclé/linen)',
+          'contrasting lumbar pillow (pair)',
           'pouf or small ottoman',
+          'shearling or bouclé accent throw',
 
-          // Plantas e objetos
+          // Plantas — tamanhos e tipologias modernas
           'indoor plant (olive tree/fiddle-leaf) in matte planter',
+          'monstera deliciosa in cylinder planter',
+          'rubber plant (ficus elastica) in tall planter',
+          'bird of paradise (strelitzia) in slim planter',
+          'snake plant (sansevieria) in pedestal planter',
+          'ZZ plant (zamioculcas) in low bowl planter',
+          'tall cactus cluster in stone planter',
           'small tabletop plant in ceramic pot',
+          'dried pampas/grass arrangement in tall vase',
+
+          // Objetos modernos (pedras, vidro, metal)
           'ceramic/stone vases, bowls, trays',
-          'decorative object/sculpture on coffee table',
+          'ribbed or smoked-glass vase (large)',
+          'travertine catchall tray',
+          'sculptural object for coffee table (metal/stone)',
+          'decorative bookend pair (stone/metal)',
           'coffee table books stack',
+          'minimal incense holder or reed diffuser',
+          'LED candle holders (freestanding)',
+
+          // Organização & apoio
           'woven basket for throws or magazines',
+          'magazine rack (freestanding, metal or leather)',
           'tray on ottoman or coffee table (drinks/books)',
+          'coaster set (stone/leather) on coffee table',
           'blanket ladder (freestanding, leaning)',
-          'LED candle holders/lanterns (freestanding)',
+
+          // Tech discreto
           'speaker on stand / vinyl holder (freestanding)',
+          'minimal charging tray (on console/side table)',
+          'record stand (slim, freestanding)',
+
+          // Pequenos móveis de apoio modernos (ainda “complementares”)
+          'C-shaped side table (sofa arm)',
+          'low pedestal stand for plant or sculpture',
+          'narrow console tray on media console (surface-styled)',
         ],
 
         roomSafetyNotes: [
