@@ -77,7 +77,6 @@ class StagingPlanService {
         ],
 
         allowedWallDecor: [
-          // Art & mirrors
           'large framed artwork (abstract/botanical)',
           'oversized round or pill mirror',
           'paired framed prints (diptych)',
@@ -87,17 +86,8 @@ class StagingPlanService {
           'slim floating shelves (surface-mounted, shallow)',
           'sculptural wall relief (lightweight, surface-mounted)',
           'textile/tapestry wall hanging (lightweight)',
-
-          // Lighting (não hardwired)
           'plug-in wall sconces (pair, no hardwiring)',
           'plug-in picture light over artwork',
-
-          // Window treatments — SOMENTE onde houver janela existente
-          'sheer or linen curtains on rod or ceiling track (existing windows only)',
-          'double-layer curtains (sheer + blackout) on existing windows',
-          'roman shade on existing window (inside or outside mount)',
-          'roller shade on existing window (inside or outside mount)',
-          'curtain rod or track hardware mounted above existing window (no new openings)',
         ],
 
         allowedComplementary: [
@@ -831,14 +821,13 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture copy styles from the image references (second image),';
+            'Add only freestanding furniture copy styles from the image references (second image, third image and fourth image),';
           break;
         case 'complement':
-          stageSpecificText =
-            'Add only freestanding decor copy styles from the image references (third image),';
+          stageSpecificText = 'Add only freestanding decor,';
           break;
         case 'wall_decoration':
-          stageSpecificText = 'Add only freestanding wall decoration';
+          stageSpecificText = 'Add only freestanding wall decoration,';
           break;
         default:
           stageSpecificText = 'Add only freestanding furniture and decor';
@@ -990,7 +979,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
         return `${globalRulesText}
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Select only from: ${allowedMainShort}.
-Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
+Add between ${minMain} and ${maxMain} essential main pieces.
 Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
 No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
 If in doubt about fit or clearance, skip the item.
@@ -1000,7 +989,7 @@ If the chosen furniture piece is too large and would require altering the struct
       case 'complement':
         return `${globalRulesText}
   Add permitted complementary items and accessories selected from: ${allowedCompShort}.
-Add ${minComp}–${maxComp} complementary items to complete the scene. ${stylesRules}
+Add ${minComp}–${maxComp} complementary items to complete the scene.
 
 Placement rule — plants & vases:
 • Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
@@ -1017,18 +1006,7 @@ If in doubt about fit or clearance, skip the item.
 Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
 Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
-Wall availability check (mandatory):
-• First, detect unobstructed wall segments (no doors/windows/closets). A valid segment must be ≥ 80 cm wide and ≥ 60 cm tall with clear surrounding space.
-• If no valid free segment exists on a wall, SKIP artwork, mirrors, picture ledges, and floating shelves on that wall.
-• Never overlap frames/shelves with windows, door casings, radiators, or switches.
-
-Windows & treatments (existing windows only):
-• If windows are present, you may add window treatments ONLY on those real windows: sheer/linen curtains on rod or ceiling track, double-layer curtains (sheer + blackout), roman shades, or roller shades.
-• Mount curtain rods/tracks above the real window (≈10–15 cm above frame; extend 10–20 cm beyond each side). Do NOT invent new openings or hardware where no window exists.
-• Curtain length should skim the floor; shades must fit the window (inside or outside mount) without covering adjacent trims or outlets.
-• Keep window hardware clear of door swings and circulation; do not block handles or latches.
-
-Placement for artwork/mirrors (only where a valid free segment exists):
+Placement:
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
@@ -1036,7 +1014,7 @@ Placement for artwork/mirrors (only where a valid free segment exists):
 Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
 • Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
-• If unsure about free wall availability or window presence, SKIP.
+• If unsure about space, clearance, or window presence, SKIP.
 
 `;
 
