@@ -287,7 +287,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       dining_room: {
-        mainPiecesRange: [2, 2],
+        mainPiecesRange: [1, 2],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
