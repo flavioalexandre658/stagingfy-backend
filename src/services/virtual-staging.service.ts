@@ -111,6 +111,57 @@ export class VirtualStagingService extends BaseService {
   }
 
   /**
+   * Processa virtual staging em etapas
+   */
+  async processVirtualStagingInStages(
+    params: VirtualStagingParams,
+    providerName?: Provider
+  ): Promise<VirtualStagingResult> {
+    const provider = this.getProvider(providerName);
+
+    // Verificar se o provider suporta processamento em etapas
+    if (!provider.processVirtualStagingInStages) {
+      // Fallback para o método padrão se não suportar etapas
+      return this.processVirtualStaging(params, providerName);
+    }
+
+    this.logOperation('Processing virtual staging in stages', {
+      provider: provider.name,
+      uploadId: params.uploadId,
+      roomType: params.roomType,
+      furnitureStyle: params.furnitureStyle,
+    });
+
+    try {
+      // Validar parâmetros
+      provider.validateParams(params);
+
+      // Processar virtual staging em etapas
+      const result = await provider.processVirtualStagingInStages(params);
+
+      this.logOperation('Virtual staging in stages completed', {
+        provider: provider.name,
+        success: result.success,
+        requestId: result.requestId,
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Virtual staging in stages failed with ${provider.name}:`,
+        error as Error
+      );
+
+      return {
+        success: false,
+        errorMessage: `Processing failed: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
    * Verifica status de job
    */
   async checkJobStatus(

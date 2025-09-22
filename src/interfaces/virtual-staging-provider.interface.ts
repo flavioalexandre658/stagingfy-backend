@@ -77,6 +77,11 @@ export interface IVirtualStagingProvider {
   processVirtualStaging(params: VirtualStagingParams): Promise<VirtualStagingResult>;
 
   /**
+   * Processa virtual staging em etapas (opcional)
+   */
+  processVirtualStagingInStages?(params: VirtualStagingParams): Promise<VirtualStagingResult>;
+
+  /**
    * Verifica o status de um job (para provedores assíncronos)
    */
   checkJobStatus?(jobId: string): Promise<VirtualStagingResult>;

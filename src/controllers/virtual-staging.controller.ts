@@ -942,11 +942,11 @@ export class VirtualStagingController {
         console.log(`[${uploadId}] 📊 Progress:`, progress);
       };
 
-      // Processar staging usando o service unificado
+      // Processar staging usando o service unificado em etapas
       const webhookUrl = provider === 'black-forest' 
         ? 'https://api.stagingfy.com/api/v1/webhooks/black-forest'
         : 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
-      const result = await this.virtualStagingService.processVirtualStaging(params, provider);
+      const result = await this.virtualStagingService.processVirtualStagingInStages(params, provider);
 
       if (result.success) {
         console.log(`[${uploadId}] ✅ Processamento com referências concluído com sucesso!`, {
@@ -1002,12 +1002,12 @@ export class VirtualStagingController {
       // Converter imagem para base64
       const imageBase64 = imageBuffer.toString('base64');
 
-      // Usar o service unificado para processar virtual staging
+      // Usar o service unificado para processar virtual staging em etapas
       // Webhook URL baseado no provider
       const webhookUrl = provider === 'black-forest' 
         ? 'https://api.stagingfy.com/api/v1/webhooks/black-forest'
         : 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
-      const result = await this.virtualStagingService.processVirtualStaging({
+      const result = await this.virtualStagingService.processVirtualStagingInStages({
         imageBase64,
         imageUrl: inputImageUrl,
         roomType,
