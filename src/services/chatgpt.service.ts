@@ -986,8 +986,13 @@ Placement:
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
-• Curtains or drapery may be added only if an existing window, sliding glass door, or built-in track/rod is clearly visible. Use neutral, lightweight fabric; keep floor-to-ceiling proportions.
-
+• Add only if a real WINDOW or a large GLASS SLIDING DOOR is clearly visible.
+• Do NOT add on hinged swing doors (~70–90 cm wide) or opaque wood/metal doors; skip in these cases.
+• Minimum visible width to qualify: ≥120 cm (prefer ≥160 cm) for sliding glass doors.
+• Use existing rod/track only; do not invent rods or tracks. If none is visible, skip.
+• Neutral, lightweight fabric; floor-to-ceiling proportion; keep clear of handles and openings.
+• If uncertain about door type, glass presence, or width → SKIP.
+o curtains on swing doors, no curtains on narrow doors (≤90 cm), no invented rods/tracks, no altering door type, no blocking handles, no adding to opaque wood or metal doors.
 Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
 • Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
