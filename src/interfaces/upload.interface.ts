@@ -1,6 +1,6 @@
 export type UploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
-export type RoomType = 
+export type RoomType =
   | 'bedroom'
   | 'living_room'
   | 'kitchen'
@@ -10,7 +10,7 @@ export type RoomType =
   | 'kids_room'
   | 'outdoor';
 
-export type FurnitureStyle = 
+export type FurnitureStyle =
   | 'standard'
   | 'modern'
   | 'scandinavian'
@@ -72,7 +72,13 @@ export interface BlackForestApiRequest {
 
 export interface BlackForestApiResponse {
   id: string;
-  status: 'Task not found' | 'Pending' | 'Request Moderated' | 'Content Moderated' | 'Ready' | 'Error';
+  status:
+    | 'Task not found'
+    | 'Pending'
+    | 'Request Moderated'
+    | 'Content Moderated'
+    | 'Ready'
+    | 'Error';
   polling_url?: string; // Retornado na resposta inicial
   result?: {
     sample?: string; // URL da imagem gerada
@@ -109,7 +115,11 @@ export interface LoraConfig {
 }
 
 // Novas interfaces para o sistema de staging em etapas
-export type StagingStage = 'foundation' | 'complement' | 'wall_decoration' | 'windows_decoration';
+export type StagingStage =
+  | 'foundation'
+  | 'complement'
+  | 'wall_decoration'
+  | 'windows_decoration';
 
 export interface StagingStageConfig {
   stage: StagingStage;
@@ -125,7 +135,6 @@ export interface StagingPlan {
   furnitureStyle: FurnitureStyle;
   stages: StagingStageConfig[];
   globalRules: string[];
-  roomSpecificRules: string[];
 }
 
 export interface StagingStageResult {

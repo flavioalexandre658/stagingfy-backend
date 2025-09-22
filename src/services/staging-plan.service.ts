@@ -21,9 +21,6 @@ interface RoomStagingPlan {
   allowedComplementary: string[]; // safe complementary items
   allowedWindowsDecor: string[]; // safe window treatments
 
-  // Extra, room-specific safety notes (e.g., island clearances, stair lanes)
-  roomSafetyNotes: string[]; // appended into prompt
-
   // Optional style emphasis (short, to steer material/finish without forcing structure)
   styleEmphasis?: string[];
 }
@@ -40,136 +37,82 @@ class StagingPlanService {
       Omit<RoomStagingPlan, 'styleEmphasis'>
     > = {
       living_room: {
-        // ↑ Ajustei ranges para compor melhor cenários pequenos a grandes
-        // (mantém margem para o seu sampler escolher 5 e ainda ficar coerente)
-        mainPiecesRange: [3, 5],
-        wallDecorRange: [1, 2],
-        complementaryRange: [3, 6],
-        windowsDecorRange: [1, 3],
+        // Quantidades ajustadas (essenciais, sem sobrecarregar)
+        mainPiecesRange: [3, 4],
+        wallDecorRange: [0, 1], // pode ser 0 quando há muitas janelas
+        complementaryRange: [3, 5],
+        windowsDecorRange: [1, 2], // tratar janelas quando existirem
 
         allowedMainItems: [
-          // Seating (âncora)
+          // Seating âncora (atuais)
           'modular sectional or curved sofa (low-profile)',
           'compact 2–3 seat sofa',
-          'loveseat (1.5–2 seat, low-profile)',
-          'daybed (low-profile, freestanding)',
-          'chaise lounge (freestanding)',
           'accent barrel or bouclé swivel chair (1–2)',
-          'pair of lounge chairs',
           'lounge chair with ottoman',
 
-          // Mesas e apoio
+          // Mesas e apoio essenciais
           'nesting coffee tables (travertine/stone/smoked glass)',
           'plinth or pedestal coffee table',
-          'waterfall coffee table (stone or wood)',
           'pedestal/cylinder side tables (single or nesting)',
-          'C-shaped side table (sofa arm)',
 
-          // Armazenagem/linha baixa
+          // Linha baixa/armazenagem atual
           'low-profile media console (fluted wood or matte lacquer)',
-          'slim credenza (low, flush-front)',
           'slim bookcase/etagere',
-          'corner bookcase (slim)',
-          'console table behind sofa (≤ 35 cm deep)',
-          'open shelving room divider (low, freestanding)',
 
-          // Extra funcional
+          // Funcional indispensável
           'storage ottoman or upholstered bench',
-          'bar cart (freestanding, with casters)',
-          'record console / slim media cabinet',
         ],
 
         allowedWallDecor: [
+          // Arte e espelhos essenciais (superficiais, sem obra)
           'large framed artwork (abstract/botanical)',
           'oversized round or pill mirror',
           'paired framed prints (diptych)',
-          'triptych framed set',
-          'balanced gallery wall set (3–5 small frames)',
           'picture ledge with framed art (surface-mounted)',
-          'slim floating shelves (surface-mounted, shallow)',
-          'sculptural wall relief (lightweight, surface-mounted)',
-          'textile/tapestry wall hanging (lightweight)',
+          // Iluminação de parede plug-in (não embutida)
           'plug-in wall sconces (pair, no hardwiring)',
           'plug-in picture light over artwork',
         ],
 
+        // SOMENTE complementos (detalhes) — nada de mini-móveis
         allowedComplementary: [
-          // Tapetes e camadas
+          // Tapete (base da composição)
           'large area rug anchoring front legs of seating',
-          'layering rug (smaller rug layered over base rug)',
 
-          // Iluminação (freestanding / portátil)
+          // Iluminação portátil/leve (2024/25)
           'arc floor lamp or slim linear floor lamp',
           'reading/task floor lamp (slim)',
-          'table lamps (pair) on side tables/console',
           'portable cordless table lamp (rechargeable)',
-          'LED floor lanterns (freestanding)',
 
-          // Têxteis e conforto
+          // Têxteis de apoio
           'textured pillows and throw blanket (bouclé/linen)',
-          'contrasting lumbar pillow (pair)',
           'pouf or small ottoman',
-          'shearling or bouclé accent throw',
 
-          // Plantas — tamanhos e tipologias modernas
+          // Plantas (seleção enxuta e atual)
           'indoor plant (olive tree/fiddle-leaf) in matte planter',
           'monstera deliciosa in cylinder planter',
           'rubber plant (ficus elastica) in tall planter',
-          'bird of paradise (strelitzia) in slim planter',
           'snake plant (sansevieria) in pedestal planter',
-          'ZZ plant (zamioculcas) in low bowl planter',
-          'tall cactus cluster in stone planter',
-          'small tabletop plant in ceramic pot',
-          'dried pampas/grass arrangement in tall vase',
 
-          // Objetos modernos (pedras, vidro, metal)
+          // Objetos modernos (materiais honestos)
           'ceramic/stone vases, bowls, trays',
           'ribbed or smoked-glass vase (large)',
           'travertine catchall tray',
           'sculptural object for coffee table (metal/stone)',
-          'decorative bookend pair (stone/metal)',
           'coffee table books stack',
-          'minimal incense holder or reed diffuser',
-          'LED candle holders (freestanding)',
-
-          // Organização & apoio
           'woven basket for throws or magazines',
-          'magazine rack (freestanding, metal or leather)',
           'tray on ottoman or coffee table (drinks/books)',
-          'coaster set (stone/leather) on coffee table',
-          'blanket ladder (freestanding, leaning)',
-
-          // Tech discreto
-          'speaker on stand / vinyl holder (freestanding)',
-          'minimal charging tray (on console/side table)',
-          'record stand (slim, freestanding)',
-
-          // Pequenos móveis de apoio modernos (ainda "complementares")
-          'C-shaped side table (sofa arm)',
-          'low pedestal stand for plant or sculpture',
-          'narrow console tray on media console (surface-styled)',
+          'minimal reed diffuser (no open flame)',
         ],
 
+        // Tratamento de janelas — só onde existir janela real, estética atual
         allowedWindowsDecor: [
           'linen curtains (floor-length, neutral tones)',
           'sheer curtains (white/cream, light filtering)',
-          'roman shades (linen/cotton, cordless)',
-          'bamboo blinds (natural wood tones)',
-          'cellular shades (honeycomb, light filtering)',
+          'double-layer curtains (sheer + blackout) on existing windows',
+          'roman shades (linen/cotton)',
           'roller shades (blackout or light filtering)',
-          'cafe curtains (lower window coverage)',
-          'valances (simple, tailored style)',
-          'curtain tiebacks (rope/fabric, matching style)',
-          'decorative curtain rods (brass/black/wood)',
-          'window film (frosted/decorative, privacy)',
-          'window boxes with plants (if applicable)',
-        ],
-
-        roomSafetyNotes: [
-          'Keep a clear seating circulation path (at least one side of the seating open)',
-          'Do not block balcony/door thresholds with furniture',
-          'Maintain ≥ 90 cm (36") of clear passage around primary seating and door swings',
-          'Keep lighting cords managed; do not span cords across walk paths',
+          'minimal curtain rod or ceiling track (existing windows only)',
         ],
       },
 
@@ -212,10 +155,6 @@ class StagingPlanService {
           'cordless blinds (privacy and light control)',
           'window treatments matching bedding style',
         ],
-        roomSafetyNotes: [
-          'Keep door swings and closet access fully clear',
-          'Do not cover power outlets or switches with furniture fronts',
-        ],
       },
 
       kitchen: {
@@ -247,10 +186,6 @@ class StagingPlanService {
           'mini blinds (easy to clean)',
           'window herbs garden (small pots on sill)',
           'simple tie-up shades',
-        ],
-        roomSafetyNotes: [
-          'Do not place items that obstruct cabinet/appliance doors or walking lanes',
-          'Keep cooktop and sink areas unobstructed',
         ],
       },
 
@@ -284,10 +219,6 @@ class StagingPlanService {
           'bathroom cafe curtains (washable)',
           'simple roller shades (waterproof)',
           'venetian blinds (moisture resistant)',
-        ],
-        roomSafetyNotes: [
-          'Keep fixtures (toilet, vanity, shower) fully visible and unobstructed',
-          'Do not place items that could block door swing or shower entry',
         ],
       },
 
@@ -338,11 +269,6 @@ class StagingPlanService {
           'decorative curtain tiebacks (matching hardware)',
           'window cornices (architectural detail)',
         ],
-
-        roomSafetyNotes: [
-          'Keep chairs fully usable; do not push table too close to walls/doors',
-          'Maintain clear path around table perimeter',
-        ],
       },
 
       home_office: {
@@ -382,10 +308,6 @@ class StagingPlanService {
           'office curtains (neutral, professional)',
           'window film (glare reduction)',
         ],
-        roomSafetyNotes: [
-          'Keep cable management tidy; do not block outlets',
-          'Do not place furniture obstructing door or window opening',
-        ],
       },
 
       kids_room: {
@@ -424,10 +346,6 @@ class StagingPlanService {
           'decorative valances (playful themes)',
           'window clings (removable, fun designs)',
         ],
-        roomSafetyNotes: [
-          'Do not place furniture blocking closet/door',
-          'Keep walking paths free of tripping hazards',
-        ],
       },
 
       outdoor: {
@@ -460,10 +378,6 @@ class StagingPlanService {
           'outdoor curtains (weather-resistant)',
           'bamboo roll-up shades',
           'outdoor privacy screens',
-        ],
-        roomSafetyNotes: [
-          'Keep door thresholds and balcony edges unobstructed',
-          'Do not place items near unsafe edges or blocking emergency egress',
         ],
       },
     };
@@ -932,28 +846,27 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture copy styles from the second image,';
+            'Add only freestanding furniture (copying styles from the second image)';
           break;
         case 'complement':
-          stageSpecificText = 'Add only freestanding decor,';
+          stageSpecificText = 'Add only freestanding decor';
           break;
         case 'wall_decoration':
-          stageSpecificText = 'Add only freestanding wall decoration,';
+          stageSpecificText =
+            'Add freestanding wall decoration (only if a valid free wall segment exists)';
           break;
         case 'windows_decoration':
-          stageSpecificText = 'Add only window treatments and decorations,';
+          stageSpecificText = 'Add only window treatments and decorations';
           break;
         default:
           stageSpecificText = 'Add only freestanding furniture and decor';
       }
 
       return [
-        `${stageSpecificText} items on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
+        `${stageSpecificText} items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
 Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
       ];
     };
-
-    const roomSpecificRules = plan.roomSafetyNotes;
 
     // Versões curtas das categorias permitidas
     const allowedMainShort = this.sampleArray(plan.allowedMainItems, 4).join(
@@ -966,9 +879,10 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 4).join(
       ', '
     );
-    const allowedWindowsShort = this.sampleArray(plan.allowedWindowsDecor, 4).join(
-      ', '
-    );
+    const allowedWindowsShort = this.sampleArray(
+      plan.allowedWindowsDecor,
+      4
+    ).join(', ');
 
     const stages: StagingStageConfig[] = [
       // Etapa 1: Base/Fundação - Móveis principais
@@ -1105,8 +1019,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
       roomType,
       furnitureStyle,
       stages,
-      globalRules: getStageSpecificGlobalRules('foundation'), // Default para compatibilidade
-      roomSpecificRules,
+      globalRules: getStageSpecificGlobalRules('foundation'),
     };
   }
 
@@ -1164,6 +1077,9 @@ If in doubt about fit or clearance, skip the item.
 
       case 'wall_decoration':
         return `${globalRulesText}
+
+If no unobstructed wall area is available (e.g., windows/doors/closets or insufficient clearance), make no wall changes and return the image unchanged.
+
 Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
 Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
