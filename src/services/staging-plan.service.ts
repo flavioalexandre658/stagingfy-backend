@@ -415,42 +415,62 @@ class StagingPlanService {
     return labels[furnitureStyle];
   }
 
-  // ========== NOVO MÉTODO: orientação dinâmica de estilo ==========
+  // ========== NOVO MÉTODO (refinado): orientação dinâmica de estilo ==========
   /**
-   * Gera um bloco curto (2–4 linhas) com requisitos POSITIVOS/EVITAR
-   * para o estilo selecionado, sem mudar a estrutura do prompt.
-   * Ele é anexado ao final do prompt dos stages "foundation" e "complement".
+   * Bloco detalhado de estilo (paleta, materiais, silhueta, hardware, evitar, exemplos).
+   * É anexado ao final do prompt dos stages "foundation" e "complement".
+   * Foco: alta precisão de estilização + bloqueio de cores indesejadas (ex. azul/navy).
    */
   private buildDynamicStyleGuidance(
     furnitureStyle: FurnitureStyle,
     roomType: RoomType,
     stage: StagingStage
   ): string {
-    // perfis por estilo (positivos e evitar)
-    const profile: Record<
-      FurnitureStyle,
-      {
-        palette: string[];
-        materials: string[];
-        silhouettes: string[];
-        accents: string[];
-        avoid: string[];
-        examplesMain?: string[];
-        examplesComplementary?: string[];
-      }
-    > = {
+    type StyleDetail = {
+      palette: string[]; // cores preferidas
+      paletteAccents?: string[]; // acentos permitidos
+      blockedColors?: string[]; // cores proibidas explícitas
+      materials: string[]; // materiais/acabamentos
+      silhouettes: string[]; // forma/perfil
+      details?: string[]; // detalhes de construção/acabamento
+      hardware?: string[]; // metal/ferragem
+      patterns?: string[]; // padrões têxteis
+      avoid: string[]; // elementos a evitar (inclui cores indesejadas)
+      examplesMain?: string[]; // exemplos para foundation
+      examplesComplementary?: string[]; // exemplos para complement
+    };
+
+    const profile: Record<FurnitureStyle, StyleDetail> = {
       standard: {
-        palette: ['warm greige', 'taupe', 'soft gray', 'cream'],
+        palette: ['warm greige', 'taupe', 'soft warm gray', 'cream', 'ecru'],
+        paletteAccents: ['muted olive', 'warm beige'],
+        blockedColors: ['navy', 'cobalt blue', 'electric blue', 'icy blue'],
         materials: [
           'oak/walnut veneer',
+          'solid oak legs',
           'linen/cotton weaves',
           'brushed nickel',
         ],
-        silhouettes: ['soft rounded edges', 'balanced proportions'],
-        accents: ['subtle tone-on-tone patterns'],
-        avoid: ['high-gloss brass glam', 'neon colors', 'ornate carvings'],
+        silhouettes: [
+          'soft rounded edges',
+          'balanced proportions',
+          'box cushions (medium firmness)',
+        ],
+        details: [
+          'edge radius 10–25 mm',
+          'top-stitch seams',
+          'tone-on-tone piping',
+        ],
+        hardware: ['brushed nickel', 'matte black (limited)'],
+        patterns: ['subtle herringbone', 'micro-chevron', 'tone-on-tone weave'],
+        avoid: [
+          'high-gloss brass glam',
+          'neon colors',
+          'ornate carvings',
+          'heavy tufting',
+        ],
         examplesMain: [
-          'sofa with soft cushions',
+          'sofa in greige linen',
           'rectangular wood/stone coffee table',
         ],
         examplesComplementary: [
@@ -460,57 +480,127 @@ class StagingPlanService {
         ],
       },
       modern: {
-        palette: ['neutral gray/black/white', 'earthy charcoal'],
+        palette: ['greige', 'taupe', 'warm gray', 'cream', 'earthy charcoal'],
+        paletteAccents: ['desaturated olive', 'warm sand'],
+        blockedColors: [
+          'blue upholstery',
+          'navy',
+          'steel-blue',
+          'cold gray fabric',
+        ],
         materials: [
           'matte lacquer',
           'powder-coated metal',
           'smoked glass',
-          'stone',
+          'stone (travertine/basalt)',
         ],
         silhouettes: [
           'clean lines',
           'low-profile',
           'rectilinear with soft curves',
+          'thin sled or blade legs',
         ],
-        accents: ['matte black', 'satin chrome', 'fluted wood'],
+        details: [
+          'flush fronts',
+          'shadow gaps',
+          'fluted wood panels (limited)',
+        ],
+        hardware: ['matte black', 'satin chrome'],
+        patterns: ['plain weave', 'micro-texture (no bold prints)'],
         avoid: [
           'rustic distressing',
           'farmhouse cross-bucks',
           'heavy ornament',
+          'chromed mirror-finish overload',
         ],
-        examplesMain: ['low-profile sofa', 'smoked-glass coffee table'],
+        examplesMain: [
+          'low-profile sofa in taupe',
+          'smoked-glass coffee table',
+        ],
         examplesComplementary: [
           'lean floor lamp',
-          'minimal rug',
+          'minimal low-pile rug',
           'black metal side table',
         ],
       },
       scandinavian: {
-        palette: ['white/cream', 'light oak/beech', 'soft pastels'],
-        materials: ['bouclé/wool', 'natural wood', 'stoneware'],
-        silhouettes: ['organic curves', 'minimal ornament', 'airy forms'],
-        accents: ['woven textures', 'ceramics'],
+        palette: [
+          'white',
+          'cream',
+          'light oak',
+          'beech',
+          'warm gray',
+          'soft pastel accents',
+        ],
+        paletteAccents: ['sage', 'dusty pink (very subtle)'],
+        blockedColors: ['navy', 'cobalt', 'high-saturation jewel tones'],
+        materials: [
+          'bouclé/wool',
+          'oiled light wood',
+          'stoneware',
+          'cotton-linen',
+        ],
+        silhouettes: [
+          'organic curves',
+          'minimal ornament',
+          ' airy forms',
+          'tapered round legs',
+        ],
+        details: ['visible wood grain', 'softly rounded corners'],
+        hardware: ['light wood pulls', 'matte white/black minimal'],
+        patterns: ['fine stripes', 'subtle checks', 'knit textures'],
         avoid: ['dark heavy woods', 'mirrored glam', 'heavy tufting'],
-        examplesMain: ['light-oak sofa legs', 'round pedestal coffee table'],
+        examplesMain: [
+          'sofa with light-oak legs',
+          'round pedestal coffee table in light wood',
+        ],
         examplesComplementary: ['jute rug', 'linen throw', 'potted olive tree'],
       },
       industrial: {
-        palette: ['charcoal', 'ink', 'tobacco', 'warm gray'],
-        materials: ['blackened steel', 'raw wood', 'concrete/stone'],
-        silhouettes: ['robust forms', 'exposed joinery'],
-        accents: ['iron details', 'leather/canvas'],
+        palette: ['charcoal', 'ink', 'tobacco', 'warm gray', 'rust brown'],
+        paletteAccents: ['aged brass (subtle)'],
+        blockedColors: ['bright white glossy', 'pastels', 'navy velvet'],
+        materials: [
+          'blackened steel',
+          'raw/reclaimed wood',
+          'concrete/stone',
+          'oiled leather',
+        ],
+        silhouettes: ['robust forms', 'exposed joinery', 'square tube frames'],
+        details: ['visible welds (clean)', 'bolted brackets'],
+        hardware: ['blackened steel', 'antique brass'],
+        patterns: ['distressed leather grain', 'muted geometric weaves'],
         avoid: ['delicate ornament', 'bright whites', 'romantic/glam cues'],
         examplesMain: ['steel-frame coffee table', 'leather lounge chair'],
-        examplesComplementary: [
-          'rug with muted pattern',
-          'industrial floor lamp',
-        ],
+        examplesComplementary: ['muted-pattern rug', 'industrial floor lamp'],
       },
       midcentury: {
-        palette: ['walnut/teak', 'mustard', 'teal', 'olive'],
-        materials: ['linen tweed', 'bouclé', 'wood veneers'],
-        silhouettes: ['tapered legs', 'slim profiles', 'boxy cushions'],
-        accents: ['brass or black hardware', 'geometric motifs'],
+        palette: [
+          'walnut',
+          'teak',
+          'cream',
+          'warm white',
+          'olive',
+          'mustard',
+          'teal (muted)',
+        ],
+        paletteAccents: ['burnt orange (small doses)'],
+        blockedColors: ['navy velvet', 'chrome mirror-finish'],
+        materials: [
+          'walnut/teak veneer',
+          'solid wood tapered legs',
+          'linen tweed',
+          'bouclé',
+        ],
+        silhouettes: [
+          'tapered legs',
+          'slim profiles',
+          'boxy cushions',
+          'loose back cushions',
+        ],
+        details: ['button tuft (light)', 'piping', 'finger joints (visible)'],
+        hardware: ['brass', 'matte black'],
+        patterns: ['geometric/atomic', 'fine houndstooth (small scale)'],
         avoid: ['overstuffed oversized sofas', 'glossy chrome futurism'],
         examplesMain: ['walnut coffee table', 'sofa with tapered legs'],
         examplesComplementary: ['geometric cushion', 'low-pile rug'],
@@ -518,39 +608,77 @@ class StagingPlanService {
       luxury: {
         palette: [
           'rich neutrals',
+          'cream',
+          'taupe',
           'jewel accents (emerald/sapphire)',
-          'champagne gold',
         ],
-        materials: ['velvet', 'silk-blend', 'marble', 'mirror'],
-        silhouettes: ['sculptural', 'sumptuous'],
-        accents: ['polished brass', 'ribbed/fluted glass'],
+        paletteAccents: ['champagne gold'],
+        blockedColors: [
+          'rustic orange',
+          'distressed wood tones',
+          'matte-black overload',
+        ],
+        materials: [
+          'velvet',
+          'silk-blend',
+          'marble',
+          'mirror',
+          'ribbed/fluted glass',
+        ],
+        silhouettes: ['sculptural', 'sumptuous', 'softly curved arms'],
+        details: [
+          'deep plush seats',
+          'mitered stone edges',
+          'polished reveals',
+        ],
+        hardware: ['polished brass', 'champagne gold'],
+        patterns: ['subtle sheen weaves', 'fine ribbing'],
         avoid: [
           'rustic/raw woods',
           'distressed finishes',
-          'matte-black minimalism excess',
+          'industrial roughness',
         ],
         examplesMain: ['marble-top coffee table', 'velvet sofa'],
         examplesComplementary: ['brass floor lamp', 'plush high-pile rug'],
       },
       coastal: {
-        palette: ['white', 'sand', 'driftwood', 'soft blue/seafoam'],
-        materials: ['rattan', 'jute', 'light woods', 'linen'],
+        palette: ['white', 'sand', 'driftwood', 'warm gray', 'soft seafoam'],
+        paletteAccents: ['powder blue (very light)'],
+        blockedColors: ['navy lacquer', 'heavy black metal'],
+        materials: [
+          'rattan',
+          'jute',
+          'light woods',
+          'linen/cotton',
+          'washed finishes',
+        ],
         silhouettes: ['breezy', 'casual', 'rounded edges'],
-        accents: ['subtle stripes', 'botanical prints'],
-        avoid: ['heavy black metal', 'dark jewel tones', 'velvet glam'],
+        details: ['loose linen slipcovers', 'open-weave panels'],
+        hardware: ['brushed nickel', 'light bronze'],
+        patterns: ['subtle stripes', 'botanical prints (muted)'],
+        avoid: ['dark jewel tones', 'velvet glam'],
         examplesMain: ['light-wood sofa frame', 'round rattan coffee table'],
         examplesComplementary: ['jute rug', 'striped linen pillows'],
       },
       farmhouse: {
-        palette: ['warm whites', 'earth tones', 'natural wood'],
-        materials: ['reclaimed/knotty wood', 'stoneware', 'textured fabrics'],
-        silhouettes: ['shaker profiles', 'sturdy'],
-        accents: ['black/antique bronze hardware'],
-        avoid: [
-          'high-gloss lacquer',
-          'glass-heavy tables',
-          'ultra-modern chrome',
+        palette: ['warm whites', 'earth tones', 'natural wood', 'greige'],
+        paletteAccents: ['sage', 'muted clay'],
+        blockedColors: ['high-gloss lacquer', 'mirror-chrome'],
+        materials: [
+          'reclaimed/knotty wood',
+          'stoneware',
+          'textured cotton',
+          'linen',
         ],
+        silhouettes: [
+          'shaker profiles',
+          'sturdy frames',
+          'X-brace (limited, neat)',
+        ],
+        details: ['visible grain', 'soft distress (light)'],
+        hardware: ['black/antique bronze'],
+        patterns: ['gingham', 'ticking stripes', 'basket weaves'],
+        avoid: ['glass-heavy tables', 'ultra-modern chrome'],
         examplesMain: ['solid wood coffee table', 'shaker-style seating'],
         examplesComplementary: [
           'woven baskets',
@@ -563,14 +691,49 @@ class StagingPlanService {
     const s = profile[furnitureStyle];
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
 
-    // Frases curtas para anexar, evitando “poluir” o prompt principal.
-    const common =
-      `\nStyle requirements — ${styleLabel}:\n` +
-      `• Palette/Materials: ${[...s.palette, ...s.materials].slice(0, 6).join(', ')}.\n` +
-      `• Silhouettes/Accents: ${[...s.silhouettes, ...s.accents].slice(0, 5).join(', ')}.\n` +
-      `• Avoid: ${s.avoid.slice(0, 4).join(', ')}.\n`;
+    // Se não houver perfil, retorna vazio para não quebrar
+    if (!s) return '';
 
-    return common;
+    // Helpers para montar listas curtas (evitar prompt gigante)
+    const take = (arr?: string[], n = 6) =>
+      (arr ?? []).filter(Boolean).slice(0, n).join(', ');
+
+    // Construção do bloco textual
+    let out = `\nStyle requirements — ${styleLabel}:\n`;
+
+    // Paleta e controle de cores
+    if (s.palette.length || s.paletteAccents?.length) {
+      out += `• Color/Palette — prefer: ${take(s.palette, 6)}`;
+      if (s.paletteAccents?.length)
+        out += `; subtle accents: ${take(s.paletteAccents, 3)}`;
+      out += `.\n`;
+    }
+    if (s.blockedColors?.length) {
+      out += `• Color control — avoid strictly: ${take(s.blockedColors, 6)}.\n`;
+    }
+
+    // Materiais / acabamentos
+    if (s.materials.length) {
+      out += `• Materials/Finishes — use: ${take(s.materials, 6)}.\n`;
+    }
+
+    // Silhuetas / proporções
+    if (s.silhouettes.length) {
+      out += `• Silhouettes/Proportions — target: ${take(s.silhouettes, 6)}.\n`;
+    }
+
+    // Hardware / detalhes / padrões
+    if (s.hardware?.length) {
+      out += `• Hardware/Accents — ${take(s.hardware, 5)}.\n`;
+    }
+    if (s.details?.length) {
+      out += `• Construction details — ${take(s.details, 5)}.\n`;
+    }
+    if (s.patterns?.length) {
+      out += `• Textiles/Patterns — ${take(s.patterns, 5)}.\n`;
+    }
+
+    return out;
   }
 
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
@@ -610,11 +773,11 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture based on the image references (second image),';
+            'Add only freestanding furniture copy styles from the image references (second image),';
           break;
         case 'complement':
           stageSpecificText =
-            'Add only freestanding decor based on the image references (third image),';
+            'Add only freestanding decor copy styles from the image references (third image),';
           break;
         case 'wall_decoration':
           stageSpecificText = 'Add only freestanding wall decoration';
