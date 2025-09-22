@@ -791,13 +791,12 @@ export class VirtualStagingController {
       const provider_instance = new BlackForestProvider(blackForestConfig);
       
       console.log(`[${uploadId}] 🔄 Iniciando processamento em etapas com Black Forest`);
-      const result = await provider_instance.processVirtualStagingInStages(
+      const result = await provider_instance.processVirtualStagingInStages({
         uploadId,
         imageBase64,
         roomType,
-        furnitureStyle,
-        onProgress
-      );
+        furnitureStyle
+      });
 
       // Se a primeira etapa foi enviada com sucesso, inicializar o staging
       if (result.success && result.requestId && result.metadata?.stagingPlan) {
@@ -1332,13 +1331,12 @@ export class VirtualStagingController {
       const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
       const provider = new BlackForestProvider(blackForestConfig);
       
-      const result = await provider.processVirtualStagingInStages(
+      const result = await provider.processVirtualStagingInStages({
         uploadId,
         imageBase64,
-        upload.roomType,
-        upload.furnitureStyle,
-        onProgress
-      );
+        roomType: upload.roomType,
+        furnitureStyle: upload.furnitureStyle
+      });
 
       if (result.success) {
         // Atualizar registro no banco

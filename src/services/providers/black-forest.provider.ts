@@ -578,13 +578,16 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   /**
    * Novo método de virtual staging em 3 etapas
    */
-  async processVirtualStagingInStages(
-    uploadId: string,
-    inputImageBase64: string,
-    roomType: RoomType,
-    furnitureStyle: FurnitureStyle,
-    progressCallback?: (progress: StagingProgressResult) => void
-  ): Promise<VirtualStagingResult> {
+  async processVirtualStagingInStages(params: VirtualStagingParams): Promise<VirtualStagingResult> {
+    const { uploadId, imageBase64: inputImageBase64, roomType, furnitureStyle } = params;
+    
+    if (!inputImageBase64) {
+      return {
+        success: false,
+        errorMessage: 'imageBase64 é obrigatório para processamento em etapas'
+      };
+    }
+    
     try {
       this.logger.info(`Starting staged processing for upload ${uploadId}`, { roomType, furnitureStyle });
       
@@ -601,18 +604,6 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
       
       this.logger.info(`Starting stage 1/${plan.stages.length}: ${firstStage.stage}`, { uploadId });
-
-      // Notificar progresso
-      if (progressCallback) {
-        progressCallback({
-          uploadId,
-          currentStage: firstStage.stage,
-          completedStages: [],
-          stageResults: [],
-          success: true,
-          totalProgress: (1 / plan.stages.length) * 100
-        });
-      }
 
       // Executar primeira etapa
       const stageResult = await this.executeStage(
