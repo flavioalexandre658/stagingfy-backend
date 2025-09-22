@@ -158,7 +158,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     > = {
       living_room: {
         mainPiecesRange: [2, 4],
-        wallDecorRange: [1, 2],
+        wallDecorRange: [0, 1],
         complementaryRange: [2, 4],
         allowedMainItems: [
           'modular sectional or curved sofa (low-profile)',
@@ -836,10 +836,12 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
 
       switch (stage) {
         case 'foundation':
-          stageSpecificText = 'Add only freestanding furniture';
+          stageSpecificText =
+            'Add only freestanding furniture based on image references';
           break;
         case 'complement':
-          stageSpecificText = 'Add only freestanding decor';
+          stageSpecificText =
+            'Add only freestanding decor based on image references';
           break;
         case 'wall_decoration':
           stageSpecificText = 'Add only freestanding wall decoration';
