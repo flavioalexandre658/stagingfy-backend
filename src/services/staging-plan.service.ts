@@ -846,24 +846,27 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture (copying styles from the second image)';
+            'Add only freestanding furniture items (copying styles from the second image), on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
           break;
         case 'complement':
-          stageSpecificText = 'Add only freestanding decor';
+          stageSpecificText =
+            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
           break;
         case 'wall_decoration':
           stageSpecificText =
-            'Add freestanding wall decoration (only if a valid free wall segment exists)';
+            'Only if a valid free wall segment exists, add freestanding wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
           break;
         case 'windows_decoration':
-          stageSpecificText = 'Add only window treatments and decorations';
+          stageSpecificText =
+            'Add only window treatments and decorations items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces.';
           break;
         default:
-          stageSpecificText = 'Add only freestanding furniture and decor';
+          stageSpecificText =
+            'Add only freestanding furniture and decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
       }
 
       return [
-        `${stageSpecificText} items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
+        `${stageSpecificText} maintain the same composition, perspective, and natural lighting.
 Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
       ];
     };
@@ -1063,7 +1066,7 @@ If the chosen furniture piece is too large and would require altering the struct
       case 'complement':
         return `${globalRulesText}
   Add permitted complementary items and accessories selected from: ${allowedCompShort}.
-Add ${minComp}–${maxComp} complementary items to complete the scene.${stylesRules}
+Add ${minComp}–${maxComp} complementary items to complete the scene.
 
 Placement rule — plants & vases:
 • Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
@@ -1078,20 +1081,10 @@ If in doubt about fit or clearance, skip the item.
       case 'wall_decoration':
         return `${globalRulesText}
 
-If no unobstructed wall area is available (e.g., windows/doors/closets or insufficient clearance), make no wall changes and return the image unchanged.
+Add (If no unobstructed wall area is available) permitted wall decoration items and accessories selected from: ${allowedWallShort}.
+Add (If no unobstructed wall area is available) ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
-Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
-Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
-
-Placement:
-• Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
-• Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
-• Balance across the room — do not cluster everything on one wall.
-
-Safety & constraints:
-• Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
-• Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
-• If unsure about space, clearance, or window presence, SKIP.
+ If unsure about space, clearance, or window presence, SKIP.
 
 `;
 
@@ -1100,18 +1093,9 @@ Safety & constraints:
 Add permitted window decoration items and treatments selected from: ${allowedWindowsShort}.
 Add ${minWindowsDecor}–${maxWindowsDecor} window treatments to complete the scene.
 
-Placement & Style:
-• Install window treatments only where windows actually exist in the image.
-• Match the style and color palette to the room's overall design theme.
-• Consider privacy, light control, and aesthetic enhancement.
-• Curtains should extend from ceiling to floor for elegant proportions.
-• Blinds and shades should fit window dimensions precisely.
+Install window treatments only where windows actually exist in the image.
 
-Safety & constraints:
-• Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
-• Never invent new windows or architectural features — use treatments only where windows exist.
-• Ensure window treatments don't interfere with window operation or emergency egress.
-• If unsure about window presence or clearance, SKIP.
+If unsure about window presence or clearance, SKIP.
 
 `;
 
