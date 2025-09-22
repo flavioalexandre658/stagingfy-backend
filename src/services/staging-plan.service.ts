@@ -44,31 +44,30 @@ class StagingPlanService {
         windowsDecorRange: [1, 2], // tratar janelas quando existirem
 
         allowedMainItems: [
-          // Seating âncora (atuais)
-          'modular sectional or curved sofa (low-profile)',
-          'compact 2–3 seat sofa',
-          'accent barrel or bouclé swivel chair (1–2)',
-          'lounge chair with ottoman',
+          // Seating âncora — modernos e relevantes
+          'modular sectional (low-profile, neutral tones)',
+          'compact 2–3 seat sofa (straight arms, slim legs)',
+          'accent swivel chair (bouclé or fabric, 1–2)',
+          'barrel lounge chair (sculptural, upholstered)',
+          'chaise lounge (slim, modern profile)',
 
-          // Mesas e apoio essenciais
-          'nesting coffee tables (travertine/stone/smoked glass)',
-          'plinth or pedestal coffee table',
-          'pedestal/cylinder side tables (single or nesting)',
+          // Mesas de centro — vidro, pedra, metal
+          'smoked-glass coffee table with slim metal base',
+          'clear tempered-glass coffee table (rectangular or square)',
+          'marble or travertine coffee table (pedestal or slab)',
+          'nesting coffee tables (glass/stone top, metal frame)',
+          'plinth-style coffee table (stone, lacquer, or glass base)',
 
-          // Linha baixa/armazenagem atual
-          'low-profile media console (fluted wood or matte lacquer)',
-          'slim bookcase/etagere',
-
-          // Funcional indispensável
-          'storage ottoman or upholstered bench',
+          // Mesas laterais / apoio
+          'cylinder side table (stone, glass, or lacquer finish)',
+          'round glass side table with metal legs',
+          'sculptural pedestal side table (minimal, modern)',
         ],
 
         allowedWallDecor: [
           // Arte e espelhos essenciais (superficiais, sem obra)
-          'large framed artwork (abstract/botanical)',
-          'oversized round or pill mirror',
-          'paired framed prints (diptych)',
-          'picture ledge with framed art (surface-mounted)',
+          'smalled framed artwork (abstract/botanical)',
+          'smalled round or pill mirror',
           // Iluminação de parede plug-in (não embutida)
           'plug-in wall sconces (pair, no hardwiring)',
           'plug-in picture light over artwork',
@@ -110,8 +109,6 @@ class StagingPlanService {
           'linen curtains (floor-length, neutral tones)',
           'sheer curtains (white/cream, light filtering)',
           'double-layer curtains (sheer + blackout) on existing windows',
-          'roman shades (linen/cotton)',
-          'roller shades (blackout or light filtering)',
           'minimal curtain rod or ceiling track (existing windows only)',
         ],
       },
