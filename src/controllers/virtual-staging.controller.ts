@@ -941,19 +941,54 @@ export class VirtualStagingController {
         console.log(`[${uploadId}] 📊 Progress:`, progress);
       };
 
-      // Processar staging usando o service unificado em etapas
-      const webhookUrl = provider === 'black-forest' 
-        ? 'https://api.stagingfy.com/api/v1/webhooks/black-forest'
-        : 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
-      const result = await this.virtualStagingService.processVirtualStagingInStages(params, provider);
+      // Processar staging em etapas usando o provider diretamente
+      const blackForestConfig = providerConfigManager.getConfig('black-forest');
+      
+      if (!blackForestConfig) {
+        console.log(`[${uploadId}] ❌ Black Forest provider não configurado`);
+        await uploadRepository.updateStatus(uploadId, 'failed', 'Black Forest provider not configured');
+        return;
+      }
 
-      if (result.success) {
-        console.log(`[${uploadId}] ✅ Processamento com referências concluído com sucesso!`, {
+      // Importar e instanciar o provider diretamente
+      const { BlackForestProvider } = await import('../services/providers/black-forest.provider');
+      const provider_instance = new BlackForestProvider(blackForestConfig);
+      
+      console.log(`[${uploadId}] 🔄 Iniciando processamento em etapas com Black Forest`);
+      const result = await provider_instance.processVirtualStagingInStages(params);
+
+      // Se a primeira etapa foi enviada com sucesso, inicializar o staging
+      if (result.success && result.requestId && result.metadata?.stagingPlan) {
+        console.log(`[${uploadId}] ✅ Primeira etapa enviada. Inicializando staging...`);
+        await uploadRepository.initializeStaging(
           uploadId,
-          outputImageUrl: result.outputImageUrl,
-          referenceImagesUsed: referenceImagesBase64.length,
-          timestamp: new Date().toISOString(),
-        });
+          result.metadata.stagingPlan,
+          result.requestId
+        );
+        console.log(`[${uploadId}] 📊 Staging inicializado. Aguardando webhook...`);
+        return;
+      }
+
+      // Verificar se há sucesso parcial com imagem válida
+      const metadata = result.metadata as any;
+      const hasPartialSuccess = metadata?.partialSuccess && result.outputImageUrl;
+
+      if (result.success || hasPartialSuccess) {
+        if (hasPartialSuccess) {
+          console.log(`[${uploadId}] ⚠️ Processamento com sucesso parcial!`, {
+            uploadId,
+            outputImageUrl: result.outputImageUrl,
+            referenceImagesUsed: referenceImagesBase64.length,
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          console.log(`[${uploadId}] ✅ Processamento com referências concluído com sucesso!`, {
+            uploadId,
+            outputImageUrl: result.outputImageUrl,
+            referenceImagesUsed: referenceImagesBase64.length,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         // Atualizar registro no banco
         if (result.outputImageUrl) {
