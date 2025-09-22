@@ -805,7 +805,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
 
     // Constantes globais que vão em TODAS as etapas
     const globalRules = [
-      'Add only freestanding furniture and decor while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.',
+      `Add only freestanding furniture and decor on ${roomLabel} in ${styleLabel} while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.`,
     ];
 
     const roomSpecificRules = plan.roomSafetyNotes;
@@ -813,6 +813,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     // Versões curtas das categorias permitidas
     const allowedMainShort = plan.allowedMainItems.slice(0, 4).join(', ');
     const allowedCompShort = plan.allowedComplementary.slice(0, 4).join(', ');
+    const allowedWallShort = plan.allowedWallDecor.slice(0, 4).join(', ');
 
     const stages: StagingStageConfig[] = [
       // Etapa 1: Base/Fundação - Móveis principais
@@ -833,10 +834,11 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           styleLabel,
           allowedMainShort,
           '',
+          '',
           plan.mainPiecesRange,
           plan.complementaryRange,
-          globalRules,
-          roomSpecificRules
+          plan.wallDecorRange,
+          globalRules
         ),
       },
 
@@ -859,10 +861,11 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           styleLabel,
           '',
           allowedCompShort,
+          '',
           plan.mainPiecesRange,
           plan.complementaryRange,
-          globalRules,
-          roomSpecificRules
+          plan.wallDecorRange,
+          globalRules
         ),
       },
 
@@ -890,10 +893,11 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           styleLabel,
           '',
           '',
+          allowedWallShort,
           plan.mainPiecesRange,
           plan.complementaryRange,
-          globalRules,
-          roomSpecificRules
+          plan.wallDecorRange,
+          globalRules
         ),
       },
     ];
@@ -916,13 +920,16 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     styleLabel: string,
     allowedMainShort: string,
     allowedCompShort: string,
+    allowedWallShort: string,
     mainRange: Range,
     compRange: Range,
-    globalRules: string[],
-    roomSpecificRules: string[]
+    wallDecorRange: Range,
+    globalRules: string[]
   ): string {
     const [minMain, maxMain] = mainRange;
     const [minComp, maxComp] = compRange;
+    const [minWallDecor, maxWallDecor] = wallDecorRange;
+
     const globalRulesText = globalRules.join('\n');
 
     switch (stage) {
@@ -953,10 +960,10 @@ If in doubt about fit or clearance, skip the item.
 
       case 'wall_decoration':
         return `${globalRulesText}
-Add wall decor for this ${roomLabel} in ${styleLabel} style — choose only: framed artwork, mirrors, slim wall shelves, plug-in sconces.
+Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
+Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
 Placement:
-• Use FREE wall area only — never on walls with doors, windows, backsplashes, or built-ins.
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
