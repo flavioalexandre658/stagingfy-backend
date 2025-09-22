@@ -959,7 +959,8 @@ Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Sele
 Add between ${minMain} and ${maxMain} essential main pieces. Be specific: use exact color/material names (e.g., “matte black steel”, “light oak”), realistic proportions, and clear action verbs.
 Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
 No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
-If in doubt about fit or clearance, skip the item. 
+If in doubt about fit or clearance, skip the item.
+If the chosen furniture piece is too large and would require altering the structure, skip it and select a smaller one from the list of options.
 `;
 
       case 'complement':
@@ -986,13 +987,7 @@ Placement:
 • Height: center of artwork at 145–152 cm (57–60") from floor; mirrors at eye level.
 • Scale: piece ≈ 2/3 the width of the furniture below; keep even spacing.
 • Balance across the room — do not cluster everything on one wall.
-• Add only if a real WINDOW or a large GLASS SLIDING DOOR is clearly visible.
-• Do NOT add on hinged swing doors (~70–90 cm wide) or opaque wood/metal doors; skip in these cases.
-• Minimum visible width to qualify: ≥120 cm (prefer ≥160 cm) for sliding glass doors.
-• Use existing rod/track only; do not invent rods or tracks. If none is visible, skip.
-• Neutral, lightweight fabric; floor-to-ceiling proportion; keep clear of handles and openings.
-• If uncertain about door type, glass presence, or width → SKIP.
-o curtains on swing doors, no curtains on narrow doors (≤90 cm), no invented rods/tracks, no altering door type, no blocking handles, no adding to opaque wood or metal doors.
+
 Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
 • Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
