@@ -980,7 +980,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
         return `${globalRulesText}
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Select only from: ${allowedMainShort}.
-Add between ${minMain} and ${maxMain} essential main pieces.
+Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
 Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
 No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
 If in doubt about fit or clearance, skip the item.
@@ -990,7 +990,7 @@ If the chosen furniture piece is too large and would require altering the struct
       case 'complement':
         return `${globalRulesText}
   Add permitted complementary items and accessories selected from: ${allowedCompShort}.
-Add ${minComp}–${maxComp} complementary items to complete the scene.
+Add ${minComp}–${maxComp} complementary items to complete the scene. ${stylesRules}
 
 Placement rule — plants & vases:
 • Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
