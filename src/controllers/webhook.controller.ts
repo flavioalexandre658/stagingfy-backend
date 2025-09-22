@@ -134,25 +134,28 @@ export class WebhookController extends BaseController {
           if (upload.currentStage && upload.stagingPlan) {
             logger.info(`Stage ${upload.currentStage} completed for upload ${upload.id}`);
             
+            // Primeiro, salvar o resultado da etapa atual
+            const currentStageResult = {
+              stage: upload.currentStage,
+              imageUrl,
+              success: true,
+              validationPassed: true,
+              retryCount: 0
+            } as any;
+            
             // Verificar se há próxima etapa
             const currentStageIndex = upload.stagingPlan.stages.findIndex((s: any) => s.stage === upload.currentStage);
             const nextStageIndex = currentStageIndex + 1;
             
             if (nextStageIndex < upload.stagingPlan.stages.length) {
-              // Há próxima etapa - processar primeiro para obter o jobId
+              // Há próxima etapa - processar para obter o jobId
               const nextStage = upload.stagingPlan.stages[nextStageIndex];
               if (nextStage) {
                 logger.info(`Starting next stage ${nextStage.stage} for upload ${upload.id}`);
                 const nextStageJobId = await this.processNextStageAndGetJobId(upload, imageUrl, nextStage, nextStageIndex);
                 
-                // Agora atualizar resultado da etapa atual com o nextStageJobId
-                await uploadRepository.updateStageResult(upload.id, {
-                  stage: upload.currentStage,
-                  imageUrl,
-                  success: true,
-                  validationPassed: true,
-                  retryCount: 0
-                } as any, nextStageJobId || undefined);
+                // Atualizar resultado da etapa atual com o nextStageJobId
+                await uploadRepository.updateStageResult(upload.id, currentStageResult, nextStageJobId || undefined);
               }
             } else {
               // Última etapa concluída - atualizar resultado sem nextStageJobId (isso marca como completed)
@@ -232,9 +235,6 @@ export class WebhookController extends BaseController {
 
   private async processNextStageAndGetJobId(upload: any, inputImageUrl: string, nextStage: any, stageIndex: number): Promise<string | null> {
     try {
-      // Atualizar currentStage
-      await uploadRepository.updateCurrentStage(upload.id, nextStage.stage);
-      
       // Importar e instanciar o BlackForestProvider
       const { providerConfigManager } = await import('../config/provider.config');
       const blackForestConfig = providerConfigManager.getConfig('black-forest');
