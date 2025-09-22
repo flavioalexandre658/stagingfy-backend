@@ -848,6 +848,9 @@ class StagingPlanService {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
+    
+    // Gerar estilo global uma única vez para todas as etapas
+    const globalStyleGuidance = this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'foundation');
 
     // Função para gerar regras específicas por stage
     const getStageSpecificGlobalRules = (stage: StagingStage): string[] => {
@@ -923,7 +926,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.wallDecorRange,
           plan.windowsDecorRange,
           getStageSpecificGlobalRules('foundation'),
-          this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'foundation')
+          globalStyleGuidance
         ),
       },
 
@@ -952,7 +955,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.wallDecorRange,
           plan.windowsDecorRange,
           getStageSpecificGlobalRules('complement'),
-          this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'complement')
+          globalStyleGuidance
         ),
       },
 
@@ -988,7 +991,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.wallDecorRange,
           plan.windowsDecorRange,
           getStageSpecificGlobalRules('windows_decoration'),
-          ''
+          globalStyleGuidance
         ),
       },
 
@@ -1023,7 +1026,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.wallDecorRange,
           plan.windowsDecorRange,
           getStageSpecificGlobalRules('wall_decoration'),
-          ''
+          globalStyleGuidance
         ),
       },
     ];
@@ -1083,12 +1086,23 @@ Do not alter or replace any fixed architectural or material elements: keep the f
       case 'foundation':
         return `${globalRulesText}
 
-Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. Select only from: ${allowedMainShort}.
+Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
+Select only from: ${allowedMainShort}.
 Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
-Maintain ≥ 90 cm (36") of clear circulation; do not block or cover doors, windows, or stairs. 
-No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
-If in doubt about fit or clearance, skip the item.
-If the chosen furniture piece is too large and would require altering the structure, skip it and select a smaller one from the list of options.
+
+Circulation & placement rules (strict):
+• Keep at least 90 cm (36") of clear circulation on all major walk paths. 
+• Do NOT place any sofa, chair, or table within 90 cm of a doorway, threshold, or window opening.
+• Always keep one clear path connecting main doors and visible openings.
+• Sofas must be aligned against walls or centered in open space, never blocking an entry or passage.
+• Accent chairs should be placed adjacent to sofas or coffee tables, never in front of doors or walk paths.
+• Coffee tables must be centered in the seating area, leaving ≥45 cm clearance around seating edges.
+• Skip any furniture piece that cannot fit without blocking circulation, doors, or windows.
+
+Restrictions:
+• No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
+• If in doubt about fit or clearance, skip the item.
+• If the chosen furniture piece is too large and would require altering the structure, skip it and select a smaller one from the list of options.
 `;
 
       case 'complement':
