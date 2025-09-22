@@ -1,8 +1,24 @@
-import { IVirtualStagingProvider, VirtualStagingParams, VirtualStagingResult, ProviderConfig, ProviderCapabilities } from '../../interfaces/virtual-staging-provider.interface';
+import {
+  IVirtualStagingProvider,
+  VirtualStagingParams,
+  VirtualStagingResult,
+  ProviderConfig,
+  ProviderCapabilities,
+} from '../../interfaces/virtual-staging-provider.interface';
 import { BaseService } from '../base.service';
-import { Provider, RoomType, FurnitureStyle, BlackForestApiResponse, BlackForestWebhookResponse, LoraConfig, StagingStage, StagingPlan, StagingStageResult, StagingProgressResult } from '../../interfaces/upload.interface';
-import { chatGPTService } from '../chatgpt.service';
-import { StagingValidationService } from '../staging-validation.service';
+import {
+  Provider,
+  RoomType,
+  FurnitureStyle,
+  BlackForestApiResponse,
+  BlackForestWebhookResponse,
+  LoraConfig,
+  StagingStage,
+  StagingPlan,
+  StagingStageResult,
+  StagingProgressResult,
+} from '../../interfaces/upload.interface';
+import { chatGPTService } from '../staging-plan.service';
 import sharp from 'sharp';
 
 type KontextRequest = {
@@ -26,7 +42,10 @@ type KontextRequest = {
 /**
  * Adapter para o Black Forest que implementa a interface comum
  */
-export class BlackForestProvider extends BaseService implements IVirtualStagingProvider {
+export class BlackForestProvider
+  extends BaseService
+  implements IVirtualStagingProvider
+{
   readonly name: Provider = 'black-forest';
   readonly version = '1.0.0';
   readonly isAsync = true;
@@ -34,7 +53,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   readonly config: ProviderConfig;
 
   // Cache temporário para jobIds recém-criados (para lidar com race conditions)
-  private static jobIdCache = new Map<string, { uploadId: string, stage: string, timestamp: number }>();
+  private static jobIdCache = new Map<
+    string,
+    { uploadId: string; stage: string; timestamp: number }
+  >();
 
   private readonly loraConfig: LoraConfig = {
     roomType: {
@@ -65,10 +87,20 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   }
 
   // Métodos para gerenciar cache de jobIds
-  private static addToCache(jobId: string, uploadId: string, stage: string): void {
-    console.log(`[CACHE] Adding jobId ${jobId} to cache for upload ${uploadId}, stage: ${stage}`);
-    BlackForestProvider.jobIdCache.set(jobId, { uploadId, stage, timestamp: Date.now() });
-    
+  private static addToCache(
+    jobId: string,
+    uploadId: string,
+    stage: string
+  ): void {
+    console.log(
+      `[CACHE] Adding jobId ${jobId} to cache for upload ${uploadId}, stage: ${stage}`
+    );
+    BlackForestProvider.jobIdCache.set(jobId, {
+      uploadId,
+      stage,
+      timestamp: Date.now(),
+    });
+
     // Limpar cache após 2 minutos para lidar com webhooks mais lentos
     setTimeout(() => {
       console.log(`[CACHE] Removing expired jobId ${jobId} from cache`);
@@ -76,18 +108,26 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     }, 120000);
   }
 
-  static getFromCache(jobId: string): { uploadId: string, stage: string } | null {
-    console.log(`[CACHE] Looking for jobId ${jobId} in cache. Cache size: ${BlackForestProvider.jobIdCache.size}`);
+  static getFromCache(
+    jobId: string
+  ): { uploadId: string; stage: string } | null {
+    console.log(
+      `[CACHE] Looking for jobId ${jobId} in cache. Cache size: ${BlackForestProvider.jobIdCache.size}`
+    );
     const cached = BlackForestProvider.jobIdCache.get(jobId);
     if (cached) {
       const age = Date.now() - cached.timestamp;
       console.log(`[CACHE] Found jobId ${jobId} in cache, age: ${age}ms`);
       // Verificar se não expirou (máximo 2 minutos)
       if (age < 120000) {
-        console.log(`[CACHE] Cache hit for jobId ${jobId}, returning upload ${cached.uploadId}`);
+        console.log(
+          `[CACHE] Cache hit for jobId ${jobId}, returning upload ${cached.uploadId}`
+        );
         return { uploadId: cached.uploadId, stage: cached.stage };
       } else {
-        console.log(`[CACHE] Cache expired for jobId ${jobId}, removing from cache`);
+        console.log(
+          `[CACHE] Cache expired for jobId ${jobId}, removing from cache`
+        );
         BlackForestProvider.jobIdCache.delete(jobId);
       }
     } else {
@@ -169,13 +209,6 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     return `Virtual staging of an empty ${roomTypeMap[roomType]} in ${styleMap[furnitureStyle]} style. Add only furniture and decor; do not change walls, floors, ceilings, doors, windows, lighting or architecture. Keep existing geometry and perspective intact. Photorealistic interior photography.`;
   }
 
-  private selectLoras(roomType: RoomType, furnitureStyle: FurnitureStyle) {
-    return [
-      { id: this.loraConfig.roomType[roomType], weight: 0.8 },
-      { id: this.loraConfig.furnitureStyle[furnitureStyle], weight: 0.7 },
-    ];
-  }
-
   /**
    * Virtual staging com FLUX.1 Kontext Pro,
    * preservando a dimensão da foto original.
@@ -183,13 +216,13 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   async generateVirtualStaging(
     imageBase64: string,
     prompt?: string,
-    opts?: { 
+    opts?: {
       seed?: number;
       referenceImages?: {
         image2?: string;
         image3?: string;
         image4?: string;
-      }
+      };
     }
   ): Promise<BlackForestApiResponse> {
     try {
@@ -216,18 +249,24 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         ...(opts?.seed !== undefined && { seed: opts.seed }),
         ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
         // Adicionar imagens de referência opcionais
-        ...(opts?.referenceImages?.image2 && { input_image_2: opts.referenceImages.image2 }),
-        ...(opts?.referenceImages?.image3 && { input_image_3: opts.referenceImages.image3 }),
-        ...(opts?.referenceImages?.image4 && { input_image_4: opts.referenceImages.image4 }),
+        ...(opts?.referenceImages?.image2 && {
+          input_image_2: opts.referenceImages.image2,
+        }),
+        ...(opts?.referenceImages?.image3 && {
+          input_image_3: opts.referenceImages.image3,
+        }),
+        ...(opts?.referenceImages?.image4 && {
+          input_image_4: opts.referenceImages.image4,
+        }),
       };
 
       // Configurar timeout e retry
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
-      
+
       let lastError: Error | null = null;
       let resp: Response | null = null;
-      
+
       // Retry logic - 3 tentativas
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
@@ -240,24 +279,26 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             body: JSON.stringify(body),
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
           break; // Sucesso, sair do loop
-          
         } catch (error) {
           lastError = error as Error;
-          
+
           if (attempt === 3) {
-            this.logger.error('Black Forest API request failed after all retries:', error as Error);
+            this.logger.error(
+              'Black Forest API request failed after all retries:',
+              error as Error
+            );
           }
-          
+
           if (attempt < 3) {
             const delay = attempt * 2000; // 2s, 4s
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       }
-      
+
       if (!resp) {
         clearTimeout(timeoutId);
         throw lastError || new Error('Todas as tentativas de conexão falharam');
@@ -280,56 +321,17 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     }
   }
 
-  // Mantive aqui seu método de inpainting como estava (se quiser, também envie W/H).
-  async generateStagedImage(
-    imageBase64: string,
-    maskBase64: string,
-    roomType: RoomType,
-    furnitureStyle: FurnitureStyle
-  ): Promise<BlackForestApiResponse> {
-    const prompt = this.generatePrompt(roomType, furnitureStyle);
-
-    // (Opcional) igualar W/H no fill também
-    const { width: ow, height: oh } =
-      await this.getImageDimsFromBase64(imageBase64);
-    const { width: cw, height: ch } = this.clampToLimits(ow, oh, 512, 1536);
-    const width = this.roundToMultiple(cw, 32);
-    const height = this.roundToMultiple(ch, 32);
-
-    const requestBody = {
-      model: 'flux-pro-1.0-fill',
-      prompt,
-      image: imageBase64,
-      mask: maskBase64,
-      steps: 40,
-      guidance: 7,
-      width,
-      height,
-      output_format: 'jpeg',
-      safety_tolerance: 2,
-    };
-
-    const resp = await fetch(`${this.config.baseUrl}/v1/flux-pro-1.0-fill`, {
-      method: 'POST',
-      headers: {
-        'x-key': this.config.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`Black Forest API error: ${resp.status} - ${err}`);
-    }
-    return (await resp.json()) as BlackForestApiResponse;
-  }
-
   async checkJobStatusInternal(jobId: string): Promise<BlackForestApiResponse> {
-    const resp = await fetch(`${this.config.baseUrl}/v1/get_result?id=${jobId}`, {
-      method: 'GET',
-      headers: { 'x-key': this.config.apiKey, 'Content-Type': 'application/json' },
-    });
+    const resp = await fetch(
+      `${this.config.baseUrl}/v1/get_result?id=${jobId}`,
+      {
+        method: 'GET',
+        headers: {
+          'x-key': this.config.apiKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
     if (!resp.ok) {
       // 404: geralmente ainda processando, não é um erro
       if (resp.status === 404) {
@@ -351,7 +353,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     return (await resp.json()) as BlackForestApiResponse;
   }
 
-  validateParametersInternal(roomType: RoomType, furnitureStyle: FurnitureStyle) {
+  validateParametersInternal(
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ) {
     const validRoomTypes = Object.keys(this.loraConfig.roomType) as RoomType[];
     const validStyles = Object.keys(
       this.loraConfig.furnitureStyle
@@ -364,7 +369,9 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   /**
    * Processa virtual staging usando Black Forest
    */
-  async processVirtualStaging(params: VirtualStagingParams): Promise<VirtualStagingResult> {
+  async processVirtualStaging(
+    params: VirtualStagingParams
+  ): Promise<VirtualStagingResult> {
     try {
       this.validateParams(params);
 
@@ -375,21 +382,26 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       });
 
       // Usar o método correto do flux-kontext-pro
-      const prompt = this.generatePrompt(params.roomType, params.furnitureStyle);
-      
+      const prompt = this.generatePrompt(
+        params.roomType,
+        params.furnitureStyle
+      );
+
       // Preparar imagens de referência se fornecidas
       const referenceImages = {
         ...(params.referenceImage2 && { image2: params.referenceImage2 }),
         ...(params.referenceImage3 && { image3: params.referenceImage3 }),
         ...(params.referenceImage4 && { image4: params.referenceImage4 }),
       };
-      
+
       const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
         prompt,
         {
-          ...(params.options?.seed !== undefined && { seed: params.options.seed }),
-          ...(Object.keys(referenceImages).length > 0 && { referenceImages })
+          ...(params.options?.seed !== undefined && {
+            seed: params.options.seed,
+          }),
+          ...(Object.keys(referenceImages).length > 0 && { referenceImages }),
         }
       );
 
@@ -409,13 +421,14 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             status: response.status,
             polling_url: response.polling_url,
             progress: response.progress,
-          }
+          },
         };
       }
 
       throw new Error('Unexpected response format from Black Forest');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Black Forest processing error:', error as Error);
       return {
         success: false,
@@ -439,7 +452,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       }
 
       const status = response.status;
-      
+
       if (status === 'Ready' && response.result?.sample) {
         return {
           success: true,
@@ -449,7 +462,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             progress: response.progress,
             width: response.result.width,
             height: response.result.height,
-          }
+          },
         };
       } else if (status === 'Error') {
         return {
@@ -464,7 +477,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
           metadata: {
             status: status.toLowerCase(),
             progress: response.progress,
-          }
+          },
         };
       }
     } catch (error) {
@@ -482,26 +495,28 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     if (!params.imageBase64 && !params.imageUrl) {
       throw new Error('Either imageBase64 or imageUrl is required');
     }
-    
+
     if (!params.roomType) {
       throw new Error('roomType is required');
     }
-    
+
     if (!params.furnitureStyle) {
       throw new Error('furnitureStyle is required');
     }
-    
+
     if (!params.uploadId) {
       throw new Error('uploadId is required');
     }
 
     const capabilities = this.getCapabilities();
-    
+
     if (!capabilities.supportedRoomTypes.includes(params.roomType)) {
       throw new Error(`Unsupported room type: ${params.roomType}`);
     }
 
-    if (!capabilities.supportedFurnitureStyles.includes(params.furnitureStyle)) {
+    if (
+      !capabilities.supportedFurnitureStyles.includes(params.furnitureStyle)
+    ) {
       throw new Error(`Unsupported furniture style: ${params.furnitureStyle}`);
     }
   }
@@ -515,13 +530,13 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       supportedFormats: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       supportedRoomTypes: [
         'bedroom',
-        'living_room', 
+        'living_room',
         'kitchen',
         'bathroom',
         'home_office',
         'dining_room',
         'kids_room',
-        'outdoor'
+        'outdoor',
       ] as RoomType[],
       supportedFurnitureStyles: [
         'standard',
@@ -531,7 +546,7 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         'midcentury',
         'luxury',
         'coastal',
-        'farmhouse'
+        'farmhouse',
       ] as FurnitureStyle[],
       maxImagesPerRequest: 1,
       supportsCustomPrompts: true,
@@ -547,16 +562,22 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     try {
       const required = ['apiKey', 'baseUrl'];
       const missing = required.filter(key => !this.config[key]);
-      
+
       if (missing.length > 0) {
-        this.logger.error(`Black Forest configuration missing: ${missing.join(', ')}`);
+        this.logger.error(
+          `Black Forest configuration missing: ${missing.join(', ')}`
+        );
         return false;
       }
 
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error('Black Forest configuration validation error:', error as Error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        'Black Forest configuration validation error:',
+        error as Error
+      );
       return false;
     }
   }
@@ -578,19 +599,29 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
   /**
    * Novo método de virtual staging em 3 etapas
    */
-  async processVirtualStagingInStages(params: VirtualStagingParams): Promise<VirtualStagingResult> {
-    const { uploadId, imageBase64: inputImageBase64, roomType, furnitureStyle } = params;
-    
+  async processVirtualStagingInStages(
+    params: VirtualStagingParams
+  ): Promise<VirtualStagingResult> {
+    const {
+      uploadId,
+      imageBase64: inputImageBase64,
+      roomType,
+      furnitureStyle,
+    } = params;
+
     if (!inputImageBase64) {
       return {
         success: false,
-        errorMessage: 'imageBase64 é obrigatório para processamento em etapas'
+        errorMessage: 'imageBase64 é obrigatório para processamento em etapas',
       };
     }
-    
+
     try {
-      this.logger.info(`Starting staged processing for upload ${uploadId}`, { roomType, furnitureStyle });
-      
+      this.logger.info(`Starting staged processing for upload ${uploadId}`, {
+        roomType,
+        furnitureStyle,
+      });
+
       // Gerar plano de staging
       const plan = await this.generateStagingPlan(roomType, furnitureStyle);
 
@@ -599,11 +630,14 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       if (!firstStage) {
         return {
           success: false,
-          errorMessage: 'Plano de staging inválido - nenhuma etapa encontrada'
+          errorMessage: 'Plano de staging inválido - nenhuma etapa encontrada',
         };
       }
-      
-      this.logger.info(`Starting stage 1/${plan.stages.length}: ${firstStage.stage}`, { uploadId });
+
+      this.logger.info(
+        `Starting stage 1/${plan.stages.length}: ${firstStage.stage}`,
+        { uploadId }
+      );
 
       // Executar primeira etapa
       const stageResult = await this.executeStage(
@@ -615,8 +649,12 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
       );
 
       if (stageResult.success && stageResult.jobId) {
-        this.logger.info(`Stage job created successfully`, { uploadId, jobId: stageResult.jobId, stage: firstStage.stage });
-        
+        this.logger.info(`Stage job created successfully`, {
+          uploadId,
+          jobId: stageResult.jobId,
+          stage: firstStage.stage,
+        });
+
         return {
           success: true,
           requestId: stageResult.jobId,
@@ -625,19 +663,23 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
             uploadId,
             stagingPlan: plan,
             currentStage: firstStage.stage,
-            totalStages: plan.stages.length
-          }
+            totalStages: plan.stages.length,
+          },
         };
       } else {
-        this.logger.error(`Failed to create stage job`, { uploadId, error: stageResult.errorMessage });
+        this.logger.error(`Failed to create stage job`, {
+          uploadId,
+          error: stageResult.errorMessage,
+        });
         return {
           success: false,
-          errorMessage: stageResult.errorMessage || 'Falha ao enviar primeira etapa'
+          errorMessage:
+            stageResult.errorMessage || 'Falha ao enviar primeira etapa',
         };
       }
-      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error('Staging in stages error:', error as Error);
       return {
         success: false,
@@ -646,7 +688,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     }
   }
 
-  private async generateStagingPlan(roomType: RoomType, furnitureStyle: FurnitureStyle): Promise<StagingPlan> {
+  private async generateStagingPlan(
+    roomType: RoomType,
+    furnitureStyle: FurnitureStyle
+  ): Promise<StagingPlan> {
     return chatGPTService.generateStagingPlan(roomType, furnitureStyle);
   }
 
@@ -656,7 +701,12 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
     stageConfig: any,
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
-  ): Promise<{ success: boolean; jobId?: string; imageUrl?: string; errorMessage?: string }> {
+  ): Promise<{
+    success: boolean;
+    jobId?: string;
+    imageUrl?: string;
+    errorMessage?: string;
+  }> {
     try {
       // Gerar prompt específico para a etapa
       const prompt = chatGPTService.generateStageSpecificPrompt(
@@ -665,175 +715,136 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         furnitureStyle,
         0 // stageIndex não é usado no generateStageSpecificPrompt
       );
-      
+
       // Executar staging para esta etapa
       const response = await this.generateVirtualStaging(imageBase64, prompt);
-      
+
       if (response.error) {
-        this.logger.error(`Stage execution failed for upload ${uploadId}:`, { error: response.error, stage: stageConfig.stage });
+        this.logger.error(`Stage execution failed for upload ${uploadId}:`, {
+          error: response.error,
+          stage: stageConfig.stage,
+        });
         return {
           success: false,
-          errorMessage: response.error
+          errorMessage: response.error,
         };
       }
-      
+
       if (response.id) {
         // IMPORTANTE: Adicionar ao cache IMEDIATAMENTE para webhooks rápidos
-        BlackForestProvider.addToCache(response.id, uploadId, stageConfig.stage);
-        
+        BlackForestProvider.addToCache(
+          response.id,
+          uploadId,
+          stageConfig.stage
+        );
+
         // Salvar jobId no banco para persistência
         try {
-          const { uploadRepository } = await import('../../repositories/upload.repository');
+          const { uploadRepository } = await import(
+            '../../repositories/upload.repository'
+          );
           const upload = await uploadRepository.findById(uploadId);
-          
+
           if (upload) {
             const updatedStageJobIds = {
               ...(upload.stageJobIds || {}),
-              [stageConfig.stage]: response.id
+              [stageConfig.stage]: response.id,
             };
-            
-            await uploadRepository.updateStageJobIds(uploadId, updatedStageJobIds);
-            this.logger.info(`Stage job created and saved for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
+
+            await uploadRepository.updateStageJobIds(
+              uploadId,
+              updatedStageJobIds
+            );
+            this.logger.info(
+              `Stage job created and saved for upload ${uploadId}`,
+              { jobId: response.id, stage: stageConfig.stage }
+            );
           } else {
-            this.logger.warn(`Upload not found when saving jobId for upload ${uploadId}`, { jobId: response.id, stage: stageConfig.stage });
+            this.logger.warn(
+              `Upload not found when saving jobId for upload ${uploadId}`,
+              { jobId: response.id, stage: stageConfig.stage }
+            );
           }
         } catch (saveError) {
-          this.logger.error(`Failed to save jobId immediately for upload ${uploadId}:`, saveError as Error);
+          this.logger.error(
+            `Failed to save jobId immediately for upload ${uploadId}:`,
+            saveError as Error
+          );
           // Continuar mesmo se falhar ao salvar, pois o cache e processNextStage lidarão com isso
         }
-        
+
         return {
           success: true,
-          jobId: response.id
+          jobId: response.id,
         };
       }
-      
-      this.logger.warn(`Unexpected API response for upload ${uploadId}`, { stage: stageConfig.stage });
+
+      this.logger.warn(`Unexpected API response for upload ${uploadId}`, {
+        stage: stageConfig.stage,
+      });
       return {
         success: false,
-        errorMessage: 'Resposta inesperada da API'
+        errorMessage: 'Resposta inesperada da API',
       };
-      
     } catch (error) {
-      this.logger.error(`Error executing stage for upload ${uploadId}:`, error as Error);
+      this.logger.error(
+        `Error executing stage for upload ${uploadId}:`,
+        error as Error
+      );
       return {
         success: false,
-        errorMessage: error instanceof Error ? error.message : 'Erro desconhecido'
+        errorMessage:
+          error instanceof Error ? error.message : 'Erro desconhecido',
       };
     }
-  }
-
-  private countItemsInPreviousStages(stageResults: StagingStageResult[]): number {
-    // Implementação simplificada - contar itens baseado nas etapas concluídas
-    return stageResults.filter(r => r.success).length;
-  }
-
-  private addReinforcementToPrompt(prompt: string, stage: StagingStage): string {
-    const reinforcements: Record<StagingStage, string> = {
-      'foundation': 'No wall decor or window treatments. Stairs and doors are no-placement zones. Add essential main furniture only.',
-      'complement': 'Only add if space is clearly available. No blocking of doors/windows. Add complementary items carefully.',
-      'wall_decoration': 'Add wall decor items only. Focus on framed artwork, mirrors, and wall shelves. Ensure proper height and balanced distribution.'
-    };
-    
-    return `${prompt}\n\nREINFORCEMENT: ${reinforcements[stage] || 'Follow all placement rules strictly.'}`;
-  }
-
-  private applyCorrectionToPrompt(prompt: string, issues: string[]): string {
-    const corrections = issues.map(issue => {
-      if (issue.includes('wall decor')) return 'Remove any wall decor (frames, mirrors, prints).';
-      if (issue.includes('curtains')) return 'Remove any window treatments (curtains, blinds).';
-      if (issue.includes('door')) return 'Ensure all doors remain fully visible and accessible.';
-      if (issue.includes('circulation')) return 'Maintain 90cm clearance around all furniture.';
-      return `Address: ${issue}`;
-    }).join(' ');
-    
-    return `${prompt}\n\nCORRECTIONS NEEDED: ${corrections}`;
-  }
-
-  private async waitForCompletion(jobId: string): Promise<VirtualStagingResult> {
-    const maxAttempts = 15; // 75 segundos máximo (15 tentativas de 5 segundos)
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-      const result = await this.checkJobStatus(jobId);
-      
-      if (result.success && result.outputImageUrl) {
-        return {
-          success: true,
-          outputImageUrl: result.outputImageUrl,
-          metadata: {
-            imageUrl: result.outputImageUrl,
-            ...result.metadata
-          }
-        };
-      }
-      
-      if (result.errorMessage) {
-        return result;
-      }
-      
-      // Se ainda está processando, aguardar
-      if (result.success && result.metadata?.status && result.metadata.status !== 'completed') {
-        // Only log every 5th attempt to reduce noise
-        if (attempts % 5 === 0) {
-          this.logger.debug(`Job ${jobId} still processing`, { status: result.metadata.status, attempt: attempts + 1, maxAttempts });
-        }
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos por tentativa
-        attempts++;
-        continue;
-      }
-      
-      // Aguardar 5 segundos antes da próxima verificação
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      attempts++;
-    }
-    
-    return {
-      success: false,
-      errorMessage: 'Timeout aguardando conclusão do job'
-    };
   }
 
   async downloadAndConvertToBase64(imageUrl: string): Promise<string> {
     const maxRetries = 3;
     const timeoutMs = 30000; // 30 segundos para download de imagem
     let lastError: Error | null = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
+
         const response = await fetch(imageUrl, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Stagingfy/1.0'
-          }
+            'User-Agent': 'Stagingfy/1.0',
+          },
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64 = buffer.toString('base64');
-        
+
         // Detectar tipo de imagem baseado na URL ou headers
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
-        
-        this.logger.info('Image downloaded and converted to base64', { imageUrl, size: buffer.length });
+        const contentType =
+          response.headers.get('content-type') || 'image/jpeg';
+
+        this.logger.info('Image downloaded and converted to base64', {
+          imageUrl,
+          size: buffer.length,
+        });
         return `data:${contentType};base64,${base64}`;
-        
       } catch (error: any) {
         lastError = error;
-        
+
         if (attempt === maxRetries) {
-          this.logger.error(`Failed to download image after ${maxRetries} attempts:`, { imageUrl, error: lastError });
+          this.logger.error(
+            `Failed to download image after ${maxRetries} attempts:`,
+            { imageUrl, error: lastError }
+          );
         }
-        
+
         if (attempt < maxRetries) {
           // Aguardar antes da próxima tentativa (backoff exponencial)
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
@@ -841,8 +852,10 @@ export class BlackForestProvider extends BaseService implements IVirtualStagingP
         }
       }
     }
-    
-    throw new Error(`Falha ao baixar imagem após ${maxRetries} tentativas: ${lastError?.message}`);
+
+    throw new Error(
+      `Falha ao baixar imagem após ${maxRetries} tentativas: ${lastError?.message}`
+    );
   }
 
   /**
