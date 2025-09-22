@@ -157,7 +157,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       Omit<RoomStagingPlan, 'styleEmphasis'>
     > = {
       living_room: {
-        mainPiecesRange: [3, 6],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
@@ -197,7 +197,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       bedroom: {
-        mainPiecesRange: [3, 6],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
@@ -287,7 +287,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       dining_room: {
-        mainPiecesRange: [3, 6],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
@@ -353,7 +353,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       kids_room: {
-        mainPiecesRange: [3, 6],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
@@ -386,7 +386,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       outdoor: {
-        mainPiecesRange: [3, 6],
+        mainPiecesRange: [2, 4],
         wallDecorRange: [0, 1],
         complementaryRange: [2, 4],
         allowedMainItems: [
@@ -822,7 +822,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       }
 
       return [
-        `only add furniture items on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
+        `${stageSpecificText} items on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
 Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
       ];
     };
@@ -830,9 +830,9 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const roomSpecificRules = plan.roomSafetyNotes;
 
     // Versões curtas das categorias permitidas
-    const allowedMainShort = plan.allowedMainItems.slice(0, 4).join(', ');
-    const allowedCompShort = plan.allowedComplementary.slice(0, 4).join(', ');
-    const allowedWallShort = plan.allowedWallDecor.slice(0, 4).join(', ');
+    const allowedMainShort = plan.allowedMainItems.join(', ');
+    const allowedCompShort = plan.allowedComplementary.join(', ');
+    const allowedWallShort = plan.allowedWallDecor.join(', ');
 
     const stages: StagingStageConfig[] = [
       // Etapa 1: Base/Fundação - Móveis principais
