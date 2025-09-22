@@ -570,27 +570,7 @@ class StagingPlanService {
       `• Silhouettes/Accents: ${[...s.silhouettes, ...s.accents].slice(0, 5).join(', ')}.\n` +
       `• Avoid: ${s.avoid.slice(0, 4).join(', ')}.\n`;
 
-    // Exemplos mudam conforme a etapa:
-    const examples =
-      stage === 'foundation'
-        ? s.examplesMain?.length
-          ? `• Examples for main pieces: ${s.examplesMain.join(', ')}.\n`
-          : ''
-        : stage === 'complement'
-          ? s.examplesComplementary?.length
-            ? `• Examples for complementary items: ${s.examplesComplementary.join(', ')}.\n`
-            : ''
-          : '';
-
-    // Pequena regra para coerência por cômodo (sem forçar estrutura)
-    const roomNudge =
-      roomType === 'kitchen'
-        ? '• Keep pieces compact and away from prep zones; prefer stools/bistro-scale items.\n'
-        : roomType === 'dining_room'
-          ? '• Ensure chairs remain fully usable around the table; pick finishes consistent across set.\n'
-          : '';
-
-    return common + examples + roomNudge;
+    return common;
   }
 
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
@@ -630,11 +610,11 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture based on image references';
+            'Add only freestanding furniture based on the image references (second image),';
           break;
         case 'complement':
           stageSpecificText =
-            'Add only freestanding decor based on image references';
+            'Add only freestanding decor based on the image references (third image),';
           break;
         case 'wall_decoration':
           stageSpecificText = 'Add only freestanding wall decoration';
@@ -676,25 +656,19 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           'no_window_treatments',
           'circulation_clear',
         ],
-        prompt:
-          this.generateStagePrompt(
-            'foundation',
-            roomLabel,
-            styleLabel,
-            allowedMainShort,
-            '',
-            '',
-            plan.mainPiecesRange,
-            plan.complementaryRange,
-            plan.wallDecorRange,
-            getStageSpecificGlobalRules('foundation')
-          ) +
-          // >>> integração: orientação dinâmica de estilo (foundation)
-          this.buildDynamicStyleGuidance(
-            furnitureStyle,
-            roomType,
-            'foundation'
-          ),
+        prompt: this.generateStagePrompt(
+          'foundation',
+          roomLabel,
+          styleLabel,
+          allowedMainShort,
+          '',
+          '',
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          plan.wallDecorRange,
+          getStageSpecificGlobalRules('foundation'),
+          this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'foundation')
+        ),
       },
 
       // Etapa 2: Complementos - Acessórios e itens funcionais
@@ -710,25 +684,19 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           'circulation_clear',
           'plant_placement',
         ],
-        prompt:
-          this.generateStagePrompt(
-            'complement',
-            roomLabel,
-            styleLabel,
-            '',
-            allowedCompShort,
-            '',
-            plan.mainPiecesRange,
-            plan.complementaryRange,
-            plan.wallDecorRange,
-            getStageSpecificGlobalRules('complement')
-          ) +
-          // >>> integração: orientação dinâmica de estilo (complement)
-          this.buildDynamicStyleGuidance(
-            furnitureStyle,
-            roomType,
-            'complement'
-          ),
+        prompt: this.generateStagePrompt(
+          'complement',
+          roomLabel,
+          styleLabel,
+          '',
+          allowedCompShort,
+          '',
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          plan.wallDecorRange,
+          getStageSpecificGlobalRules('complement'),
+          this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'complement')
+        ),
       },
 
       // Etapa 3: Decoração de parede - Quadros, espelhos e elementos decorativos
@@ -759,7 +727,8 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
-          getStageSpecificGlobalRules('wall_decoration')
+          getStageSpecificGlobalRules('wall_decoration'),
+          ''
         ),
       },
     ];
@@ -786,7 +755,8 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     mainRange: Range,
     compRange: Range,
     wallDecorRange: Range,
-    globalRules: string[]
+    globalRules: string[],
+    stylesRules: string
   ): string {
     const [minMain, maxMain] = mainRange;
     const [minComp, maxComp] = compRange;
@@ -809,7 +779,7 @@ If the chosen furniture piece is too large and would require altering the struct
       case 'complement':
         return `${globalRulesText}
   Add permitted complementary items and accessories selected from: ${allowedCompShort}.
-Add ${minComp}–${maxComp} complementary items to complete the scene. Be specific: use exact color/material names (e.g., “matte black metal”, “natural jute”, “light oak”), realistic scale, and clear action verbs.
+Add ${minComp}–${maxComp} complementary items to complete the scene.
 
 Placement rule — plants & vases:
 • Place floor plants, planters, and decorative floor vases only in wall corners or snug wall-adjacent positions.
