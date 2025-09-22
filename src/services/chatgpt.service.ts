@@ -287,15 +287,32 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       },
 
       dining_room: {
-        mainPiecesRange: [2, 4],
+        mainPiecesRange: [2, 2],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
         allowedMainItems: [
-          'dining table (round/oval pedestal or rectangular slab)',
-          'set of dining chairs (4–8; upholstered or wood/cane)',
-          'bench for one side (if space)',
+          // Mesas de jantar
+          'dining table (round pedestal, oval pedestal, or rectangular slab)',
+          'extendable dining table (wood, glass, or ceramic top)',
+          'live-edge wood dining table',
+          'glass-top dining table with sculptural base',
+
+          // Assentos
+          'set of dining chairs (4–8; upholstered, wood, cane, or mixed material)',
+          'bench for one side (upholstered or wood)',
+          'banquette seating (built-in look against a wall)',
+          'counter stools for island or dining bar (wood, metal, or upholstered)',
+
+          // Armazenamento e apoio
           'slim bar cabinet',
-          'slim serving console',
+          'serving console or sideboard',
+          'buffet with drawers and cabinets',
+          'wine rack cabinet or tall wine storage unit',
+
+          // Complementares que podem ser main
+          'narrow console table behind dining chairs (for serving)',
+          'credenza with modern finish (lacquer, veneer, or glass)',
+          'round breakfast table (for compact dining zones)',
         ],
         allowedWallDecor: [
           'large framed artwork or triptych',
@@ -791,7 +808,23 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
   }
 
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
-
+  sampleArray<T>(arr: T[] | undefined, n = 4): T[] {
+    if (!arr) {
+      return [];
+    }
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      if (copy[i] !== undefined && copy[j] !== undefined) {
+        const temp = copy[i];
+        copy[i] = copy[j];
+        if (temp !== undefined) {
+          copy[j] = temp;
+        }
+      }
+    }
+    return copy.slice(0, Math.min(n, copy.length));
+  }
   /**
    * Gera um plano completo de staging em 3 etapas para um cômodo específico
    */
@@ -830,9 +863,17 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const roomSpecificRules = plan.roomSafetyNotes;
 
     // Versões curtas das categorias permitidas
-    const allowedMainShort = plan.allowedMainItems.join(', ');
-    const allowedCompShort = plan.allowedComplementary.join(', ');
-    const allowedWallShort = plan.allowedWallDecor.join(', ');
+
+    const allowedMainShort = this.sampleArray(plan.allowedMainItems, 4).join(
+      ', '
+    );
+    const allowedCompShort = this.sampleArray(
+      plan.allowedComplementary,
+      4
+    ).join(', ');
+    const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 4).join(
+      ', '
+    );
 
     const stages: StagingStageConfig[] = [
       // Etapa 1: Base/Fundação - Móveis principais
