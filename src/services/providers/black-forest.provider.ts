@@ -13,12 +13,9 @@ import {
   BlackForestApiResponse,
   BlackForestWebhookResponse,
   LoraConfig,
-  StagingStage,
   StagingPlan,
-  StagingStageResult,
-  StagingProgressResult,
 } from '../../interfaces/upload.interface';
-import { chatGPTService } from '../staging-plan.service';
+import { stagingPlanService } from '../staging-plan.service';
 import sharp from 'sharp';
 
 type KontextRequest = {
@@ -692,7 +689,7 @@ export class BlackForestProvider
     roomType: RoomType,
     furnitureStyle: FurnitureStyle
   ): Promise<StagingPlan> {
-    return chatGPTService.generateStagingPlan(roomType, furnitureStyle);
+    return stagingPlanService.generateStagingPlan(roomType, furnitureStyle);
   }
 
   async executeStage(
@@ -709,7 +706,7 @@ export class BlackForestProvider
   }> {
     try {
       // Gerar prompt específico para a etapa
-      const prompt = chatGPTService.generateStageSpecificPrompt(
+      const prompt = stagingPlanService.generateStageSpecificPrompt(
         stageConfig.stage,
         roomType,
         furnitureStyle,

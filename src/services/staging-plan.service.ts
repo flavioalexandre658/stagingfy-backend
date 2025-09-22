@@ -26,7 +26,7 @@ interface RoomStagingPlan {
   styleEmphasis?: string[];
 }
 
-class ChatGPTService {
+class StagingPlanService {
   // ---------- NEW: room-aware, style-aware plan ----------
   private getRoomStagingPlan(
     roomType: RoomType,
@@ -415,6 +415,184 @@ class ChatGPTService {
     return labels[furnitureStyle];
   }
 
+  // ========== NOVO MÉTODO: orientação dinâmica de estilo ==========
+  /**
+   * Gera um bloco curto (2–4 linhas) com requisitos POSITIVOS/EVITAR
+   * para o estilo selecionado, sem mudar a estrutura do prompt.
+   * Ele é anexado ao final do prompt dos stages "foundation" e "complement".
+   */
+  private buildDynamicStyleGuidance(
+    furnitureStyle: FurnitureStyle,
+    roomType: RoomType,
+    stage: StagingStage
+  ): string {
+    // perfis por estilo (positivos e evitar)
+    const profile: Record<
+      FurnitureStyle,
+      {
+        palette: string[];
+        materials: string[];
+        silhouettes: string[];
+        accents: string[];
+        avoid: string[];
+        examplesMain?: string[];
+        examplesComplementary?: string[];
+      }
+    > = {
+      standard: {
+        palette: ['warm greige', 'taupe', 'soft gray', 'cream'],
+        materials: [
+          'oak/walnut veneer',
+          'linen/cotton weaves',
+          'brushed nickel',
+        ],
+        silhouettes: ['soft rounded edges', 'balanced proportions'],
+        accents: ['subtle tone-on-tone patterns'],
+        avoid: ['high-gloss brass glam', 'neon colors', 'ornate carvings'],
+        examplesMain: [
+          'sofa with soft cushions',
+          'rectangular wood/stone coffee table',
+        ],
+        examplesComplementary: [
+          'neutral area rug',
+          'linen pillows',
+          'ceramic vases',
+        ],
+      },
+      modern: {
+        palette: ['neutral gray/black/white', 'earthy charcoal'],
+        materials: [
+          'matte lacquer',
+          'powder-coated metal',
+          'smoked glass',
+          'stone',
+        ],
+        silhouettes: [
+          'clean lines',
+          'low-profile',
+          'rectilinear with soft curves',
+        ],
+        accents: ['matte black', 'satin chrome', 'fluted wood'],
+        avoid: [
+          'rustic distressing',
+          'farmhouse cross-bucks',
+          'heavy ornament',
+        ],
+        examplesMain: ['low-profile sofa', 'smoked-glass coffee table'],
+        examplesComplementary: [
+          'lean floor lamp',
+          'minimal rug',
+          'black metal side table',
+        ],
+      },
+      scandinavian: {
+        palette: ['white/cream', 'light oak/beech', 'soft pastels'],
+        materials: ['bouclé/wool', 'natural wood', 'stoneware'],
+        silhouettes: ['organic curves', 'minimal ornament', 'airy forms'],
+        accents: ['woven textures', 'ceramics'],
+        avoid: ['dark heavy woods', 'mirrored glam', 'heavy tufting'],
+        examplesMain: ['light-oak sofa legs', 'round pedestal coffee table'],
+        examplesComplementary: ['jute rug', 'linen throw', 'potted olive tree'],
+      },
+      industrial: {
+        palette: ['charcoal', 'ink', 'tobacco', 'warm gray'],
+        materials: ['blackened steel', 'raw wood', 'concrete/stone'],
+        silhouettes: ['robust forms', 'exposed joinery'],
+        accents: ['iron details', 'leather/canvas'],
+        avoid: ['delicate ornament', 'bright whites', 'romantic/glam cues'],
+        examplesMain: ['steel-frame coffee table', 'leather lounge chair'],
+        examplesComplementary: [
+          'rug with muted pattern',
+          'industrial floor lamp',
+        ],
+      },
+      midcentury: {
+        palette: ['walnut/teak', 'mustard', 'teal', 'olive'],
+        materials: ['linen tweed', 'bouclé', 'wood veneers'],
+        silhouettes: ['tapered legs', 'slim profiles', 'boxy cushions'],
+        accents: ['brass or black hardware', 'geometric motifs'],
+        avoid: ['overstuffed oversized sofas', 'glossy chrome futurism'],
+        examplesMain: ['walnut coffee table', 'sofa with tapered legs'],
+        examplesComplementary: ['geometric cushion', 'low-pile rug'],
+      },
+      luxury: {
+        palette: [
+          'rich neutrals',
+          'jewel accents (emerald/sapphire)',
+          'champagne gold',
+        ],
+        materials: ['velvet', 'silk-blend', 'marble', 'mirror'],
+        silhouettes: ['sculptural', 'sumptuous'],
+        accents: ['polished brass', 'ribbed/fluted glass'],
+        avoid: [
+          'rustic/raw woods',
+          'distressed finishes',
+          'matte-black minimalism excess',
+        ],
+        examplesMain: ['marble-top coffee table', 'velvet sofa'],
+        examplesComplementary: ['brass floor lamp', 'plush high-pile rug'],
+      },
+      coastal: {
+        palette: ['white', 'sand', 'driftwood', 'soft blue/seafoam'],
+        materials: ['rattan', 'jute', 'light woods', 'linen'],
+        silhouettes: ['breezy', 'casual', 'rounded edges'],
+        accents: ['subtle stripes', 'botanical prints'],
+        avoid: ['heavy black metal', 'dark jewel tones', 'velvet glam'],
+        examplesMain: ['light-wood sofa frame', 'round rattan coffee table'],
+        examplesComplementary: ['jute rug', 'striped linen pillows'],
+      },
+      farmhouse: {
+        palette: ['warm whites', 'earth tones', 'natural wood'],
+        materials: ['reclaimed/knotty wood', 'stoneware', 'textured fabrics'],
+        silhouettes: ['shaker profiles', 'sturdy'],
+        accents: ['black/antique bronze hardware'],
+        avoid: [
+          'high-gloss lacquer',
+          'glass-heavy tables',
+          'ultra-modern chrome',
+        ],
+        examplesMain: ['solid wood coffee table', 'shaker-style seating'],
+        examplesComplementary: [
+          'woven baskets',
+          'stoneware vases',
+          'cotton throws',
+        ],
+      },
+    };
+
+    const s = profile[furnitureStyle];
+    const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
+
+    // Frases curtas para anexar, evitando “poluir” o prompt principal.
+    const common =
+      `\nStyle requirements — ${styleLabel}:\n` +
+      `• Palette/Materials: ${[...s.palette, ...s.materials].slice(0, 6).join(', ')}.\n` +
+      `• Silhouettes/Accents: ${[...s.silhouettes, ...s.accents].slice(0, 5).join(', ')}.\n` +
+      `• Avoid: ${s.avoid.slice(0, 4).join(', ')}.\n`;
+
+    // Exemplos mudam conforme a etapa:
+    const examples =
+      stage === 'foundation'
+        ? s.examplesMain?.length
+          ? `• Examples for main pieces: ${s.examplesMain.join(', ')}.\n`
+          : ''
+        : stage === 'complement'
+          ? s.examplesComplementary?.length
+            ? `• Examples for complementary items: ${s.examplesComplementary.join(', ')}.\n`
+            : ''
+          : '';
+
+    // Pequena regra para coerência por cômodo (sem forçar estrutura)
+    const roomNudge =
+      roomType === 'kitchen'
+        ? '• Keep pieces compact and away from prep zones; prefer stools/bistro-scale items.\n'
+        : roomType === 'dining_room'
+          ? '• Ensure chairs remain fully usable around the table; pick finishes consistent across set.\n'
+          : '';
+
+    return common + examples + roomNudge;
+  }
+
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
   sampleArray<T>(arr: T[] | undefined, n = 4): T[] {
     if (!arr) {
@@ -433,6 +611,7 @@ class ChatGPTService {
     }
     return copy.slice(0, Math.min(n, copy.length));
   }
+
   /**
    * Gera um plano completo de staging em 3 etapas para um cômodo específico
    */
@@ -473,7 +652,6 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const roomSpecificRules = plan.roomSafetyNotes;
 
     // Versões curtas das categorias permitidas
-
     const allowedMainShort = this.sampleArray(plan.allowedMainItems, 4).join(
       ', '
     );
@@ -498,18 +676,25 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           'no_window_treatments',
           'circulation_clear',
         ],
-        prompt: this.generateStagePrompt(
-          'foundation',
-          roomLabel,
-          styleLabel,
-          allowedMainShort,
-          '',
-          '',
-          plan.mainPiecesRange,
-          plan.complementaryRange,
-          plan.wallDecorRange,
-          getStageSpecificGlobalRules('foundation')
-        ),
+        prompt:
+          this.generateStagePrompt(
+            'foundation',
+            roomLabel,
+            styleLabel,
+            allowedMainShort,
+            '',
+            '',
+            plan.mainPiecesRange,
+            plan.complementaryRange,
+            plan.wallDecorRange,
+            getStageSpecificGlobalRules('foundation')
+          ) +
+          // >>> integração: orientação dinâmica de estilo (foundation)
+          this.buildDynamicStyleGuidance(
+            furnitureStyle,
+            roomType,
+            'foundation'
+          ),
       },
 
       // Etapa 2: Complementos - Acessórios e itens funcionais
@@ -525,18 +710,25 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           'circulation_clear',
           'plant_placement',
         ],
-        prompt: this.generateStagePrompt(
-          'complement',
-          roomLabel,
-          styleLabel,
-          '',
-          allowedCompShort,
-          '',
-          plan.mainPiecesRange,
-          plan.complementaryRange,
-          plan.wallDecorRange,
-          getStageSpecificGlobalRules('complement')
-        ),
+        prompt:
+          this.generateStagePrompt(
+            'complement',
+            roomLabel,
+            styleLabel,
+            '',
+            allowedCompShort,
+            '',
+            plan.mainPiecesRange,
+            plan.complementaryRange,
+            plan.wallDecorRange,
+            getStageSpecificGlobalRules('complement')
+          ) +
+          // >>> integração: orientação dinâmica de estilo (complement)
+          this.buildDynamicStyleGuidance(
+            furnitureStyle,
+            roomType,
+            'complement'
+          ),
       },
 
       // Etapa 3: Decoração de parede - Quadros, espelhos e elementos decorativos
@@ -671,4 +863,4 @@ Safety & constraints:
   }
 }
 
-export const chatGPTService = new ChatGPTService();
+export const stagingPlanService = new StagingPlanService();
