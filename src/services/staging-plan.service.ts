@@ -76,33 +76,44 @@ class StagingPlanService {
 
         // SOMENTE complementos (detalhes) — nada de mini-móveis
         allowedComplementary: [
-          // Tapete (base da composição)
+          // Tapetes (base da composição)
           'large area rug anchoring front legs of seating',
+          'layered rug (smaller patterned rug on top of neutral base rug)',
 
-          // Iluminação portátil/leve (2024/25)
+          // Iluminação portátil/leve
           'arc floor lamp or slim linear floor lamp',
-          'reading/task floor lamp (slim)',
-          'portable cordless table lamp (rechargeable)',
+          'reading/task floor lamp (slim, matte black or brass)',
+          'portable cordless table lamp (rechargeable, modern design)',
+          'small sculptural table lamp (stone, ceramic or smoked glass)',
 
           // Têxteis de apoio
-          'textured pillows and throw blanket (bouclé/linen)',
-          'pouf or small ottoman',
+          'contrasting throw pillows (2–4) in complementary textures',
+          'neutral bouclé or linen throw blanket casually draped on sofa',
+          'pouf or small ottoman (fabric or leather)',
+          'floor cushion (oversized, casual seating)',
 
-          // Plantas (seleção enxuta e atual)
-          'indoor plant (olive tree/fiddle-leaf) in matte planter',
-          'monstera deliciosa in cylinder planter',
-          'rubber plant (ficus elastica) in tall planter',
-          'snake plant (sansevieria) in pedestal planter',
+          // Plantas (variar tamanhos e suportes)
+          'indoor tree (olive, fiddle-leaf, bird of paradise) in matte planter',
+          'medium plant (monstera, rubber plant, ZZ plant) in ceramic or stone planter',
+          'tall snake plant (sansevieria) in slim pedestal planter',
+          'tabletop plant (succulent, pothos) in small ceramic pot',
+          'arrangement of dried pampas/grass in tall vase',
 
-          // Objetos modernos (materiais honestos)
-          'ceramic/stone vases, bowls, trays',
-          'ribbed or smoked-glass vase (large)',
-          'travertine catchall tray',
-          'sculptural object for coffee table (metal/stone)',
-          'coffee table books stack',
-          'woven basket for throws or magazines',
-          'tray on ottoman or coffee table (drinks/books)',
-          'minimal reed diffuser (no open flame)',
+          // Objetos modernos (materiais honestos, 2024/25)
+          'ceramic/stone vases in varied heights (cluster of 2–3)',
+          'ribbed or smoked-glass vase with single branch or flower',
+          'travertine or marble tray with candles/decor',
+          'sculptural object for coffee table (metal, resin or stone)',
+          'stack of coffee table books (2–3, neutral covers)',
+          'minimal reed diffuser (glass bottle, slim sticks)',
+          'set of decorative bowls or catchalls (stone/ceramic)',
+          'pillar candles in glass or ceramic holders (grouped)',
+
+          // Organização & lifestyle
+          'woven basket for throws or magazines (floor corner)',
+          'tray on ottoman or coffee table with drinks/books',
+          'coasters set (stone, marble or leather)',
+          'small decorative box (storage for remotes)',
         ],
 
         // Tratamento de janelas — só onde existir janela real, estética atual
@@ -876,7 +887,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     );
     const allowedCompShort = this.sampleArray(
       plan.allowedComplementary,
-      5
+      10
     ).join(', ');
     const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 2).join(
       ', '
