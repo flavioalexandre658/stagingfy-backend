@@ -18,6 +18,7 @@ import {
   FurnitureStyle,
   Upload,
   Provider,
+  StageSelectionConfig,
 } from '../interfaces/upload.interface';
 
 // Configuração do S3
@@ -230,12 +231,33 @@ export class VirtualStagingController {
         furnitureStyle,
         provider = 'black-forest',
         plan = 'free',
+        stageSelection,
       } = req.body as CreateUploadRequest & { plan: string };
 
       if (!roomType || !furnitureStyle) {
         res.status(400).json({
           success: false,
           message: 'roomType e furnitureStyle são obrigatórios',
+        });
+        return;
+      }
+
+
+
+      // Configuração padrão de etapas (todas habilitadas se não especificado)
+      const finalStageSelection: StageSelectionConfig = stageSelection || {
+        foundation: true,
+        complement: true,
+        wall_decoration: true,
+        windows_decoration: true,
+      };
+
+      // Validar se pelo menos uma etapa está selecionada
+      const selectedStages = Object.values(finalStageSelection).filter(Boolean);
+      if (selectedStages.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Pelo menos uma etapa deve ser selecionada',
         });
         return;
       }
@@ -349,6 +371,14 @@ export class VirtualStagingController {
         inputImageUrl,
       });
 
+      // Configuração padrão de etapas (todas habilitadas se não especificado)
+      const stageConfig: StageSelectionConfig = stageSelection || {
+        foundation: true,
+        complement: true,
+        wall_decoration: true,
+        windows_decoration: true,
+      };
+
       // Iniciar processamento assíncrono em etapas
       this.processVirtualStagingInStagesAsync(
         uploadRecord.id,
@@ -356,7 +386,8 @@ export class VirtualStagingController {
         req.file.buffer,
         roomType as RoomType,
         furnitureStyle as FurnitureStyle,
-        provider as Provider
+        provider as Provider,
+        stageConfig
       );
 
       // Retornar resposta imediata
@@ -409,6 +440,7 @@ export class VirtualStagingController {
         plan = 'free',
         seed,
         customPrompt,
+        stageSelection,
       } = req.body as CreateUploadRequest & {
         plan: string;
         seed?: number;
@@ -556,6 +588,14 @@ export class VirtualStagingController {
         inputImageUrl,
       });
 
+      // Configuração padrão de etapas (todas habilitadas se não especificado)
+      const finalStageSelection: StageSelectionConfig = stageSelection || {
+        foundation: true,
+        complement: true,
+        wall_decoration: true,
+        windows_decoration: true,
+      };
+
       // Iniciar processamento assíncrono com imagens de referência
       this.processVirtualStagingInStagesWithReferencesAsync(
         uploadRecord.id,
@@ -565,6 +605,7 @@ export class VirtualStagingController {
         furnitureStyle as FurnitureStyle,
         provider as Provider,
         referenceImageUrls,
+        finalStageSelection,
         seed ? parseInt(seed.toString()) : undefined,
         customPrompt
       );
@@ -601,7 +642,8 @@ export class VirtualStagingController {
     imageBuffer: Buffer,
     roomType: RoomType,
     furnitureStyle: FurnitureStyle,
-    provider: Provider
+    provider: Provider,
+    stageSelection?: StageSelectionConfig
   ): Promise<void> {
     console.log(
       `[${uploadId}] 🚀 Iniciando processamento em etapas assíncrono de virtual staging`,
@@ -642,6 +684,7 @@ export class VirtualStagingController {
         imageBase64: imageBase64,
         roomType: roomType,
         furnitureStyle: furnitureStyle,
+        ...(stageSelection && { stageSelection }),
       };
 
       // Configurar callback de progresso
@@ -777,6 +820,7 @@ export class VirtualStagingController {
     furnitureStyle: FurnitureStyle,
     provider: Provider,
     referenceImageUrls: string[],
+    stageSelection: StageSelectionConfig,
     seed?: number,
     customPrompt?: string
   ): Promise<void> {
@@ -851,6 +895,7 @@ export class VirtualStagingController {
         imageBase64: imageBase64,
         roomType: roomType,
         furnitureStyle: furnitureStyle,
+        ...(stageSelection && { stageSelection }),
         ...(referenceImagesBase64[0] && {
           referenceImage2: referenceImagesBase64[0],
         }),

@@ -1,4 +1,4 @@
-import { RoomType, FurnitureStyle, Provider } from './upload.interface';
+import { RoomType, FurnitureStyle, Provider, StageSelectionConfig } from './upload.interface';
 
 /**
  * Resultado do processamento de virtual staging
@@ -34,6 +34,7 @@ export interface VirtualStagingParams {
   furnitureStyle: FurnitureStyle;
   uploadId: string;
   webhookUrl?: string;
+  stageSelection?: StageSelectionConfig;
   // Imagens de referência opcionais (até 3 adicionais)
   referenceImage2?: string; // base64
   referenceImage3?: string; // base64

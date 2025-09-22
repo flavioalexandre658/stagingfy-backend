@@ -4,6 +4,7 @@ import {
   StagingStage,
   StagingPlan,
   StagingStageConfig,
+  StageSelectionConfig,
 } from '../interfaces/upload.interface';
 
 type Range = [number, number];
@@ -830,7 +831,8 @@ class StagingPlanService {
    */
   generateStagingPlan(
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle
+    furnitureStyle: FurnitureStyle,
+    stageSelection?: StageSelectionConfig
   ): StagingPlan {
     const plan = this.getRoomStagingPlan(roomType, furnitureStyle);
     const roomLabel = this.getRoomTypeLabel(roomType);
@@ -1015,10 +1017,28 @@ Do not alter or replace any fixed architectural or material elements: keep the f
       },
     ];
 
+    // Filtrar etapas baseado na seleção do usuário
+    const filteredStages = stageSelection 
+      ? stages.filter(stage => {
+          switch (stage.stage) {
+            case 'foundation':
+              return stageSelection.foundation;
+            case 'complement':
+              return stageSelection.complement;
+            case 'wall_decoration':
+              return stageSelection.wall_decoration;
+            case 'windows_decoration':
+              return stageSelection.windows_decoration;
+            default:
+              return true;
+          }
+        })
+      : stages;
+
     return {
       roomType,
       furnitureStyle,
-      stages,
+      stages: filteredStages,
       globalRules: getStageSpecificGlobalRules('foundation'),
     };
   }
@@ -1104,9 +1124,10 @@ If unsure about window presence or clearance, SKIP.
     stage: StagingStage,
     roomType: RoomType,
     furnitureStyle: FurnitureStyle,
-    currentItemCount: number = 0
+    currentItemCount: number = 0,
+    stageSelection?: StageSelectionConfig
   ): string {
-    const plan = this.generateStagingPlan(roomType, furnitureStyle);
+    const plan = this.generateStagingPlan(roomType, furnitureStyle, stageSelection);
     const stageConfig = plan.stages.find(s => s.stage === stage);
 
     if (!stageConfig) {

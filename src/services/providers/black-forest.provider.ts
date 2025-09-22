@@ -14,6 +14,7 @@ import {
   BlackForestWebhookResponse,
   LoraConfig,
   StagingPlan,
+  StageSelectionConfig,
 } from '../../interfaces/upload.interface';
 import { stagingPlanService } from '../staging-plan.service';
 import sharp from 'sharp';
@@ -620,7 +621,7 @@ export class BlackForestProvider
       });
 
       // Gerar plano de staging
-      const plan = await this.generateStagingPlan(roomType, furnitureStyle);
+      const plan = await this.generateStagingPlan(roomType, furnitureStyle, params.stageSelection);
 
       // Executar apenas a primeira etapa
       const firstStage = plan.stages[0];
@@ -642,7 +643,8 @@ export class BlackForestProvider
         inputImageBase64,
         firstStage,
         roomType,
-        furnitureStyle
+        furnitureStyle,
+        params.stageSelection
       );
 
       if (stageResult.success && stageResult.jobId) {
@@ -687,9 +689,10 @@ export class BlackForestProvider
 
   private async generateStagingPlan(
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle
+    furnitureStyle: FurnitureStyle,
+    stageSelection?: StageSelectionConfig
   ): Promise<StagingPlan> {
-    return stagingPlanService.generateStagingPlan(roomType, furnitureStyle);
+    return stagingPlanService.generateStagingPlan(roomType, furnitureStyle, stageSelection);
   }
 
   async executeStage(
@@ -697,7 +700,8 @@ export class BlackForestProvider
     imageBase64: string,
     stageConfig: any,
     roomType: RoomType,
-    furnitureStyle: FurnitureStyle
+    furnitureStyle: FurnitureStyle,
+    stageSelection?: StageSelectionConfig
   ): Promise<{
     success: boolean;
     jobId?: string;
@@ -710,7 +714,8 @@ export class BlackForestProvider
         stageConfig.stage,
         roomType,
         furnitureStyle,
-        0 // stageIndex não é usado no generateStageSpecificPrompt
+        0, // stageIndex não é usado no generateStageSpecificPrompt
+        stageSelection
       );
 
       // Executar staging para esta etapa

@@ -52,6 +52,7 @@ export interface CreateUploadRequest {
   plan?: 'free' | 'premium';
   saveMask?: boolean;
   hasMask?: boolean; // Indica se o usuário está enviando uma máscara personalizada
+  stageSelection?: StageSelectionConfig; // Configuração de etapas a serem executadas
 }
 
 export interface BlackForestApiRequest {
@@ -169,4 +170,11 @@ export interface StagingValidationResult {
   stairsBlocked: boolean;
   colorDeviationDetected: boolean;
   errors: string[];
+}
+
+export interface StageSelectionConfig {
+  foundation: boolean;
+  complement: boolean;
+  wall_decoration: boolean;
+  windows_decoration: boolean;
 }
