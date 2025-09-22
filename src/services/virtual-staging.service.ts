@@ -13,7 +13,7 @@ import { BaseService } from './base.service';
  */
 export class VirtualStagingService extends BaseService {
   private providers: Map<Provider, IVirtualStagingProvider> = new Map();
-  private defaultProvider: Provider = 'instant-deco';
+  private defaultProvider: Provider = 'black-forest';
 
   constructor(private configs: Record<Provider, ProviderConfig>) {
     super();

@@ -943,8 +943,10 @@ export class VirtualStagingController {
       };
 
       // Processar staging usando o service unificado
-      const webhookUrl = 'https://api.stagingfy.com/api/v1/webhooks/black-forest';
-      const result = await this.virtualStagingService.processVirtualStaging(params);
+      const webhookUrl = provider === 'black-forest' 
+        ? 'https://api.stagingfy.com/api/v1/webhooks/black-forest'
+        : 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
+      const result = await this.virtualStagingService.processVirtualStaging(params, provider);
 
       if (result.success) {
         console.log(`[${uploadId}] ✅ Processamento com referências concluído com sucesso!`, {
@@ -1001,8 +1003,10 @@ export class VirtualStagingController {
       const imageBase64 = imageBuffer.toString('base64');
 
       // Usar o service unificado para processar virtual staging
-      // Webhook URL fixo da nossa aplicação para receber respostas do InstantDeco
-      const webhookUrl = 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
+      // Webhook URL baseado no provider
+      const webhookUrl = provider === 'black-forest' 
+        ? 'https://api.stagingfy.com/api/v1/webhooks/black-forest'
+        : 'https://api.stagingfy.com/api/v1/webhooks/instant-deco';
       const result = await this.virtualStagingService.processVirtualStaging({
         imageBase64,
         imageUrl: inputImageUrl,
