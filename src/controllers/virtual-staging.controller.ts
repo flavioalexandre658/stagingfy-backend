@@ -231,8 +231,17 @@ export class VirtualStagingController {
         furnitureStyle,
         provider = 'black-forest',
         plan = 'free',
-        stageSelection,
-      } = req.body as CreateUploadRequest & { plan: string };
+        foundation,
+        complement,
+        wall_decoration,
+        windows_decoration,
+      } = req.body as CreateUploadRequest & { 
+        plan: string;
+        foundation?: string | boolean;
+        complement?: string | boolean;
+        wall_decoration?: string | boolean;
+        windows_decoration?: string | boolean;
+      };
 
       if (!roomType || !furnitureStyle) {
         res.status(400).json({
@@ -242,10 +251,19 @@ export class VirtualStagingController {
         return;
       }
 
+      // Converter campos individuais para StageSelectionConfig
+      // Se nenhum campo for especificado, usar configuração padrão (todas habilitadas)
+      const hasAnyStageField = foundation !== undefined || 
+                              complement !== undefined || 
+                              wall_decoration !== undefined || 
+                              windows_decoration !== undefined;
 
-
-      // Configuração padrão de etapas (todas habilitadas se não especificado)
-      const finalStageSelection: StageSelectionConfig = stageSelection || {
+      const finalStageSelection: StageSelectionConfig = hasAnyStageField ? {
+        foundation: foundation === 'true' || foundation === true,
+        complement: complement === 'true' || complement === true,
+        wall_decoration: wall_decoration === 'true' || wall_decoration === true,
+        windows_decoration: windows_decoration === 'true' || windows_decoration === true,
+      } : {
         foundation: true,
         complement: true,
         wall_decoration: true,
@@ -371,13 +389,8 @@ export class VirtualStagingController {
         inputImageUrl,
       });
 
-      // Configuração padrão de etapas (todas habilitadas se não especificado)
-      const stageConfig: StageSelectionConfig = stageSelection || {
-        foundation: true,
-        complement: true,
-        wall_decoration: true,
-        windows_decoration: true,
-      };
+      // Usar a configuração de etapas já processada
+      const stageConfig: StageSelectionConfig = finalStageSelection;
 
       // Iniciar processamento assíncrono em etapas
       this.processVirtualStagingInStagesAsync(
@@ -440,11 +453,18 @@ export class VirtualStagingController {
         plan = 'free',
         seed,
         customPrompt,
-        stageSelection,
+        foundation,
+        complement,
+        wall_decoration,
+        windows_decoration,
       } = req.body as CreateUploadRequest & {
         plan: string;
         seed?: number;
         customPrompt?: string;
+        foundation?: string | boolean;
+        complement?: string | boolean;
+        wall_decoration?: string | boolean;
+        windows_decoration?: string | boolean;
       };
 
       if (!roomType || !furnitureStyle) {
@@ -588,8 +608,19 @@ export class VirtualStagingController {
         inputImageUrl,
       });
 
-      // Configuração padrão de etapas (todas habilitadas se não especificado)
-      const finalStageSelection: StageSelectionConfig = stageSelection || {
+      // Converter campos individuais para StageSelectionConfig
+      // Se nenhum campo for especificado, usar configuração padrão (todas habilitadas)
+      const hasAnyStageField = foundation !== undefined || 
+                              complement !== undefined || 
+                              wall_decoration !== undefined || 
+                              windows_decoration !== undefined;
+
+      const finalStageSelection: StageSelectionConfig = hasAnyStageField ? {
+        foundation: foundation === 'true' || foundation === true,
+        complement: complement === 'true' || complement === true,
+        wall_decoration: wall_decoration === 'true' || wall_decoration === true,
+        windows_decoration: windows_decoration === 'true' || windows_decoration === true,
+      } : {
         foundation: true,
         complement: true,
         wall_decoration: true,
