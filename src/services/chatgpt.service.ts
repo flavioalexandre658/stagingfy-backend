@@ -803,10 +803,28 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     const roomLabel = this.getRoomTypeLabel(roomType);
     const styleLabel = this.getFurnitureStyleLabel(furnitureStyle);
 
-    // Constantes globais que vão em TODAS as etapas
-    const globalRules = [
-      `Add only freestanding furniture and decor on ${roomLabel} in ${styleLabel} while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.`,
-    ];
+    // Função para gerar regras específicas por stage
+    const getStageSpecificGlobalRules = (stage: StagingStage): string[] => {
+      let stageSpecificText = '';
+      
+      switch (stage) {
+        case 'foundation':
+          stageSpecificText = 'Add only freestanding furniture';
+          break;
+        case 'complement':
+          stageSpecificText = 'Add only freestanding decor';
+          break;
+        case 'wall_decoration':
+          stageSpecificText = 'Add only freestanding wall decoration';
+          break;
+        default:
+          stageSpecificText = 'Add only freestanding furniture and decor';
+      }
+      
+      return [
+        `${stageSpecificText} on ${roomLabel} in ${styleLabel} while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.`,
+      ];
+    };
 
     const roomSpecificRules = plan.roomSafetyNotes;
 
@@ -838,7 +856,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
-          globalRules
+          getStageSpecificGlobalRules('foundation')
         ),
       },
 
@@ -865,7 +883,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
-          globalRules
+          getStageSpecificGlobalRules('complement')
         ),
       },
 
@@ -897,7 +915,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
-          globalRules
+          getStageSpecificGlobalRules('wall_decoration')
         ),
       },
     ];
@@ -906,7 +924,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
       roomType,
       furnitureStyle,
       stages,
-      globalRules,
+      globalRules: getStageSpecificGlobalRules('foundation'), // Default para compatibilidade
       roomSpecificRules,
     };
   }
