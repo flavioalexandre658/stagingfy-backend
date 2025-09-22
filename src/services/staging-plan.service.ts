@@ -39,10 +39,10 @@ class StagingPlanService {
     > = {
       living_room: {
         // Quantidades ajustadas (essenciais, sem sobrecarregar)
-        mainPiecesRange: [3, 4],
-        wallDecorRange: [0, 1], // pode ser 0 quando há muitas janelas
+        mainPiecesRange: [2, 3],
+        wallDecorRange: [0, 2], // pode ser 0 quando há muitas janelas
         complementaryRange: [3, 5],
-        windowsDecorRange: [1, 2], // tratar janelas quando existirem
+        windowsDecorRange: [1, 4], // tratar janelas quando existirem
 
         allowedMainItems: [
           // Seating âncora — modernos e relevantes
@@ -849,7 +849,7 @@ class StagingPlanService {
           break;
         case 'complement':
           stageSpecificText =
-            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures, surfaces.';
+            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
           break;
         case 'wall_decoration':
           stageSpecificText =
@@ -871,19 +871,19 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     };
 
     // Versões curtas das categorias permitidas
-    const allowedMainShort = this.sampleArray(plan.allowedMainItems, 4).join(
+    const allowedMainShort = this.sampleArray(plan.allowedMainItems, 3).join(
       ', '
     );
     const allowedCompShort = this.sampleArray(
       plan.allowedComplementary,
-      4
+      5
     ).join(', ');
-    const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 4).join(
+    const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 2).join(
       ', '
     );
     const allowedWindowsShort = this.sampleArray(
       plan.allowedWindowsDecor,
-      4
+      3
     ).join(', ');
 
     const stages: StagingStageConfig[] = [
@@ -1018,7 +1018,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     ];
 
     // Filtrar etapas baseado na seleção do usuário
-    const filteredStages = stageSelection 
+    const filteredStages = stageSelection
       ? stages.filter(stage => {
           switch (stage.stage) {
             case 'foundation':
@@ -1127,7 +1127,11 @@ If unsure about window presence or clearance, SKIP.
     currentItemCount: number = 0,
     stageSelection?: StageSelectionConfig
   ): string {
-    const plan = this.generateStagingPlan(roomType, furnitureStyle, stageSelection);
+    const plan = this.generateStagingPlan(
+      roomType,
+      furnitureStyle,
+      stageSelection
+    );
     const stageConfig = plan.stages.find(s => s.stage === stage);
 
     if (!stageConfig) {
