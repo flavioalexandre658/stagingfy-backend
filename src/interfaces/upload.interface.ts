@@ -109,7 +109,7 @@ export interface LoraConfig {
 }
 
 // Novas interfaces para o sistema de staging em etapas
-export type StagingStage = 'foundation' | 'complement' | 'wall_decoration';
+export type StagingStage = 'foundation' | 'complement' | 'wall_decoration' | 'windows_decoration';
 
 export interface StagingStageConfig {
   stage: StagingStage;

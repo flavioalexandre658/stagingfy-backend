@@ -13,11 +13,13 @@ interface RoomStagingPlan {
   mainPiecesRange: Range; // e.g., sofa/bed/table/desk depending on room
   wallDecorRange: Range; // frames, mirrors (on free wall only)
   complementaryRange: Range; // plants, lamps, rugs, cushions, accessories
+  windowsDecorRange: Range; // curtains, blinds, window treatments
 
   // Allowed item types for this room (semantic guardrails)
   allowedMainItems: string[]; // room-specific primary furniture
   allowedWallDecor: string[]; // safe wall decor
   allowedComplementary: string[]; // safe complementary items
+  allowedWindowsDecor: string[]; // safe window treatments
 
   // Extra, room-specific safety notes (e.g., island clearances, stair lanes)
   roomSafetyNotes: string[]; // appended into prompt
@@ -43,6 +45,7 @@ class StagingPlanService {
         mainPiecesRange: [3, 5],
         wallDecorRange: [1, 2],
         complementaryRange: [3, 6],
+        windowsDecorRange: [1, 3],
 
         allowedMainItems: [
           // Seating (âncora)
@@ -141,10 +144,25 @@ class StagingPlanService {
           'minimal charging tray (on console/side table)',
           'record stand (slim, freestanding)',
 
-          // Pequenos móveis de apoio modernos (ainda “complementares”)
+          // Pequenos móveis de apoio modernos (ainda "complementares")
           'C-shaped side table (sofa arm)',
           'low pedestal stand for plant or sculpture',
           'narrow console tray on media console (surface-styled)',
+        ],
+
+        allowedWindowsDecor: [
+          'linen curtains (floor-length, neutral tones)',
+          'sheer curtains (white/cream, light filtering)',
+          'roman shades (linen/cotton, cordless)',
+          'bamboo blinds (natural wood tones)',
+          'cellular shades (honeycomb, light filtering)',
+          'roller shades (blackout or light filtering)',
+          'cafe curtains (lower window coverage)',
+          'valances (simple, tailored style)',
+          'curtain tiebacks (rope/fabric, matching style)',
+          'decorative curtain rods (brass/black/wood)',
+          'window film (frosted/decorative, privacy)',
+          'window boxes with plants (if applicable)',
         ],
 
         roomSafetyNotes: [
@@ -159,6 +177,7 @@ class StagingPlanService {
         mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
+        windowsDecorRange: [1, 2],
         allowedMainItems: [
           'platform bed (upholstered/wood, channel-tufted optional)',
           'nightstands (pair or single)',
@@ -183,6 +202,16 @@ class StagingPlanService {
           'tray + small decorative objects on dresser',
           'lidded laundry hamper (compact)',
         ],
+        allowedWindowsDecor: [
+          'blackout curtains (bedroom privacy)',
+          'layered curtains (sheer + blackout)',
+          'roman shades (room darkening)',
+          'plantation shutters (if applicable)',
+          'window scarves (decorative draping)',
+          'bedroom valances (soft, romantic)',
+          'cordless blinds (privacy and light control)',
+          'window treatments matching bedding style',
+        ],
         roomSafetyNotes: [
           'Keep door swings and closet access fully clear',
           'Do not cover power outlets or switches with furniture fronts',
@@ -193,6 +222,7 @@ class StagingPlanService {
         mainPiecesRange: [1, 3],
         wallDecorRange: [0, 1],
         complementaryRange: [1, 3],
+        windowsDecorRange: [0, 2],
         allowedMainItems: [
           'counter or island stools (2–4; backless/low-back)',
           'compact bistro/café set (small round table + 2 chairs)',
@@ -210,6 +240,14 @@ class StagingPlanService {
           'tabletop bowl/vase on bistro/bar table (not on countertops)',
           'seat cushions for stools',
         ],
+        allowedWindowsDecor: [
+          'cafe curtains (lower window only)',
+          'kitchen valances (simple, washable)',
+          'roman shades (moisture resistant)',
+          'mini blinds (easy to clean)',
+          'window herbs garden (small pots on sill)',
+          'simple tie-up shades',
+        ],
         roomSafetyNotes: [
           'Do not place items that obstruct cabinet/appliance doors or walking lanes',
           'Keep cooktop and sink areas unobstructed',
@@ -220,6 +258,7 @@ class StagingPlanService {
         mainPiecesRange: [0, 1],
         wallDecorRange: [0, 1],
         complementaryRange: [2, 4],
+        windowsDecorRange: [0, 1],
         allowedMainItems: [
           'small stool (wood/stone)',
           'slim console table (narrow, freestanding)',
@@ -239,6 +278,13 @@ class StagingPlanService {
           'compact lidded hamper',
           'reed diffuser or LED candle',
         ],
+        allowedWindowsDecor: [
+          'frosted window film (privacy)',
+          'moisture-resistant roman shades',
+          'bathroom cafe curtains (washable)',
+          'simple roller shades (waterproof)',
+          'venetian blinds (moisture resistant)',
+        ],
         roomSafetyNotes: [
           'Keep fixtures (toilet, vanity, shower) fully visible and unobstructed',
           'Do not place items that could block door swing or shower entry',
@@ -249,6 +295,7 @@ class StagingPlanService {
         mainPiecesRange: [1, 2],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
+        windowsDecorRange: [1, 2],
 
         allowedMainItems: [
           // Mesas
@@ -282,6 +329,16 @@ class StagingPlanService {
           'compact bar cart in matching wood/metal finish',
         ],
 
+        allowedWindowsDecor: [
+          'formal dining curtains (floor-length, elegant)',
+          'layered window treatments (sheer + drapes)',
+          'roman shades (linen, sophisticated)',
+          'wooden blinds (matching dining furniture)',
+          'swag curtains (formal dining style)',
+          'decorative curtain tiebacks (matching hardware)',
+          'window cornices (architectural detail)',
+        ],
+
         roomSafetyNotes: [
           'Keep chairs fully usable; do not push table too close to walls/doors',
           'Maintain clear path around table perimeter',
@@ -292,6 +349,7 @@ class StagingPlanService {
         mainPiecesRange: [2, 3],
         wallDecorRange: [0, 2],
         complementaryRange: [2, 4],
+        windowsDecorRange: [1, 2],
         allowedMainItems: [
           'sit-stand desk (freestanding)',
           'ergonomic task chair',
@@ -316,6 +374,14 @@ class StagingPlanService {
           'monitor stand',
           'cable management box',
         ],
+        allowedWindowsDecor: [
+          'light-filtering blinds (reduce screen glare)',
+          'adjustable roman shades',
+          'vertical blinds (professional look)',
+          'cordless cellular shades',
+          'office curtains (neutral, professional)',
+          'window film (glare reduction)',
+        ],
         roomSafetyNotes: [
           'Keep cable management tidy; do not block outlets',
           'Do not place furniture obstructing door or window opening',
@@ -326,6 +392,7 @@ class StagingPlanService {
         mainPiecesRange: [2, 4],
         wallDecorRange: [1, 2],
         complementaryRange: [2, 4],
+        windowsDecorRange: [1, 2],
         allowedMainItems: [
           'twin/full bed or bunk bed (if space)',
           'nightstand',
@@ -349,6 +416,14 @@ class StagingPlanService {
           'table lamp or night light',
           'small plant out of reach',
         ],
+        allowedWindowsDecor: [
+          'blackout curtains (better sleep)',
+          'fun patterned curtains (age-appropriate)',
+          'cordless blinds (child safety)',
+          'room darkening shades',
+          'decorative valances (playful themes)',
+          'window clings (removable, fun designs)',
+        ],
         roomSafetyNotes: [
           'Do not place furniture blocking closet/door',
           'Keep walking paths free of tripping hazards',
@@ -359,6 +434,7 @@ class StagingPlanService {
         mainPiecesRange: [2, 4],
         wallDecorRange: [0, 1],
         complementaryRange: [2, 4],
+        windowsDecorRange: [0, 1],
         allowedMainItems: [
           'modular outdoor sectional',
           'pair of lounge chairs',
@@ -379,6 +455,11 @@ class StagingPlanService {
           'outdoor cushions and throws',
           'small side tables',
           'decor tray for table',
+        ],
+        allowedWindowsDecor: [
+          'outdoor curtains (weather-resistant)',
+          'bamboo roll-up shades',
+          'outdoor privacy screens',
         ],
         roomSafetyNotes: [
           'Keep door thresholds and balcony edges unobstructed',
@@ -859,6 +940,9 @@ class StagingPlanService {
         case 'wall_decoration':
           stageSpecificText = 'Add only freestanding wall decoration,';
           break;
+        case 'windows_decoration':
+          stageSpecificText = 'Add only window treatments and decorations,';
+          break;
         default:
           stageSpecificText = 'Add only freestanding furniture and decor';
       }
@@ -882,6 +966,9 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const allowedWallShort = this.sampleArray(plan.allowedWallDecor, 4).join(
       ', '
     );
+    const allowedWindowsShort = this.sampleArray(plan.allowedWindowsDecor, 4).join(
+      ', '
+    );
 
     const stages: StagingStageConfig[] = [
       // Etapa 1: Base/Fundação - Móveis principais
@@ -903,9 +990,11 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           allowedMainShort,
           '',
           '',
+          '',
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
+          plan.windowsDecorRange,
           getStageSpecificGlobalRules('foundation'),
           this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'foundation')
         ),
@@ -931,9 +1020,11 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           '',
           allowedCompShort,
           '',
+          '',
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
+          plan.windowsDecorRange,
           getStageSpecificGlobalRules('complement'),
           this.buildDynamicStyleGuidance(furnitureStyle, roomType, 'complement')
         ),
@@ -964,10 +1055,47 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           '',
           '',
           allowedWallShort,
+          '',
           plan.mainPiecesRange,
           plan.complementaryRange,
           plan.wallDecorRange,
+          plan.windowsDecorRange,
           getStageSpecificGlobalRules('wall_decoration'),
+          ''
+        ),
+      },
+
+      // Etapa 4: Decoração de janelas - Cortinas, persianas e tratamentos de janela
+      {
+        stage: 'windows_decoration',
+        minItems: plan.windowsDecorRange[0],
+        maxItems: plan.windowsDecorRange[1],
+        allowedCategories: [
+          'curtains',
+          'blinds',
+          'shades',
+          'window_treatments',
+          'window_decor',
+        ],
+        validationRules: [
+          'windows_decoration_allowed',
+          'circulation_clear',
+          'proper_window_coverage',
+          'style_consistency',
+        ],
+        prompt: this.generateStagePrompt(
+          'windows_decoration',
+          roomLabel,
+          styleLabel,
+          '',
+          '',
+          '',
+          allowedWindowsShort,
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          plan.wallDecorRange,
+          plan.windowsDecorRange,
+          getStageSpecificGlobalRules('windows_decoration'),
           ''
         ),
       },
@@ -992,15 +1120,18 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     allowedMainShort: string,
     allowedCompShort: string,
     allowedWallShort: string,
+    allowedWindowsShort: string,
     mainRange: Range,
     compRange: Range,
     wallDecorRange: Range,
+    windowsDecorRange: Range,
     globalRules: string[],
     stylesRules: string
   ): string {
     const [minMain, maxMain] = mainRange;
     const [minComp, maxComp] = compRange;
     const [minWallDecor, maxWallDecor] = wallDecorRange;
+    const [minWindowsDecor, maxWindowsDecor] = windowsDecorRange;
 
     const globalRulesText = globalRules.join('\n');
 
@@ -1045,6 +1176,26 @@ Safety & constraints:
 • Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
 • Never invent new openings, rods, or architectural features — use treatments only where a real structure exists.
 • If unsure about space, clearance, or window presence, SKIP.
+
+`;
+
+      case 'windows_decoration':
+        return `${globalRulesText}
+Add permitted window decoration items and treatments selected from: ${allowedWindowsShort}.
+Add ${minWindowsDecor}–${maxWindowsDecor} window treatments to complete the scene.
+
+Placement & Style:
+• Install window treatments only where windows actually exist in the image.
+• Match the style and color palette to the room's overall design theme.
+• Consider privacy, light control, and aesthetic enhancement.
+• Curtains should extend from ceiling to floor for elegant proportions.
+• Blinds and shades should fit window dimensions precisely.
+
+Safety & constraints:
+• Keep ≥90 cm (36") clear circulation; do not obstruct doors, windows, or stairs.
+• Never invent new windows or architectural features — use treatments only where windows exist.
+• Ensure window treatments don't interfere with window operation or emergency egress.
+• If unsure about window presence or clearance, SKIP.
 
 `;
 

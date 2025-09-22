@@ -271,16 +271,46 @@ export class StagingValidationService {
         }
         // Permitir wall decor nesta etapa
         break;
+        
+      case 'windows_decoration':
+        // Na etapa de decoração de janelas, validar tratamentos de janela
+        if (result.itemCount < expectedItemCount) {
+          result.errors.push(`Windows decoration stage should have at least ${expectedItemCount} window items, found ${result.itemCount}`);
+        }
+        // Permitir window treatments nesta etapa
+        break;
     }
 
-    // Validações comuns para todas as etapas (exceto wall_decoration)
-    if (stage !== 'wall_decoration') {
+    // Validações comuns para todas as etapas (exceto wall_decoration e windows_decoration)
+    if (stage !== 'wall_decoration' && stage !== 'windows_decoration') {
       if (result.hasWallDecor) {
         result.errors.push('Wall decor detected - not allowed in any stage');
       }
       
       if (result.hasWindowTreatments) {
         result.errors.push('Window treatments detected - not allowed in any stage');
+      }
+      
+      if (result.colorDeviationDetected) {
+        result.errors.push('Significant color deviation detected - architectural elements may have been modified');
+      }
+    }
+    
+    // Validações específicas para wall_decoration (não permitir window treatments)
+    if (stage === 'wall_decoration') {
+      if (result.hasWindowTreatments) {
+        result.errors.push('Window treatments detected - not allowed in wall decoration stage');
+      }
+      
+      if (result.colorDeviationDetected) {
+        result.errors.push('Significant color deviation detected - architectural elements may have been modified');
+      }
+    }
+    
+    // Validações específicas para windows_decoration (não permitir wall decor)
+    if (stage === 'windows_decoration') {
+      if (result.hasWallDecor) {
+        result.errors.push('Wall decor detected - not allowed in windows decoration stage');
       }
       
       if (result.colorDeviationDetected) {

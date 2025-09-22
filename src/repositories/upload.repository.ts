@@ -414,7 +414,7 @@ export class UploadRepository {
   async updateCurrentStage(uploadId: string, currentStage: string): Promise<void> {
     await db.update(uploads)
       .set({ 
-        currentStage: currentStage as 'foundation' | 'complement' | 'wall_decoration',
+        currentStage: currentStage as 'foundation' | 'complement' | 'wall_decoration' | 'windows_decoration',
         updatedAt: new Date() 
       })
       .where(eq(uploads.id, uploadId));
