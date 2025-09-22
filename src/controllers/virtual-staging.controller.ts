@@ -8,7 +8,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { uploadRepository } from '../repositories/upload.repository';
-import { chatGPTService } from '../services/staging-plan.service';
+import { stagingPlanService } from '../services/staging-plan.service';
 import { VirtualStagingService } from '../services/virtual-staging.service';
 import { ProviderConfig } from '../interfaces/virtual-staging-provider.interface';
 import { providerConfigManager } from '../config/provider.config';
@@ -299,7 +299,7 @@ export class VirtualStagingController {
       }
 
       // Verificar se os serviços estão configurados
-      if (!chatGPTService) {
+      if (!stagingPlanService) {
         res.status(500).json({
           success: false,
           message: 'Serviço ChatGPT não configurado',
@@ -482,7 +482,7 @@ export class VirtualStagingController {
       }
 
       // Verificar se os serviços estão configurados
-      if (!chatGPTService) {
+      if (!stagingPlanService) {
         res.status(500).json({
           success: false,
           message: 'Serviço ChatGPT não configurado',
