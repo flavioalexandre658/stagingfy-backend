@@ -806,7 +806,7 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
     // Função para gerar regras específicas por stage
     const getStageSpecificGlobalRules = (stage: StagingStage): string[] => {
       let stageSpecificText = '';
-      
+
       switch (stage) {
         case 'foundation':
           stageSpecificText = 'Add only freestanding furniture';
@@ -820,9 +820,10 @@ Output: a photo-real, professionally staged ${roomLabel} in a ${styleLabel} styl
         default:
           stageSpecificText = 'Add only freestanding furniture and decor';
       }
-      
+
       return [
-        `${stageSpecificText} on ${roomLabel} in ${styleLabel} while maintaining the same composition and lighting; keep the floor, walls, doors, windows, countertops/cabinetry, and all existing colors identical.`,
+        `only add furniture items on top of the original photo; never modify, move, or substitute any existing structures or surfaces. maintain the same composition, perspective, and natural lighting.
+Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
       ];
     };
 
