@@ -126,43 +126,61 @@ class StagingPlanService {
       },
 
       bedroom: {
-        mainPiecesRange: [2, 4],
-        wallDecorRange: [1, 2],
-        complementaryRange: [2, 4],
+        // ranges ajustados — sempre cama + apoios
+        mainPiecesRange: [2, 4], // cama + 1–3 itens de apoio
+        wallDecorRange: [0, 2], // pode ser zero (quando sem parede livre)
+        complementaryRange: [2, 5],
         windowsDecorRange: [1, 2],
+
         allowedMainItems: [
-          'platform bed (upholstered/wood, channel-tufted optional)',
-          'nightstands (pair or single)',
-          'low dresser (6–8 drawers) or slim wardrobe',
-          'bench or storage bench at foot of bed',
+          // Âncora obrigatória
+          'bed (platform or upholstered, low-profile, with headboard)',
+
+          // Apoios
+          'nightstands (pair or single, matching bed scale)',
+          'low dresser (6–8 drawers) or slim wardrobe (if space)',
+          'bench or storage bench at foot of bed (if space)',
           'accent chair or chaise (if space)',
-          'vanity/desk with stool (if space)',
+          'compact vanity or desk with stool (if space)',
         ],
+
         allowedWallDecor: [
-          'framed artwork above headboard (single or pair)',
+          'framed artwork above headboard (single large or pair)',
           'oversized round/arched mirror above dresser',
           'paired framed prints over nightstands',
-          'picture ledge for art/photos (surface-mounted)',
-          'plug-in sconces above nightstands (pair)',
+          'picture ledge for photos/art (surface-mounted)',
+          'plug-in sconces above nightstands (pair, no hardwiring)',
         ],
+
         allowedComplementary: [
-          'bedside lamps (pair)',
+          // Iluminação
+          'bedside lamps (pair or single, proportional to nightstand)',
+          'slim floor lamp in corner (if space)',
+
+          // Têxteis
+          'layered bedding with decorative pillows and throw',
           'area rug extending beyond bed sides/foot',
-          'freestanding leaner floor mirror',
-          'layered bedding + decorative pillows/throw',
-          'plant in neutral pot',
-          'tray + small decorative objects on dresser',
-          'lidded laundry hamper (compact)',
+
+          // Espelhos & plantas
+          'freestanding leaner floor mirror (corner placement)',
+          'potted plant (olive, monstera, fiddle-leaf) in neutral planter',
+
+          // Detalhes sobre superfícies
+          'tray with small decorative objects on dresser',
+          'stack of books or magazines on nightstand',
+          'ceramic or glass vase with greenery/flowers',
+
+          // Organização
+          'woven basket for extra blankets or cushions',
+          'compact lidded laundry hamper (neutral finish)',
         ],
+
         allowedWindowsDecor: [
-          'blackout curtains (bedroom privacy)',
-          'layered curtains (sheer + blackout)',
-          'roman shades (room darkening)',
-          'plantation shutters (if applicable)',
-          'window scarves (decorative draping)',
-          'bedroom valances (soft, romantic)',
-          'cordless blinds (privacy and light control)',
-          'window treatments matching bedding style',
+          'blackout curtains (neutral fabric, floor length)',
+          'layered curtains (sheer + blackout, modern track/rod)',
+          'roman shades (fabric, room darkening)',
+          'cordless roller blinds (privacy and light control)',
+          'plantation shutters (if architecture matches)',
         ],
       },
 
@@ -871,7 +889,7 @@ class StagingPlanService {
           break;
         case 'wall_decoration':
           stageSpecificText =
-            'Only if a valid free wall segment exists, add freestanding wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
+            'Add only freestanding wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
           break;
         case 'windows_decoration':
           stageSpecificText =
@@ -1086,18 +1104,46 @@ Do not alter or replace any fixed architectural or material elements: keep the f
 
     const globalRulesText = globalRules.join('\n');
 
-    let ref = '';
-    if (roomLabel == 'living_room') {
-      ref = `
+    // instruções específicas por tipo de cômodo
+    const roomGuidance: Record<string, string> = {
+      living_room: `
 Copy sofa reference and styles from the second image
 Copy tables reference and styles from the third image
-Copy armchairs reference and styles from the fourth image`;
-    } else if (roomLabel == 'bedroom') {
-      ref = `
-Copy beds reference and styles from the second image
-Copy dressers reference and styles from the third image
-Copy armchairs reference and styles from the fourth image`;
-    }
+Copy armchairs reference and styles from the fourth image`,
+
+      bedroom: `
+Copy bed reference and styles from the second image
+Copy dresser/wardrobe reference and styles from the third image
+Copy accent chairs or bench reference and styles from the fourth image`,
+
+      dining_room: `
+Copy dining table reference and styles from the second image
+Copy dining chairs reference and styles from the third image
+If space permits, copy sideboard or buffet reference from the fourth image`,
+
+      home_office: `
+Copy desk reference and styles from the second image
+Copy ergonomic/task chair reference and styles from the third image
+If space permits, copy bookshelf or storage unit reference from the fourth image`,
+
+      kids_room: `
+Copy kids bed or bunk bed reference and styles from the second image
+Copy study desk or small dresser reference from the third image
+If space permits, copy toy storage or seating reference from the fourth image`,
+
+      kitchen: `
+Copy kitchen island or main dining table reference from the second image
+Copy counter stools or dining chairs reference from the third image
+If space permits, copy additional shelving or storage unit reference from the fourth image`,
+
+      bathroom: `
+Copy vanity and sink reference from the second image
+Copy storage cabinet or shelving reference from the third image
+If space permits, copy seating or decorative stool reference from the fourth image`,
+    };
+
+    const ref = roomGuidance[roomLabel] ?? '';
+
     switch (stage) {
       case 'foundation':
         return `${globalRulesText}
@@ -1109,11 +1155,8 @@ Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
 
 Circulation & placement rules (strict):
 • Keep at least 90 cm (36") of clear circulation on all major walk paths. 
-• Do NOT place any sofa, chair, or table within 90 cm of a doorway, threshold, or window opening.
+• Do NOT place any main piece within 90 cm of a doorway, threshold, or window opening.
 • Always keep one clear path connecting main doors and visible openings.
-• Sofas must be aligned against walls or centered in open space, never blocking an entry or passage.
-• Accent chairs should be placed adjacent to sofas or coffee tables, never in front of doors or walk paths.
-• Coffee tables must be centered in the seating area, leaving ≥45 cm clearance around seating edges.
 • Skip any furniture piece that cannot fit without blocking circulation, doors, or windows.
 
 Restrictions:
@@ -1124,23 +1167,20 @@ Restrictions:
 
       case 'complement':
         return `${globalRulesText}
-  Add permitted complementary items and accessories selected from: ${allowedCompShort}.
+Add permitted complementary items and accessories selected from: ${allowedCompShort}.
 Add ${minComp}–${maxComp} complementary items to complete the scene.
 
 Maintain ≥ 90 cm (36") of clear circulation. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
 
 If in doubt about fit or clearance, skip the item. 
-
 `;
 
       case 'wall_decoration':
         return `${globalRulesText}
-
 Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
 Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
 
- If unsure about space, clearance, or window presence, SKIP.
-
+If no free wall space exists (due to windows/doors), SKIP.
 `;
 
       case 'windows_decoration':
@@ -1149,9 +1189,7 @@ Add permitted window decoration items and treatments selected from: ${allowedWin
 Add ${minWindowsDecor}–${maxWindowsDecor} window treatments to complete the scene.
 
 Install window treatments only where windows actually exist in the image.
-
 If unsure about window presence or clearance, SKIP.
-
 `;
 
       default:
