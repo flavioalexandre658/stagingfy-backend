@@ -258,7 +258,7 @@ export class BlackForestProvider
         height,
         aspect_ratio: `${width}:${height}`, // alguns provedores exigem; não faz mal incluir
         prompt_upsampling: false, // evita "enfeitar" o prompt e mexer na cena
-        output_format: 'png',
+        output_format: 'jpeg',
         safety_tolerance: 2,
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
         ...(opts?.seed !== undefined && { seed: opts.seed }),
@@ -410,9 +410,10 @@ export class BlackForestProvider
       };
 
       // Usar seed específico do room type se não foi fornecido um seed customizado
-      const seedToUse = params.options?.seed !== undefined 
-        ? params.options.seed 
-        : this.getRoomTypeSeed(params.roomType);
+      const seedToUse =
+        params.options?.seed !== undefined
+          ? params.options.seed
+          : this.getRoomTypeSeed(params.roomType);
 
       const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
