@@ -1143,7 +1143,6 @@ If space permits, copy seating or decorative stool reference from the fourth ima
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
-${ref}
 
 Circulation & placement rules (strict):
 • Keep at least 90 cm (36") of clear circulation on all major walk paths. 
