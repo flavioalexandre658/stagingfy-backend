@@ -1142,14 +1142,15 @@ If space permits, copy seating or decorative stool reference from the fourth ima
         return `${globalRulesText}
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
-Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
+Select only between ${minMain}-${maxMain} essential main pieces from the list: ${allowedMainShort}.
 ${ref}
  `;
 
       case 'complement':
         return `${globalRulesText}
-Add permitted complementary items and accessories selected from: ${allowedCompShort}.
-Add ${minComp}–${maxComp} complementary items to complete the scene.
+Add appropriate complementary items to this ${roomLabel} in ${styleLabel} style.
+Select only between ${minComp}–${maxComp} complementary items from the list bellow to complete the scene.
+${allowedCompShort}
 
 Maintain ≥ 90 cm (36") of clear circulation. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
 
@@ -1158,16 +1159,18 @@ If in doubt about fit or clearance, skip the item.
 
       case 'wall_decoration':
         return `${globalRulesText}
-Add permitted wall decoration items and accessories selected from: ${allowedWallShort}.
-Add ${minWallDecor}–${maxWallDecor} wall decor items to complete the scene.
+Add appropriate wall decoration items and accessories to this ${roomLabel} in ${styleLabel} style.
+Select only between ${minWallDecor}–${maxWallDecor} wall decor items from the list bellow to complete the scene.
+${allowedWallShort}
 
 If no free wall space exists (due to windows/doors), SKIP.
 `;
 
       case 'windows_decoration':
         return `${globalRulesText}
-Add permitted window decoration items and treatments selected from: ${allowedWindowsShort}.
-Add ${minWindowsDecor}–${maxWindowsDecor} window treatments to complete the scene.
+Add appropriate window decoration items and treatments to this ${roomLabel} in ${styleLabel} style.
+Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
+ ${allowedWindowsShort}
 
 Install window treatments only where windows actually exist in the image.
 If unsure about window presence or clearance, SKIP.
