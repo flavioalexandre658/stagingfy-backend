@@ -261,7 +261,7 @@ export class BlackForestProvider
         output_format: 'jpeg',
         safety_tolerance: 2,
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
-        ...(opts?.seed !== undefined && { seed: opts.seed }),
+        //...(opts?.seed !== undefined && { seed: opts.seed }),
         ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
         // Adicionar imagens de referência opcionais
         ...(opts?.referenceImages?.image2 && {
