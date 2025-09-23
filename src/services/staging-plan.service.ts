@@ -127,8 +127,8 @@ class StagingPlanService {
 
       bedroom: {
         // ranges ajustados — sempre cama + apoios
-        mainPiecesRange: [1, 3], // cama + 1–3 itens de apoio
-        wallDecorRange: [0, 2], // pode ser zero (quando sem parede livre)
+        mainPiecesRange: [1, 2], // cama + 1–3 itens de apoio
+        wallDecorRange: [0, 1], // pode ser zero (quando sem parede livre)
         complementaryRange: [1, 2],
         windowsDecorRange: [0, 1],
 
