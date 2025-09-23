@@ -598,6 +598,10 @@ class StagingPlanService {
           stageSpecificText =
             'Add only window treatments and decorations items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces.';
           break;
+        case 'customization':
+          stageSpecificText =
+            'Make only subtle final adjustments and refinements to existing elements, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces. Focus on color adjustments, style refinements, and small decorative touches.';
+          break;
         default:
           stageSpecificText =
             'Add only furniture and decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
@@ -754,6 +758,41 @@ Do not alter or replace any fixed architectural or material elements: keep the f
           globalStyleGuidance
         ),
       },
+
+      // Etapa 5: Customização - Ajustes finais e personalização
+      {
+        stage: 'customization',
+        minItems: 0,
+        maxItems: 3,
+        allowedCategories: [
+          'custom_adjustments',
+          'final_touches',
+          'personalization',
+          'style_refinements',
+          'color_adjustments',
+        ],
+        validationRules: [
+          'customization_allowed',
+          'circulation_clear',
+          'style_consistency',
+          'final_validation',
+        ],
+        prompt: this.generateStagePrompt(
+          'customization',
+          roomLabel,
+          styleLabel,
+          '',
+          '',
+          '',
+          '',
+          plan.mainPiecesRange,
+          plan.complementaryRange,
+          plan.wallDecorRange,
+          plan.windowsDecorRange,
+          getStageSpecificGlobalRules('customization'),
+          globalStyleGuidance
+        ),
+      },
     ];
 
     // Filtrar etapas baseado na seleção do usuário
@@ -768,6 +807,8 @@ Do not alter or replace any fixed architectural or material elements: keep the f
               return stageSelection.wall_decoration;
             case 'windows_decoration':
               return stageSelection.windows_decoration;
+            case 'customization':
+              return stageSelection.customization;
             default:
               return true;
           }
@@ -833,15 +874,15 @@ ${allowedWallShort}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
-      /* case 'windows_decoration':
+      case 'windows_decoration':
         return `${globalRulesText}
 Add appropriate window decoration items and treatments to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
  ${allowedWindowsShort}
 
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-`;*/
-      case 'windows_decoration':
+`;
+      case 'customization':
         return `
 ${stylesRules}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.

@@ -235,12 +235,14 @@ export class VirtualStagingController {
         complement,
         wall_decoration,
         windows_decoration,
+        customization,
       } = req.body as CreateUploadRequest & { 
         plan: string;
         foundation?: string | boolean;
         complement?: string | boolean;
         wall_decoration?: string | boolean;
         windows_decoration?: string | boolean;
+        customization?: string | boolean;
       };
 
       if (!roomType || !furnitureStyle) {
@@ -256,18 +258,21 @@ export class VirtualStagingController {
       const hasAnyStageField = foundation !== undefined || 
                               complement !== undefined || 
                               wall_decoration !== undefined || 
-                              windows_decoration !== undefined;
+                              windows_decoration !== undefined ||
+                              customization !== undefined;
 
       const finalStageSelection: StageSelectionConfig = hasAnyStageField ? {
         foundation: foundation === 'true' || foundation === true,
         complement: complement === 'true' || complement === true,
         wall_decoration: wall_decoration === 'true' || wall_decoration === true,
         windows_decoration: windows_decoration === 'true' || windows_decoration === true,
+        customization: customization === 'true' || customization === true,
       } : {
         foundation: true,
         complement: true,
         wall_decoration: true,
         windows_decoration: true,
+        customization: true,
       };
 
       // Validar se pelo menos uma etapa está selecionada
@@ -457,6 +462,7 @@ export class VirtualStagingController {
         complement,
         wall_decoration,
         windows_decoration,
+        customization,
       } = req.body as CreateUploadRequest & {
         plan: string;
         seed?: number;
@@ -465,6 +471,7 @@ export class VirtualStagingController {
         complement?: string | boolean;
         wall_decoration?: string | boolean;
         windows_decoration?: string | boolean;
+        customization?: string | boolean;
       };
 
       if (!roomType || !furnitureStyle) {
@@ -613,18 +620,21 @@ export class VirtualStagingController {
       const hasAnyStageField = foundation !== undefined || 
                               complement !== undefined || 
                               wall_decoration !== undefined || 
-                              windows_decoration !== undefined;
+                              windows_decoration !== undefined ||
+                              customization !== undefined;
 
       const finalStageSelection: StageSelectionConfig = hasAnyStageField ? {
         foundation: foundation === 'true' || foundation === true,
         complement: complement === 'true' || complement === true,
         wall_decoration: wall_decoration === 'true' || wall_decoration === true,
         windows_decoration: windows_decoration === 'true' || windows_decoration === true,
+        customization: customization === 'true' || customization === true,
       } : {
         foundation: true,
         complement: true,
         wall_decoration: true,
         windows_decoration: true,
+        customization: true,
       };
 
       // Iniciar processamento assíncrono com imagens de referência

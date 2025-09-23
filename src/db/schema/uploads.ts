@@ -44,7 +44,8 @@ export const stagingStageEnum = pgEnum('staging_stage', [
   'foundation',
   'complement', 
   'wall_decoration',
-  'windows_decoration'
+  'windows_decoration',
+  'customization'
 ]);
 
 export const uploads = pgTable('uploads', {

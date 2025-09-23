@@ -279,10 +279,18 @@ export class StagingValidationService {
         }
         // Permitir window treatments nesta etapa
         break;
+        
+      case 'customization':
+        // Na etapa de customização, permitir ajustes finais (0-3 itens)
+        if (result.itemCount > 3) {
+          result.errors.push(`Customization stage should have at most 3 items, found ${result.itemCount}`);
+        }
+        // Permitir customizações nesta etapa
+        break;
     }
 
-    // Validações comuns para todas as etapas (exceto wall_decoration e windows_decoration)
-    if (stage !== 'wall_decoration' && stage !== 'windows_decoration') {
+    // Validações comuns para todas as etapas (exceto wall_decoration, windows_decoration e customization)
+    if (stage !== 'wall_decoration' && stage !== 'windows_decoration' && stage !== 'customization') {
       if (result.hasWallDecor) {
         result.errors.push('Wall decor detected - not allowed in any stage');
       }
@@ -316,6 +324,17 @@ export class StagingValidationService {
       if (result.colorDeviationDetected) {
         result.errors.push('Significant color deviation detected - architectural elements may have been modified');
       }
+    }
+    
+    // Validações específicas para customization (permitir ajustes sutis)
+    if (stage === 'customization') {
+      // Na customização, permitimos mais flexibilidade mas ainda validamos estruturas
+      if (result.doorsBlocked || result.stairsBlocked) {
+        result.errors.push('Circulation paths must remain clear even during customization');
+      }
+      
+      // Permitir pequenas variações de cor para ajustes de estilo
+      // mas não grandes modificações estruturais
     }
   }
 

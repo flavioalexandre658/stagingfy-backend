@@ -120,7 +120,8 @@ export type StagingStage =
   | 'foundation'
   | 'complement'
   | 'wall_decoration'
-  | 'windows_decoration';
+  | 'windows_decoration'
+  | 'customization';
 
 export interface StagingStageConfig {
   stage: StagingStage;
@@ -177,4 +178,5 @@ export interface StageSelectionConfig {
   complement: boolean;
   wall_decoration: boolean;
   windows_decoration: boolean;
+  customization: boolean;
 }
