@@ -882,15 +882,15 @@ class StagingPlanService {
       switch (stage) {
         case 'foundation':
           stageSpecificText =
-            'Add only freestanding furniture items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
+            'Add only furniture items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
           break;
         case 'complement':
           stageSpecificText =
-            'Add only freestanding decor items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
+            'Add only decor items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
           break;
         case 'wall_decoration':
           stageSpecificText =
-            'Add only freestanding wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
+            'Add only wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
           break;
         case 'windows_decoration':
           stageSpecificText =
@@ -898,7 +898,7 @@ class StagingPlanService {
           break;
         default:
           stageSpecificText =
-            'Add only freestanding furniture and decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
+            'Add only furniture and decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
       }
 
       return [
@@ -1152,7 +1152,6 @@ If space permits, copy seating or decorative stool reference from the fourth ima
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
 ${ref}
- ${stylesRules}
 
 Circulation & placement rules (strict):
 • Keep at least 90 cm (36") of clear circulation on all major walk paths. 
@@ -1160,11 +1159,13 @@ Circulation & placement rules (strict):
 • Always keep one clear path connecting main doors and visible openings.
 • Skip any furniture piece that cannot fit without blocking circulation, doors, or windows.
 
-Restrictions:
+Restrictions
 • No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
 • If in doubt about fit or clearance, skip the item.
 • If the chosen furniture piece is too large and would require altering the structure, skip it and select a smaller one from the list of options.
-`;
+
+ ${stylesRules}
+ `;
 
       case 'complement':
         return `${globalRulesText}
