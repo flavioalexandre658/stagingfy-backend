@@ -878,8 +878,7 @@ Maintain all doors, openings, windows, dimensions (width and height) and circula
       case 'customization':
         return `
 ${stylesRules}
-Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-`;
+Maintain all doors, openings, windows, dimensions (width and height), walls, floors, ceilings, and circulation paths exactly as in the original image. Do not block, move, resize, recolor, or alter any architectural or material elements in any way.`;
 
       default:
         throw new Error(`Unknown staging stage: ${stage}`);
