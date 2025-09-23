@@ -130,7 +130,7 @@ class StagingPlanService {
         mainPiecesRange: [1, 1], // cama + 1–3 itens de apoio
         wallDecorRange: [0, 1], // pode ser zero (quando sem parede livre)
         complementaryRange: [1, 2],
-        windowsDecorRange: [0, 1],
+        windowsDecorRange: [1, 1],
 
         allowedMainItems: [
           // Âncora obrigatória
@@ -170,10 +170,6 @@ class StagingPlanService {
 
         allowedWindowsDecor: [
           'blackout curtains (neutral fabric, floor length)',
-          'layered curtains (sheer + blackout, modern track/rod)',
-          'roman shades (fabric, room darkening)',
-          'cordless roller blinds (privacy and light control)',
-          'plantation shutters (if architecture matches)',
         ],
       },
 
