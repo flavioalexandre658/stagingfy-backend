@@ -1148,9 +1148,7 @@ Add appropriate complementary items to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minComp}–${maxComp} complementary items from the list bellow to complete the scene.
 ${allowedCompShort}
 
-Maintain ≥ 90 cm (36") of clear circulation. Rugs must anchor the zone and lie fully on the floor—do not cover stair treads or thresholds.
-
-If in doubt about fit or clearance, skip the item. 
+Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       case 'wall_decoration':
@@ -1158,8 +1156,7 @@ If in doubt about fit or clearance, skip the item.
 Add appropriate wall decoration items and accessories to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minWallDecor}–${maxWallDecor} wall decor items from the list bellow to complete the scene.
 ${allowedWallShort}
-
-If no free wall space exists (due to windows/doors), SKIP.
+Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       case 'windows_decoration':
@@ -1168,8 +1165,7 @@ Add appropriate window decoration items and treatments to this ${roomLabel} in $
 Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
  ${allowedWindowsShort}
 
-Install window treatments only where windows actually exist in the image.
-If unsure about window presence or clearance, SKIP.
+Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       default:
