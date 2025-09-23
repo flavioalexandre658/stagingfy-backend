@@ -1099,7 +1099,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain}-${maxMain} essential main pieces from the list: ${allowedMainShort}.
-${stylesRules}
+
  `;
 
       case 'complement':
@@ -1109,7 +1109,6 @@ Select only between ${minComp}–${maxComp} complementary items from the list be
 ${allowedCompShort}
 
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-${stylesRules}
 `;
 
       case 'wall_decoration':
@@ -1118,7 +1117,6 @@ Add appropriate wall decoration items and accessories to this ${roomLabel} in ${
 Select only between ${minWallDecor}–${maxWallDecor} wall decor items from the list bellow to complete the scene.
 ${allowedWallShort}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-${stylesRules}
 `;
 
       case 'windows_decoration':
@@ -1128,7 +1126,6 @@ Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments fr
  ${allowedWindowsShort}
 
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-${stylesRules}
 `;
 
       default:
