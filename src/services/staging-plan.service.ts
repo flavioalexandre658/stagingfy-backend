@@ -600,7 +600,7 @@ class StagingPlanService {
       }
 
       return [
-        `${stageSpecificText} maintain the same composition, perspective, and natural lighting.
+        `${stageSpecificText} maintain the same composition, dimensions (width and height), perspective, and natural lighting.
 Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
       ];
     };
@@ -846,6 +846,7 @@ Do not alter or replace any fixed architectural or material elements: keep the f
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain}-${maxMain} essential main pieces from the list: ${allowedMainShort}.
+Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 
  `;
 
@@ -855,7 +856,7 @@ Add appropriate complementary items to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minComp}–${maxComp} complementary items from the list bellow to complete the scene.
 ${allowedCompShort}
 
-Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
+Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       case 'wall_decoration':
@@ -863,7 +864,7 @@ Maintain all doors, openings, windows, and circulation paths exactly as in the o
 Add appropriate wall decoration items and accessories to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minWallDecor}–${maxWallDecor} wall decor items from the list bellow to complete the scene.
 ${allowedWallShort}
-Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
+Maintain all doors, openings, windows,dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       case 'windows_decoration':
@@ -872,12 +873,12 @@ Add appropriate window decoration items and treatments to this ${roomLabel} in $
 Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
  ${allowedWindowsShort}
 
-Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
+Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
       case 'customization':
         return `
 ${stylesRules}
-Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
+Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       default:
