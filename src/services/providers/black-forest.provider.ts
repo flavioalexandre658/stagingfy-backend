@@ -258,10 +258,10 @@ export class BlackForestProvider
         height,
         aspect_ratio: `${width}:${height}`, // alguns provedores exigem; não faz mal incluir
         prompt_upsampling: false, // evita "enfeitar" o prompt e mexer na cena
-        output_format: 'jpeg',
+        output_format: 'png',
         safety_tolerance: 2,
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
-        //...(opts?.seed !== undefined && { seed: opts.seed }),
+        ...(opts?.seed !== undefined && { seed: opts.seed }),
         ...(this.config.webhookUrl && { webhook_url: this.config.webhookUrl }),
         // Adicionar imagens de referência opcionais
         ...(opts?.referenceImages?.image2 && {
@@ -409,17 +409,13 @@ export class BlackForestProvider
         ...(params.referenceImage4 && { image4: params.referenceImage4 }),
       };
 
-      // Usar seed específico do room type se não foi fornecido um seed customizado
-      const seedToUse =
-        params.options?.seed !== undefined
-          ? params.options.seed
-          : this.getRoomTypeSeed(params.roomType);
-
       const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
         prompt,
         {
-          seed: seedToUse,
+          ...(params.options?.seed !== undefined && {
+            seed: params.options.seed,
+          }),
           ...(Object.keys(referenceImages).length > 0 && { referenceImages }),
         }
       );
@@ -747,10 +743,11 @@ export class BlackForestProvider
         stageSelection
       );
 
-      // Executar staging para esta etapa com seed específico do room type
-      const seedToUse = this.getRoomTypeSeed(roomType);
+      // Executar staging para esta etapa
+      // Usar seed específico do room type apenas para etapas após foundation
+      const shouldUseSeed = stageConfig.stage !== 'foundation';
       const response = await this.generateVirtualStaging(imageBase64, prompt, {
-        seed: seedToUse,
+        ...(shouldUseSeed && { seed: this.getRoomTypeSeed(roomType) }),
       });
 
       if (response.error) {
