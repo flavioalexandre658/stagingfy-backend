@@ -1144,18 +1144,6 @@ If space permits, copy seating or decorative stool reference from the fourth ima
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
 
-Circulation & placement rules (strict):
-• Keep at least 90 cm (36") of clear circulation on all major walk paths. 
-• Do NOT place any main piece within 90 cm of a doorway, threshold, or window opening.
-• Always keep one clear path connecting main doors and visible openings.
-• Skip any furniture piece that cannot fit without blocking circulation, doors, or windows.
-
-Restrictions
-• No wall decor or window treatments (no frames, mirrors, curtains, or blinds).
-• If in doubt about fit or clearance, skip the item.
-• If the chosen furniture piece is too large and would require altering the structure, skip it and select a smaller one from the list of options.
-
- ${stylesRules}
  `;
 
       case 'complement':
