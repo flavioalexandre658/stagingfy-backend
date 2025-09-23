@@ -1119,11 +1119,17 @@ ${allowedWallShort}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
-      case 'windows_decoration':
+      /* case 'windows_decoration':
         return `${globalRulesText}
 Add appropriate window decoration items and treatments to this ${roomLabel} in ${styleLabel} style.
 Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
  ${allowedWindowsShort}
+
+Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
+`;*/
+      case 'windows_decoration':
+        return `
+     Stylize only: apply all style characteristics listed below to the existing furniture and decor items in the image.
 
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
