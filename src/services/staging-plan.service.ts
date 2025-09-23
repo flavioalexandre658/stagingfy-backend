@@ -990,6 +990,45 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const [minComp, maxComp] = compRange;
     const [minWallDecor, maxWallDecor] = wallDecorRange;
     const [minWindowsDecor, maxWindowsDecor] = windowsDecorRange;
+    // instruções específicas por tipo de cômodo
+    const roomGuidance: Record<string, string> = {
+      living_room: `
+Copy sofa reference and styles from the second image
+Copy tables reference and styles from the third image
+Copy armchairs reference and styles from the fourth image`,
+
+      bedroom: `
+Copy bed reference and styles from the second image
+Copy dresser/wardrobe reference and styles from the third image
+Copy accent chairs or bench reference and styles from the fourth image`,
+
+      dining_room: `
+Copy dining table reference and styles from the second image
+Copy dining chairs reference and styles from the third image
+If space permits, copy sideboard or buffet reference from the fourth image`,
+
+      home_office: `
+Copy desk reference and styles from the second image
+Copy ergonomic/task chair reference and styles from the third image
+If space permits, copy bookshelf or storage unit reference from the fourth image`,
+
+      kids_room: `
+Copy kids bed or bunk bed reference and styles from the second image
+Copy study desk or small dresser reference from the third image
+If space permits, copy toy storage or seating reference from the fourth image`,
+
+      kitchen: `
+Copy kitchen island or main dining table reference from the second image
+Copy counter stools or dining chairs reference from the third image
+If space permits, copy additional shelving or storage unit reference from the fourth image`,
+
+      bathroom: `
+Copy vanity and sink reference from the second image
+Copy storage cabinet or shelving reference from the third image
+If space permits, copy seating or decorative stool reference from the fourth image`,
+    };
+
+    const ref = roomGuidance[roomLabel] ?? '';
 
     const globalRulesText = globalRules.join('\n');
 
@@ -1029,7 +1068,7 @@ Maintain all doors, openings, windows, and circulation paths exactly as in the o
 `;*/
       case 'windows_decoration':
         return `
-${stylesRules}
+${ref}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
