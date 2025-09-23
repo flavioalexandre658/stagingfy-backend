@@ -127,7 +127,7 @@ class StagingPlanService {
 
       bedroom: {
         // ranges ajustados — sempre cama + apoios
-        mainPiecesRange: [1, 2], // cama + 1–3 itens de apoio
+        mainPiecesRange: [1, 1], // cama + 1–3 itens de apoio
         wallDecorRange: [0, 1], // pode ser zero (quando sem parede livre)
         complementaryRange: [1, 2],
         windowsDecorRange: [0, 1],
@@ -1150,9 +1150,9 @@ If space permits, copy seating or decorative stool reference from the fourth ima
         return `${globalRulesText}
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
-Select only from: ${allowedMainShort}.
+Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
 ${ref}
-Add between ${minMain} and ${maxMain} essential main pieces. ${stylesRules}
+ ${stylesRules}
 
 Circulation & placement rules (strict):
 • Keep at least 90 cm (36") of clear circulation on all major walk paths. 
