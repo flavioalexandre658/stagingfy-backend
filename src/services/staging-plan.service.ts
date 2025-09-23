@@ -135,14 +135,6 @@ class StagingPlanService {
         allowedMainItems: [
           // Âncora obrigatória
           'queen or king-size bed (upholstered headboard in velvet/linen or paneled wood, low-profile, with premium bedding layers)',
-
-          // Apoios de luxo
-          'nightstands (pair, matching finish with bed; lacquer, fluted wood, or stone top)',
-          'long dresser (6–8 drawers, lacquer or wood veneer with metal accents)',
-          'slim wardrobe or armoire (if space, flush-front, matte lacquer or wood with metal handles)',
-          'upholstered bench or storage bench at foot of bed (velvet, bouclé, or leather)',
-          'accent lounge chair or chaise (sculptural, fabric or leather, if space allows)',
-          'luxury vanity/desk with upholstered stool (marble or lacquer top, slim profile, if space)',
         ],
 
         allowedWallDecor: [
