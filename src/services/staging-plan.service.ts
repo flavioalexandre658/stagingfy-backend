@@ -134,7 +134,7 @@ class StagingPlanService {
 
         allowedMainItems: [
           // Âncora obrigatória
-          'queen or king-size bed (upholstered headboard in velvet/linen or paneled wood, low-profile, with premium bedding layers)',
+          'queen or king-size bed',
         ],
 
         allowedWallDecor: [
