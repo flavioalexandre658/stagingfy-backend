@@ -79,6 +79,18 @@ export class BlackForestProvider
     },
   };
 
+  // Seeds específicos por tipo de ambiente para garantir consistência
+  private readonly roomTypeSeedConfig: Record<RoomType, number> = {
+    living_room: 101,
+    dining_room: 202,
+    bedroom: 303,
+    kitchen: 404,
+    bathroom: 505,
+    home_office: 606,
+    kids_room: 707,
+    outdoor: 808,
+  };
+
   constructor(config: ProviderConfig) {
     super();
     this.config = config;
@@ -181,6 +193,11 @@ export class BlackForestProvider
     return { width: meta.width, height: meta.height };
   }
 
+  // ------------ seed baseado no tipo de ambiente ------------
+  private getRoomTypeSeed(roomType: RoomType): number {
+    return this.roomTypeSeedConfig[roomType];
+  }
+
   // ------------ prompt básico (você pode manter/ajustar depois) ------------
   private generatePrompt(roomType: RoomType, furnitureStyle: FurnitureStyle) {
     const roomTypeMap: Record<RoomType, string> = {
@@ -241,7 +258,7 @@ export class BlackForestProvider
         height,
         aspect_ratio: `${width}:${height}`, // alguns provedores exigem; não faz mal incluir
         prompt_upsampling: false, // evita "enfeitar" o prompt e mexer na cena
-        output_format: 'jpeg',
+        output_format: 'png',
         safety_tolerance: 2,
         guidance: 3.5, // use somente se o provedor expõe este parâmetro para Kontext
         ...(opts?.seed !== undefined && { seed: opts.seed }),
@@ -392,13 +409,16 @@ export class BlackForestProvider
         ...(params.referenceImage4 && { image4: params.referenceImage4 }),
       };
 
+      // Usar seed específico do room type se não foi fornecido um seed customizado
+      const seedToUse = params.options?.seed !== undefined 
+        ? params.options.seed 
+        : this.getRoomTypeSeed(params.roomType);
+
       const response = await this.generateVirtualStaging(
         params.imageBase64 || '',
         prompt,
         {
-          ...(params.options?.seed !== undefined && {
-            seed: params.options.seed,
-          }),
+          seed: seedToUse,
           ...(Object.keys(referenceImages).length > 0 && { referenceImages }),
         }
       );
@@ -621,7 +641,11 @@ export class BlackForestProvider
       });
 
       // Gerar plano de staging
-      const plan = await this.generateStagingPlan(roomType, furnitureStyle, params.stageSelection);
+      const plan = await this.generateStagingPlan(
+        roomType,
+        furnitureStyle,
+        params.stageSelection
+      );
 
       // Executar apenas a primeira etapa
       const firstStage = plan.stages[0];
@@ -692,7 +716,11 @@ export class BlackForestProvider
     furnitureStyle: FurnitureStyle,
     stageSelection?: StageSelectionConfig
   ): Promise<StagingPlan> {
-    return stagingPlanService.generateStagingPlan(roomType, furnitureStyle, stageSelection);
+    return stagingPlanService.generateStagingPlan(
+      roomType,
+      furnitureStyle,
+      stageSelection
+    );
   }
 
   async executeStage(
@@ -718,8 +746,11 @@ export class BlackForestProvider
         stageSelection
       );
 
-      // Executar staging para esta etapa
-      const response = await this.generateVirtualStaging(imageBase64, prompt);
+      // Executar staging para esta etapa com seed específico do room type
+      const seedToUse = this.getRoomTypeSeed(roomType);
+      const response = await this.generateVirtualStaging(imageBase64, prompt, {
+        seed: seedToUse,
+      });
 
       if (response.error) {
         this.logger.error(`Stage execution failed for upload ${uploadId}:`, {
