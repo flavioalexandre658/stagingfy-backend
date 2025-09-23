@@ -517,212 +517,26 @@ class StagingPlanService {
     roomType: RoomType,
     stage: StagingStage
   ): string {
-    type StyleDetail = {
-      palette: string[];
-      paletteAccents?: string[];
-      blockedColors?: string[];
-      materials: string[];
-      silhouettes: string[];
-      details?: string[];
-      hardware?: string[];
-      patterns?: string[];
-      avoid: string[];
+    const profile: Record<FurnitureStyle, string> = {
+      standard: `Restyle all existing furniture and decor items in a standard style, focusing on warm neutrals, soft rounded edges, balanced proportions, oak or walnut veneer, linen or cotton weaves, brushed nickel accents, and subtle construction details like top-stitch seams and tone-on-tone piping. Use box cushions with medium firmness and avoid heavy tufting or ornate carving. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      modern: `Restyle all existing furniture and decor items in a modern style, emphasizing clean lines, low-profile proportions, rectilinear forms with soft curves, thin sled or blade legs, matte lacquer finishes, powder-coated metal, smoked glass, and stone such as travertine or basalt. Apply construction refinements like flush fronts, shadow gaps, and limited fluted wood panels. Avoid rustic distressing, farmhouse cross-bucks, or heavy ornament. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      scandinavian: `Restyle all existing furniture and decor items in a Scandinavian style, highlighting organic curves, airy minimal forms, tapered round legs, light woods such as oak or beech, bouclé or wool fabrics, and stoneware or cotton-linen finishes. Maintain visible wood grain, softly rounded corners, and minimal matte hardware. Avoid dark heavy woods, glam mirrored finishes, or heavy tufting. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      industrial: `Restyle all existing furniture and decor items in an industrial style, with robust exposed forms, square tube frames, blackened steel, reclaimed or raw wood, oiled leather, and concrete or stone accents. Incorporate visible joinery, clean welds, bolted brackets, and antique brass or blackened steel hardware. Avoid delicate ornament, bright whites, or romantic glam cues. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      midcentury: `Restyle all existing furniture and decor items in a midcentury modern style, defined by walnut or teak veneer, slim and tapered legs, boxy cushions with light tufting, linen tweed or bouclé upholstery, and slim rectilinear proportions. Include details like piping, visible finger joints, and brass or matte black hardware. Avoid oversized overstuffed sofas or glossy chrome futurism. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      luxury: `Restyle all existing furniture and decor items in a luxury style, with sculptural forms, sumptuous plush proportions, velvet or silk-blend fabrics, marble, mirrored or fluted glass finishes, and polished brass or champagne gold accents. Apply construction refinements like mitered stone edges, polished reveals, and fine ribbing in textiles. Avoid rustic woods, distressed finishes, or industrial roughness. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      coastal: `Restyle all existing furniture and decor items in a coastal style, favoring light woods, rattan, jute, linen, cotton, and breezy silhouettes with rounded edges. Incorporate open-weave panels, loose slipcovers, and brushed nickel or light bronze hardware. Use subtle stripes or botanical prints in textiles. Avoid heavy dark tones, jewel-colored velvets, or glossy finishes. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
+
+      farmhouse: `Restyle all existing furniture and decor items in a farmhouse style, using natural woods, warm whites, textured cotton or linen, and sturdy shaker-inspired frames. Apply visible wood grain, soft distressing, woven baskets, and stoneware accents, with black or antique bronze hardware. Avoid glass-heavy ultramodern tables, high-gloss lacquers, or mirror finishes. Preserve all doors, windows, and circulation paths exactly as in the original image.`,
     };
 
-    const profile: Record<FurnitureStyle, StyleDetail> = {
-      standard: {
-        palette: ['warm greige', 'taupe', 'soft warm gray', 'cream', 'ecru'],
-        paletteAccents: ['muted olive', 'warm beige'],
-        blockedColors: ['navy', 'cobalt blue', 'electric blue'],
-        materials: [
-          'oak/walnut veneer',
-          'linen/cotton weaves',
-          'brushed nickel',
-        ],
-        silhouettes: [
-          'soft rounded edges',
-          'balanced proportions',
-          'box cushions',
-        ],
-        details: ['edge radius 10–25 mm', 'top-stitch seams'],
-        hardware: ['brushed nickel', 'matte black'],
-        patterns: ['subtle herringbone', 'micro-chevron'],
-        avoid: [
-          'high-gloss brass glam',
-          'neon colors',
-          'ornate carvings',
-          'heavy tufting',
-        ],
-      },
-      modern: {
-        palette: ['greige', 'taupe', 'warm gray', 'cream', 'earthy charcoal'],
-        paletteAccents: ['desaturated olive', 'warm sand'],
-        blockedColors: [
-          'blue upholstery',
-          'navy',
-          'steel-blue',
-          'cold gray fabric',
-        ],
-        materials: [
-          'matte lacquer',
-          'powder-coated metal',
-          'smoked glass',
-          'travertine',
-          'basalt stone',
-        ],
-        silhouettes: [
-          'clean lines',
-          'low-profile',
-          'rectilinear with soft curves',
-          'thin sled or blade legs',
-        ],
-        details: [
-          'flush fronts',
-          'shadow gaps',
-          'fluted wood panels (limited)',
-        ],
-        hardware: ['matte black', 'satin chrome'],
-        patterns: ['plain weave', 'micro-texture'],
-        avoid: [
-          'rustic distressing',
-          'farmhouse cross-bucks',
-          'heavy ornament',
-          'mirror chrome',
-        ],
-      },
-      scandinavian: {
-        palette: ['white', 'cream', 'light oak', 'beech', 'warm gray'],
-        paletteAccents: ['sage', 'dusty pink'],
-        blockedColors: ['navy', 'cobalt', 'saturated jewel tones'],
-        materials: ['bouclé', 'wool', 'stoneware', 'linen'],
-        silhouettes: [
-          'organic curves',
-          'minimal ornament',
-          'airy forms',
-          'tapered legs',
-        ],
-        details: ['visible wood grain', 'softly rounded corners'],
-        hardware: ['light wood', 'matte white'],
-        patterns: ['fine stripes', 'knit textures'],
-        avoid: ['dark heavy woods', 'glam mirrored finishes', 'heavy tufting'],
-      },
-      industrial: {
-        palette: ['charcoal', 'ink', 'tobacco', 'warm gray', 'rust brown'],
-        paletteAccents: ['aged brass'],
-        blockedColors: ['bright glossy white', 'pastels', 'navy velvet'],
-        materials: [
-          'blackened steel',
-          'raw/reclaimed wood',
-          'concrete',
-          'oiled leather',
-        ],
-        silhouettes: ['robust forms', 'exposed joinery', 'square tube frames'],
-        details: ['visible welds', 'bolted brackets'],
-        hardware: ['blackened steel', 'antique brass'],
-        patterns: ['distressed leather grain', 'muted geometric weaves'],
-        avoid: ['delicate ornament', 'romantic glam cues'],
-      },
-      midcentury: {
-        palette: [
-          'walnut',
-          'teak',
-          'cream',
-          'warm white',
-          'olive',
-          'mustard',
-          'teal',
-        ],
-        paletteAccents: ['burnt orange'],
-        blockedColors: ['navy velvet', 'mirror chrome'],
-        materials: ['walnut veneer', 'teak veneer', 'linen tweed', 'bouclé'],
-        silhouettes: [
-          'tapered legs',
-          'slim profiles',
-          'boxy cushions',
-          'loose backs',
-        ],
-        details: ['button tuft (light)', 'piping', 'finger joints'],
-        hardware: ['brass', 'matte black'],
-        patterns: ['geometric motifs', 'atomic prints', 'fine houndstooth'],
-        avoid: ['oversized sofas', 'glossy chrome futurism'],
-      },
-      luxury: {
-        palette: ['rich neutrals', 'cream', 'taupe', 'emerald', 'sapphire'],
-        paletteAccents: ['champagne gold'],
-        blockedColors: [
-          'rustic orange',
-          'distressed tones',
-          'industrial black',
-        ],
-        materials: ['velvet', 'silk-blend', 'marble', 'mirror', 'ribbed glass'],
-        silhouettes: ['sculptural', 'sumptuous', 'softly curved arms'],
-        details: ['deep plush seats', 'polished reveals'],
-        hardware: ['polished brass', 'champagne gold'],
-        patterns: ['subtle sheen weaves', 'fine ribbing'],
-        avoid: ['raw woods', 'distressed finishes', 'industrial roughness'],
-      },
-      coastal: {
-        palette: ['white', 'sand', 'driftwood', 'warm gray', 'seafoam'],
-        paletteAccents: ['powder blue'],
-        blockedColors: ['navy lacquer', 'heavy black metal'],
-        materials: ['rattan', 'jute', 'light woods', 'linen'],
-        silhouettes: ['breezy', 'casual', 'rounded edges'],
-        details: ['loose slipcovers', 'open-weave panels'],
-        hardware: ['brushed nickel', 'light bronze'],
-        patterns: ['subtle stripes', 'muted botanicals'],
-        avoid: ['dark jewel tones', 'velvet glam'],
-      },
-      farmhouse: {
-        palette: ['warm whites', 'earth tones', 'natural wood', 'greige'],
-        paletteAccents: ['sage', 'muted clay'],
-        blockedColors: ['high-gloss lacquer', 'mirror chrome'],
-        materials: ['reclaimed wood', 'stoneware', 'cotton', 'linen'],
-        silhouettes: ['shaker profiles', 'sturdy frames'],
-        details: ['visible grain', 'light distress'],
-        hardware: ['black metal', 'antique bronze'],
-        patterns: ['gingham', 'ticking stripes', 'basket weaves'],
-        avoid: ['glass-heavy tables', 'ultra-modern chrome'],
-      },
-    };
-
-    const s = profile[furnitureStyle];
-    if (!s) return '';
-
-    const take = (arr?: string[], n = 6) =>
-      (arr ?? []).filter(Boolean).slice(0, n).join(', ');
-
-    // Construção imperativa
-    let out = `Stylize only existing furniture and decor items in the image into a ${this.getFurnitureStyleLabel(
-      furnitureStyle
-    )} style. `;
-
-    // Materiais e silhuetas primeiro
-    if (s.materials.length)
-      out += `Apply ${take(s.materials, 5)} finishes to all major surfaces. `;
-    if (s.silhouettes.length)
-      out += `Enforce ${take(s.silhouettes, 5)} in furniture forms. `;
-    if (s.details?.length)
-      out += `Include details such as ${take(s.details, 3)}. `;
-    if (s.hardware?.length)
-      out += `Use accents and hardware in ${take(s.hardware, 3)}. `;
-
-    // Paleta e bloqueios de cor
-    if (s.palette.length || s.paletteAccents?.length) {
-      out += `Use fabrics and surfaces in ${take(s.palette, 5)}`;
-      if (s.paletteAccents?.length)
-        out += ` with subtle accents of ${take(s.paletteAccents, 3)}`;
-      out += `. `;
-    }
-    if (s.blockedColors?.length) {
-      out += `Strictly avoid ${take(s.blockedColors, 4)}. `;
-    }
-
-    // Padrões e restrições
-    if (s.patterns?.length)
-      out += `Prefer textiles with ${take(s.patterns, 3)}. `;
-    if (s.avoid.length) out += `Avoid ${take(s.avoid, 4)}.`;
-
-    return `\n${out}\n`;
+    const styleGuidance = profile[furnitureStyle];
+    return styleGuidance || '';
   }
 
   // ========== NOVOS MÉTODOS PARA STAGING EM ETAPAS ==========
@@ -990,45 +804,6 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     const [minComp, maxComp] = compRange;
     const [minWallDecor, maxWallDecor] = wallDecorRange;
     const [minWindowsDecor, maxWindowsDecor] = windowsDecorRange;
-    // instruções específicas por tipo de cômodo
-    const roomGuidance: Record<string, string> = {
-      living_room: `
-Copy sofa reference and styles from the second image
-Copy tables reference and styles from the third image
-Copy armchairs reference and styles from the fourth image`,
-
-      bedroom: `
-Copy bed reference and styles from the second image
-Copy dresser/wardrobe reference and styles from the third image
-Copy accent chairs or bench reference and styles from the fourth image`,
-
-      dining_room: `
-Copy dining table reference and styles from the second image
-Copy dining chairs reference and styles from the third image
-If space permits, copy sideboard or buffet reference from the fourth image`,
-
-      home_office: `
-Copy desk reference and styles from the second image
-Copy ergonomic/task chair reference and styles from the third image
-If space permits, copy bookshelf or storage unit reference from the fourth image`,
-
-      kids_room: `
-Copy kids bed or bunk bed reference and styles from the second image
-Copy study desk or small dresser reference from the third image
-If space permits, copy toy storage or seating reference from the fourth image`,
-
-      kitchen: `
-Copy kitchen island or main dining table reference from the second image
-Copy counter stools or dining chairs reference from the third image
-If space permits, copy additional shelving or storage unit reference from the fourth image`,
-
-      bathroom: `
-Copy vanity and sink reference from the second image
-Copy storage cabinet or shelving reference from the third image
-If space permits, copy seating or decorative stool reference from the fourth image`,
-    };
-
-    const ref = roomGuidance[roomLabel] ?? '';
 
     const globalRulesText = globalRules.join('\n');
 
@@ -1068,7 +843,7 @@ Maintain all doors, openings, windows, and circulation paths exactly as in the o
 `;*/
       case 'windows_decoration':
         return `
-${ref}
+${stylesRules}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
