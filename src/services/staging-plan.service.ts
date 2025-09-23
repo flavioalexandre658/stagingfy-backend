@@ -1143,7 +1143,7 @@ If space permits, copy seating or decorative stool reference from the fourth ima
 
 Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
 Select only between ${minMain} and ${maxMain} essential main pieces from list: ${allowedMainShort}.
-
+${ref}
  `;
 
       case 'complement':
