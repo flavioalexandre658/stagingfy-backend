@@ -511,6 +511,7 @@ class StagingPlanService {
    * Foco: alta precisão de estilização + bloqueio de cores indesejadas (ex. azul/navy).
    */
   // ========== NOVO MÉTODO: orientação dinâmica de estilo (parágrafo fluido) ==========
+  // ========== MÉTODO AJUSTADO: estilo imperativo (todos os perfis) ==========
   private buildDynamicStyleGuidance(
     furnitureStyle: FurnitureStyle,
     roomType: RoomType,
@@ -530,7 +531,7 @@ class StagingPlanService {
 
     const profile: Record<FurnitureStyle, StyleDetail> = {
       standard: {
-        palette: ['warm greige', 'taupe', 'soft gray', 'cream', 'ecru'],
+        palette: ['warm greige', 'taupe', 'soft warm gray', 'cream', 'ecru'],
         paletteAccents: ['muted olive', 'warm beige'],
         blockedColors: ['navy', 'cobalt blue', 'electric blue'],
         materials: [
@@ -573,7 +574,7 @@ class StagingPlanService {
           'clean lines',
           'low-profile',
           'rectilinear with soft curves',
-          'thin sled legs',
+          'thin sled or blade legs',
         ],
         details: [
           'flush fronts',
@@ -602,7 +603,7 @@ class StagingPlanService {
         ],
         details: ['visible wood grain', 'softly rounded corners'],
         hardware: ['light wood', 'matte white'],
-        patterns: ['fine stripes', 'subtle checks', 'knit textures'],
+        patterns: ['fine stripes', 'knit textures'],
         avoid: ['dark heavy woods', 'glam mirrored finishes', 'heavy tufting'],
       },
       industrial: {
@@ -690,21 +691,36 @@ class StagingPlanService {
     const take = (arr?: string[], n = 6) =>
       (arr ?? []).filter(Boolean).slice(0, n).join(', ');
 
-    // Saída em parágrafo único
-    let out = `Stylize only existing furniture and decor items in the image in a ${this.getFurnitureStyleLabel(
+    // Construção imperativa
+    let out = `Stylize only existing furniture and decor items in the image into a ${this.getFurnitureStyleLabel(
       furnitureStyle
-    )} style, using ${take(s.palette, 5)}`;
+    )} style. `;
 
-    if (s.paletteAccents?.length)
-      out += ` with subtle accents of ${take(s.paletteAccents, 3)}`;
-    out += `, avoiding ${take(s.blockedColors, 4)}. `;
+    // Materiais e silhuetas primeiro
+    if (s.materials.length)
+      out += `Apply ${take(s.materials, 5)} finishes to all major surfaces. `;
+    if (s.silhouettes.length)
+      out += `Enforce ${take(s.silhouettes, 5)} in furniture forms. `;
+    if (s.details?.length)
+      out += `Include details such as ${take(s.details, 3)}. `;
+    if (s.hardware?.length)
+      out += `Use accents and hardware in ${take(s.hardware, 3)}. `;
 
-    if (s.materials.length) out += `Prefer ${take(s.materials, 5)}; `;
-    if (s.silhouettes.length) out += `keep ${take(s.silhouettes, 4)}; `;
-    if (s.details?.length) out += `${take(s.details, 3)}; `;
-    if (s.hardware?.length) out += `use accents in ${take(s.hardware, 3)}; `;
-    if (s.patterns?.length) out += `favor ${take(s.patterns, 3)} textiles; `;
-    if (s.avoid.length) out += `strictly avoid ${take(s.avoid, 4)}.`;
+    // Paleta e bloqueios de cor
+    if (s.palette.length || s.paletteAccents?.length) {
+      out += `Use fabrics and surfaces in ${take(s.palette, 5)}`;
+      if (s.paletteAccents?.length)
+        out += ` with subtle accents of ${take(s.paletteAccents, 3)}`;
+      out += `. `;
+    }
+    if (s.blockedColors?.length) {
+      out += `Strictly avoid ${take(s.blockedColors, 4)}. `;
+    }
+
+    // Padrões e restrições
+    if (s.patterns?.length)
+      out += `Prefer textiles with ${take(s.patterns, 3)}. `;
+    if (s.avoid.length) out += `Avoid ${take(s.avoid, 4)}.`;
 
     return `\n${out}\n`;
   }
