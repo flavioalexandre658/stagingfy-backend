@@ -1130,7 +1130,7 @@ Maintain all doors, openings, windows, and circulation paths exactly as in the o
       case 'windows_decoration':
         return `
      Stylize only: apply all style characteristics listed below to the existing furniture and decor items in the image.
-
+${stylesRules}
 Maintain all doors, openings, windows, and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
