@@ -211,29 +211,28 @@ class StagingPlanService {
         complementaryRange: [2, 4],
         windowsDecorRange: [0, 1],
         allowedMainItems: [
-          'small ceramic or stone stool',
-          'narrow console shelf (floating, slim metal or oak)',
-          'freestanding ladder towel rack (matte black or oak)',
-          'slim shelving tower (powder-coated metal frame, glass shelves)',
+          'slim ladder towel rack (matte black or oak)',
+          'narrow floating shelf (above toilet or sink)',
+          'compact freestanding storage tower (metal/wood mix)',
         ],
+
         allowedWallDecor: [
-          'small framed line art or abstract print (moisture resistant)',
-          'round auxiliary mirror with thin metal frame',
-          'slim floating shelf above toilet (surface-mounted)',
+          'framed line art or abstract print (moisture-resistant frame)',
+          'round auxiliary mirror with slim black or brass frame',
         ],
+
         allowedComplementary: [
-          'coordinated towels (neutral palette, ribbed texture)',
-          'stone or ceramic vanity tray with soap dispenser and jar',
-          'low-pile bath mat (neutral tone)',
-          'small humidity-tolerant plant (fern, aloe, orchid)',
-          'woven or matte metal lidded hamper',
-          'reed diffuser, ceramic candle, or LED ambient light',
+          'set of folded neutral towels (white, beige, gray)',
+          'dispenser set in ceramic or stone (soap + lotion)',
+          'low-pile bath mat (neutral cotton)',
+          'small humidity-tolerant plant (fern, aloe, orchid) in ceramic pot (outside shower)',
+          'woven or matte metal laundry hamper (compact)',
         ],
+
         allowedWindowsDecor: [
-          'frosted film (privacy)',
-          'moisture-resistant roman shades (linen or synthetic)',
-          'simple waterproof roller shades',
-          'vinyl or aluminum blinds (moisture-proof)',
+          'frosted film for privacy',
+          'linen roman shade (moisture resistant)',
+          'simple waterproof roller shade',
         ],
       },
 
