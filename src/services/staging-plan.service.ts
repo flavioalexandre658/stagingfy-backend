@@ -133,43 +133,45 @@ class StagingPlanService {
         windowsDecorRange: [1, 1],
 
         allowedMainItems: [
-          // Âncora obrigatória
-          'queen, king-size or twin bed (according to available space)',
+          // Âncora obrigatória — sempre cama
+          'queen, king-size or twin bed (low-profile, upholstered or wood headboard with integrated LED or fluted detailing)',
         ],
 
         allowedWallDecor: [
-          'framed artwork above headboard (single large or pair)',
-          'oversized round/arched mirror above dresser',
-          'paired framed prints over nightstands',
-          'picture ledge for photos/art (surface-mounted)',
-          'plug-in sconces above nightstands (pair, no hardwiring)',
+          'single oversized artwork above headboard (abstract, minimal, or botanical)',
+          'large round/arched mirror above dresser (thin frame, black or brass)',
+          'paired small framed prints above nightstands',
+          'slim picture ledge for curated prints (surface-mounted)',
+          'plug-in wall sconces above nightstands (slim, matte black or brass)',
         ],
 
         allowedComplementary: [
-          // Iluminação
-          'bedside lamps (pair or single, proportional to nightstand)',
-          'slim floor lamp in corner (if space)',
+          // Iluminação moderna
+          'bedside table lamps (pair, sculptural ceramic, smoked glass, or metal)',
+          'minimal floor lamp in corner (matte black or slim brass)',
 
-          // Têxteis
-          'layered bedding with decorative pillows and throw',
-          'area rug extending beyond bed sides/foot',
+          // Têxteis de luxo
+          'layered bedding with tonal duvet, decorative pillows, and throw',
+          'large area rug extending beyond bed, neutral or geometric pattern',
 
           // Espelhos & plantas
-          'freestanding leaner floor mirror (corner placement)',
-          'potted plant (olive, monstera, fiddle-leaf) in neutral planter',
+          'full-height leaner floor mirror with slim frame',
+          'modern potted plant (olive tree, monstera, bird of paradise) in matte planter',
 
-          // Detalhes sobre superfícies
-          'tray with small decorative objects on dresser',
-          'stack of books or magazines on nightstand',
-          'ceramic or glass vase with greenery/flowers',
+          // Objetos de superfície modernos
+          'decorative tray on dresser with candles, diffuser, or sculpture',
+          'stack of coffee table books on nightstand',
+          'ribbed or smoked-glass vase with greenery or dried stems',
 
-          // Organização
-          'woven basket for extra blankets or cushions',
-          'compact lidded laundry hamper (neutral finish)',
+          // Organização discreta
+          'woven or fabric basket for throws or cushions',
+          'slim lidded laundry hamper (neutral fabric or wood finish)',
         ],
 
         allowedWindowsDecor: [
-          'blackout curtains (neutral fabric, floor length)',
+          'floor-length blackout curtains (neutral linen, cotton, or velvet blend)',
+          'layered curtains (sheer + blackout, soft neutral tones)',
+          'roman shades (linen, cordless, neutral)',
         ],
       },
 
