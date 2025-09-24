@@ -133,45 +133,45 @@ class StagingPlanService {
         windowsDecorRange: [1, 1],
 
         allowedMainItems: [
-          // Âncora obrigatória — sempre cama
-          'queen, king-size or twin bed (low-profile, upholstered or wood headboard with integrated LED or fluted detailing)',
+          // Âncora obrigatória
+          'queen or king-size bed (low-profile, upholstered headboard in bouclé, linen-blend, or channel-tufted velvet)',
         ],
 
         allowedWallDecor: [
-          'single oversized artwork above headboard (abstract, minimal, or botanical)',
-          'large round/arched mirror above dresser (thin frame, black or brass)',
-          'paired small framed prints above nightstands',
-          'slim picture ledge for curated prints (surface-mounted)',
-          'plug-in wall sconces above nightstands (slim, matte black or brass)',
+          'single oversized abstract artwork above headboard',
+          'large arched mirror with thin black or brass frame',
+          'paired minimalist prints above nightstands',
+          'slim floating shelf/ledge for curated objects',
+          'slim plug-in wall sconces (matte black, brass, or alabaster)',
         ],
 
         allowedComplementary: [
-          // Iluminação moderna
-          'bedside table lamps (pair, sculptural ceramic, smoked glass, or metal)',
-          'minimal floor lamp in corner (matte black or slim brass)',
+          // Iluminação
+          'designer table lamps (smoked glass, travertine, or matte ceramic)',
+          'minimal arc or slim floor lamp',
 
-          // Têxteis de luxo
-          'layered bedding with tonal duvet, decorative pillows, and throw',
-          'large area rug extending beyond bed, neutral or geometric pattern',
+          // Têxteis
+          'layered bedding (tonal duvet + decorative pillows + bouclé/linen throw)',
+          'large neutral rug extending beyond bed (low-pile, geometric or tone-on-tone)',
 
           // Espelhos & plantas
-          'full-height leaner floor mirror with slim frame',
-          'modern potted plant (olive tree, monstera, bird of paradise) in matte planter',
+          'floor-to-ceiling leaner mirror (slim frame)',
+          'potted statement plant (olive tree, bird of paradise, fiddle-leaf) in matte planter',
 
-          // Objetos de superfície modernos
-          'decorative tray on dresser with candles, diffuser, or sculpture',
-          'stack of coffee table books on nightstand',
-          'ribbed or smoked-glass vase with greenery or dried stems',
+          // Detalhes modernos
+          'sculptural tray with diffuser/candles on dresser',
+          'stack of curated design books',
+          'ribbed glass vase with greenery or dried stems',
 
           // Organização discreta
-          'woven or fabric basket for throws or cushions',
-          'slim lidded laundry hamper (neutral fabric or wood finish)',
+          'woven/fabric basket for throws',
+          'neutral lidded hamper in fabric or wood',
         ],
 
         allowedWindowsDecor: [
-          'floor-length blackout curtains (neutral linen, cotton, or velvet blend)',
-          'layered curtains (sheer + blackout, soft neutral tones)',
-          'roman shades (linen, cordless, neutral)',
+          'floor-length blackout curtains in neutral linen/cotton blend',
+          'layered sheers + blackout for softness and depth',
+          'roman shades in neutral textured fabric',
         ],
       },
 
