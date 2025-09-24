@@ -592,7 +592,7 @@ class StagingPlanService {
           break;
         case 'customization':
           stageSpecificText =
-            'Make only subtle final adjustments and refinements to existing elements, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces. Focus on color adjustments, style refinements, and small decorative touches.';
+            'Make only subtle final adjustments and refinements to existing elements, on top of the original photo;';
           break;
         default:
           stageSpecificText =
@@ -876,9 +876,9 @@ Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments fr
 Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
       case 'customization':
-        return `
+        return `${globalRulesText}
 ${stylesRules}
-Maintain all doors, openings, windows, dimensions (width and height), walls, floors, ceilings, and circulation paths exactly as in the original image. Do not block, move, resize, recolor, or alter any architectural or material elements in any way.
+Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
 `;
 
       default:
