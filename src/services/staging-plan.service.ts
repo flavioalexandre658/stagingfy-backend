@@ -147,27 +147,26 @@ class StagingPlanService {
 
         allowedComplementary: [
           // Iluminação
-          'designer table lamps (smoked glass, travertine, or matte ceramic)',
-          'minimal arc or slim floor lamp',
+          'slim LED floor lamp with sculptural base (matte black or brushed bronze)',
+          'geometric bedside lamps with linen or pleated shades',
 
           // Têxteis
-          'layered bedding (tonal duvet + decorative pillows + bouclé/linen throw)',
-          'large neutral rug extending beyond bed (low-pile, geometric or tone-on-tone)',
+          'layered bedding with boucle or textured throws in warm neutrals',
+          'large area rug with abstract geometric or organic pattern (low pile, neutral tones)',
 
           // Espelhos & plantas
-          'floor-to-ceiling leaner mirror (slim frame)',
-          'potted statement plant (olive tree, bird of paradise, fiddle-leaf) in matte planter',
+          'arched full-height floor mirror with thin matte black frame',
+          'tall indoor plant (olive tree, bird of paradise, fiddle-leaf fig) in ribbed ceramic planter',
 
-          // Detalhes modernos
-          'sculptural tray with diffuser/candles on dresser',
-          'stack of curated design books',
-          'ribbed glass vase with greenery or dried stems',
+          // Detalhes sobre superfícies
+          'ceramic or stone decorative tray with sculptural objects',
+          'stack of contemporary art books on nightstand or console',
+          'sculptural vase in matte ceramic or tinted glass with greenery',
 
-          // Organização discreta
-          'woven/fabric basket for throws',
-          'neutral lidded hamper in fabric or wood',
+          // Organização
+          'woven storage basket with leather accents',
+          'minimal lidded hamper in fabric or matte metal finish',
         ],
-
         allowedWindowsDecor: [
           'floor-length blackout curtains in neutral linen/cotton blend',
           'layered sheers + blackout for softness and depth',
