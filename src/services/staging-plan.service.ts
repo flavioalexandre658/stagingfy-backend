@@ -134,7 +134,7 @@ class StagingPlanService {
 
         allowedMainItems: [
           // Âncora obrigatória
-          'queen or king-size bed',
+          'queen, king-size or twin bed (according to available space)',
         ],
 
         allowedWallDecor: [
@@ -879,7 +879,6 @@ Maintain all doors, openings, windows, dimensions (width and height) and circula
         return `
 ${stylesRules}
 Maintain all doors, openings, windows, dimensions (width and height), walls, floors, ceilings, and circulation paths exactly as in the original image. Do not block, move, resize, recolor, or alter any architectural or material elements in any way.
-Output in high resolution details, realistic lighting, finely textured materials,sharp details, photorealistic quality, ultra-clear render
 `;
 
       default:
