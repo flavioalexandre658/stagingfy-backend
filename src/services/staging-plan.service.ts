@@ -569,20 +569,24 @@ class StagingPlanService {
 
       switch (stage) {
         case 'foundation':
-          stageSpecificText =
-            'Add only furniture items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
+          stageSpecificText = `Add only new furniture items on top of the original photo; never modify or substitute existing architecture or surfaces. 
+Preserve floor, walls, ceiling, doors, windows, and lighting exactly as they appear, without recoloring or altering textures. 
+Maintain composition, perspective, dimensions, and circulation paths identical to the original image.`;
           break;
         case 'complement':
-          stageSpecificText =
-            'Add only decor items, on top of the original photo; never modify, move, or substitute any existing structures or surfaces.';
+          stageSpecificText = `Add only new decor items on top of the original photo; never modify or substitute existing architecture or surfaces. 
+Preserve floor, walls, ceiling, doors, windows, and lighting exactly as they appear, without recoloring or altering textures. 
+Maintain composition, perspective, dimensions, and circulation paths identical to the original image.`;
           break;
         case 'wall_decoration':
-          stageSpecificText =
-            'Add only wall decoration items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces. ';
+          stageSpecificText = `Add only new wall decor items on top of the original photo; never modify or substitute existing architecture or surfaces. 
+Preserve floor, walls, ceiling, doors, windows, and lighting exactly as they appear, without recoloring or altering textures. 
+Maintain composition, perspective, dimensions, and circulation paths identical to the original image.`;
           break;
         case 'windows_decoration':
-          stageSpecificText =
-            'Add only window treatments and decorations items, on top of the original photo; never modify, move, or substitute any existing structures, furniture, decor or surfaces.';
+          stageSpecificText = `Add only new windows decoration items on top of the original photo; never modify or substitute existing architecture or surfaces. 
+Preserve floor, walls, ceiling, doors, windows, and lighting exactly as they appear, without recoloring or altering textures. 
+Maintain composition, perspective, dimensions, and circulation paths identical to the original image.`;
           break;
         case 'customization':
           stageSpecificText =
@@ -593,10 +597,7 @@ class StagingPlanService {
             'Add only furniture and decor items, on top of the original photo; never modify, move, or substitute any existing structures, furniture or surfaces.';
       }
 
-      return [
-        `${stageSpecificText} maintain the same composition, dimensions (width and height), perspective, and natural lighting.
-Do not alter or replace any fixed architectural or material elements: keep the floor, walls, ceiling, doors, windows, countertops, cabinetry, stair parts, lighting fixtures, trims, and all existing colors identical.`,
-      ];
+      return [`${stageSpecificText}`];
     };
 
     // Versões curtas das categorias permitidas
@@ -837,38 +838,24 @@ Do not alter or replace any fixed architectural or material elements: keep the f
     switch (stage) {
       case 'foundation':
         return `${globalRulesText}
-
-Add main furniture appropriate to this ${roomLabel} in ${styleLabel} style. 
-Select only between ${minMain}-${maxMain} essential main pieces from the list: ${allowedMainShort}.
-Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-
+Add between ${minMain}-${maxMain} main furniture item appropriate to this ${roomLabel} in ${styleLabel} style: 
+${allowedMainShort}
  `;
 
       case 'complement':
         return `${globalRulesText}
-Add appropriate complementary items to this ${roomLabel} in ${styleLabel} style.
-Select only between ${minComp}–${maxComp} complementary items from the list bellow to complete the scene.
-${allowedCompShort}
-
-Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-`;
+Add between ${minComp}-${maxComp} main furniture item appropriate to this ${roomLabel} in ${styleLabel} style: 
+${allowedCompShort}`;
 
       case 'wall_decoration':
         return `${globalRulesText}
-Add appropriate wall decoration items and accessories to this ${roomLabel} in ${styleLabel} style.
-Select only between ${minWallDecor}–${maxWallDecor} wall decor items from the list bellow to complete the scene.
-${allowedWallShort}
-Maintain all doors, openings, windows,dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-`;
+Add between ${minWallDecor}-${maxWallDecor} main furniture item appropriate to this ${roomLabel} in ${styleLabel} style: 
+${allowedWallShort}`;
 
       case 'windows_decoration':
         return `${globalRulesText}
-Add appropriate window decoration items and treatments to this ${roomLabel} in ${styleLabel} style.
-Select only between ${minWindowsDecor}–${maxWindowsDecor} window treatments from the list bellow to complete the scene.
- ${allowedWindowsShort}
-
-Maintain all doors, openings, windows, dimensions (width and height) and circulation paths exactly as in the original image. Do not block, move, resize, or alter them in any way.
-`;
+Add between ${minWindowsDecor}-${maxWindowsDecor} main furniture item appropriate to this ${roomLabel} in ${styleLabel} style: 
+${allowedWindowsShort}`;
       case 'customization':
         return `
         Maintain wall, ground and roof as original image.
