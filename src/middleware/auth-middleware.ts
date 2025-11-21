@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { auth } from '@/lib/auth';
+import { verifyJwt } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
 
 export interface AuthenticatedRequest extends Request {
@@ -36,7 +37,18 @@ export const authMiddleware = async (
       return;
     }
 
-    // Verify the session using BetterAuth
+    const jwtPayload = verifyJwt<any>(token);
+    if (jwtPayload && jwtPayload.sub && jwtPayload.email) {
+      req.user = {
+        id: jwtPayload.sub,
+        email: jwtPayload.email,
+        name: jwtPayload.name,
+        image: jwtPayload.image,
+      };
+      next();
+      return;
+    }
+
     const headers = new Headers();
     Object.entries(req.headers).forEach(([key, value]) => {
       if (typeof value === 'string') {
@@ -45,10 +57,7 @@ export const authMiddleware = async (
         headers.set(key, value.join(', '));
       }
     });
-    
-    const session = await auth.api.getSession({
-      headers,
-    });
+    const session = await auth.api.getSession({ headers });
 
     if (!session?.session || !session?.user) {
       res.status(401).json({
@@ -61,7 +70,6 @@ export const authMiddleware = async (
       return;
     }
 
-    // Attach user and session to request
     req.user = {
       id: session.user.id,
       email: session.user.email,
@@ -99,23 +107,33 @@ export const optionalAuthMiddleware = async (
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
     if (token) {
-      const session = await auth.api.getSession({
-        headers: new Headers(req.headers as Record<string, string>),
-      });
-
-      if (session?.session && session?.user) {
+      const jwtPayload = verifyJwt<any>(token);
+      if (jwtPayload && jwtPayload.sub && jwtPayload.email) {
         req.user = {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name || undefined,
-          image: session.user.image || undefined,
+          id: jwtPayload.sub,
+          email: jwtPayload.email,
+          name: jwtPayload.name,
+          image: jwtPayload.image,
         };
+      } else {
+        const session = await auth.api.getSession({
+          headers: new Headers(req.headers as Record<string, string>),
+        });
 
-        req.session = {
-          id: session.session.id,
-          userId: session.session.userId,
-          expiresAt: session.session.expiresAt,
-        };
+        if (session?.session && session?.user) {
+          req.user = {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name || undefined,
+            image: session.user.image || undefined,
+          };
+
+          req.session = {
+            id: session.session.id,
+            userId: session.session.userId,
+            expiresAt: session.session.expiresAt,
+          };
+        }
       }
     }
 
